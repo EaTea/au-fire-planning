@@ -30,7 +30,7 @@ is built or what it looks like. Anything intended for later is in the backlog
 | **FI number** | The portfolio value needed to fund retirement spending until the end age at the chosen drawdown rate. |
 | **Outside super** | Assets the household can reach at any age, such as shares, cash and investment property. |
 | **Inside super** | Superannuation balances, which the preservation rules restrict. |
-| **Bridge period** | The years between retiring early and reaching preservation age. Only outside-super assets can fund this period. |
+| **Bridge period** | The years between retiring early and super becoming accessible (IN-5). Only outside-super assets can fund this period. |
 | **Owner-occupied home** | The property the household lives in and owns (the principal place of residence). |
 | **Today's dollars** | Values adjusted for inflation back to the current year (real terms). |
 
@@ -57,7 +57,7 @@ entered.
 | IN-2 | For each person, the user can enter their current age. The app doesn't ask for date of birth, to avoid collecting more personal data than it needs. | Must |
 | IN-3 | For each person, the user can enter a target retirement age. The app can also work out the earliest feasible retirement age for each person (see FIRE-3). Partners may retire at different ages. | Must |
 | IN-4 | The user can enter the age at which the projection ends (life expectancy / planning horizon). For a couple, the projection runs until the younger partner reaches the end age. | Must |
-| IN-5 | For each person, the user can set their **preservation age** (the age super becomes accessible). By default, the app uses the preservation age that applies under current law (60 for anyone who hasn't yet reached it). | Must |
+| IN-5 | For each person, the user can set the **age at which super becomes accessible**. **This defaults to 65**, the age at which super is released without any condition of release. The user can lower it as far as their legal preservation age (60 for anyone who hasn't yet reached it; SUPER-1), e.g. if they will have retired by then. | Must |
 | IN-6 | For each person, the app calculates tax, super contributions, caps and super access rules separately, as Australian law applies them per individual. | Must |
 
 ### 2.2 Income
