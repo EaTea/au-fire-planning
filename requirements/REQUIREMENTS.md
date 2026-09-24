@@ -307,3 +307,4 @@ written before it is scheduled.
 | BL-3 | **Self-managed super funds (SMSFs):** modelling an SMSF instead of, or alongside, a public super fund, including its running costs and investment choices. | |
 | BL-4 | **Family trusts:** holding investments in a discretionary trust and distributing income between beneficiaries. | |
 | BL-5 | **Companies:** holding investments in a company (e.g. a "bucket company"), including company tax and franked dividends paid to shareholders. | |
+| BL-6 | **Mobile responsive design:** the app works well on phones and tablets as well as desktop browsers, with inputs, results, charts and the year-by-year projection adapting to smaller screens. | The first version targets desktop web; the mockups in `requirements/mockups/` are desktop-only. |
