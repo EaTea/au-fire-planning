@@ -16,7 +16,8 @@ access until preservation age, the tax treatment of shares, property and super,
 and the rules for drawing down in retirement.
 
 This document only says **what** the app must do. It doesn't cover how the app
-is built or what it looks like. Anything intended for later is in the backlog
+is built or what it looks like. Where it requires visualisations, it says what
+each one must show, not how it is designed. Anything intended for later is in the backlog
 (§11), not in the requirements.
 
 ### 1.1 Terminology
@@ -173,6 +174,7 @@ and any number of investment properties.
 | FIRE-4 | The app splits the FI requirement into two parts. The **bridge requirement** is the outside-super assets needed to fund expenses from retirement until super becomes accessible. The **post-preservation requirement** is what super plus remaining outside-super assets must fund after that. For a couple, each partner's super becomes accessible at their own preservation age. The app reports whether each part is met. | Must |
 | FIRE-5 | Investment property counts toward FI through its net income (rent minus costs, loan interest and tax) and its equity. The user can choose whether that equity is ever sold down to fund retirement. | Must |
 | FIRE-6 | The app can calculate FI variants from different expense levels, e.g. Lean FIRE (essential expenses only, EXP-4) and Fat FIRE (a higher lifestyle budget). | Could |
+| FIRE-7 | The app provides **visualisations** that explain the FIRE model. At minimum they must show: (a) investable net worth over time against the FI number, marking the FI age; (b) the bridge period, showing outside-super assets being drawn down until super becomes accessible, then super taking over; and (c) where the money comes from and goes to each year (income, tax, expenses, contributions and withdrawals). | Must |
 
 ## 4. Coast FIRE
 
@@ -183,6 +185,7 @@ and any number of investment properties.
 | COAST-3 | The app calculates Coast FIRE separately for super (per person) and for outside-super assets. Super can "coast" to preservation age while outside-super assets are still being built for the bridge period. | Must |
 | COAST-4 | Once Coast FIRE is reached, the app shows the minimum income the household needs to cover current expenses without drawing on investments. | Should |
 | COAST-5 | Coast FIRE calculations account for employer super contributions that continue while a person keeps working after reaching Coast FIRE. | Should |
+| COAST-6 | The app provides **visualisations** that explain the Coast FIRE model. At minimum they must show: (a) current invested assets growing with no further contributions against the FI number, and the Coast FIRE number over time; (b) the point at which Coast FIRE is or will be reached on the current contribution path; and (c) super and outside-super assets separately (COAST-3). | Must |
 
 ## 5. Superannuation rules
 
