@@ -76,9 +76,10 @@ app works out the pre-tax income or withdrawals needed to fund them.
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | EXP-1 | The user can enter current annual household living expenses as after-tax spending. | Must |
+| EXP-1a | Instead of a single total, the user can enter living expenses in a few rough buckets. The defaults are **childcare**, **food**, **travel**, **medical** and **other**. Total living expenses are the sum of the buckets. | Should |
 | EXP-2 | The user can enter expected retirement expenses separately from current expenses, either as an amount or as a percentage of current expenses. For a couple, the change applies once both partners have retired. The user can also set an interim amount for when only one has retired. | Must |
 | EXP-3 | By default, all expenses grow with the inflation rate (IN-11) each year. | Must |
-| EXP-4 | The user can split expenses into categories (e.g. housing, food, transport, health, travel, education). Each category is marked **essential** or **discretionary**. | Should |
+| EXP-4 | Beyond the default buckets in EXP-1a, the user can add, rename or remove expense categories (e.g. housing, transport, education). Each category is marked **essential** or **discretionary**. | Should |
 | EXP-5 | The user can give any category its own growth rate above or below inflation, e.g. health costs rising faster than CPI. | Should |
 | EXP-6 | The user can add expenses that apply only between a start and end year, such as childcare, school fees or university support. They can also add one-off expenses in a single year, such as a car, wedding or renovation. | Must |
 | EXP-7 | The user can define **spending phases in retirement** as step changes at set ages, e.g. higher travel spending early in retirement and lower discretionary spending from age 75. | Should |
