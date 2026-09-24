@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>02 · Income &amp; expenses</title>
+<link rel="stylesheet" href="wireframe.css">
+</head>
+<body data-step="2">
+<div class="screen">
+  <header class="app-header"></header>
+  <div class="page">
+    <h1 class="page-title">Income &amp; expenses</h1>
+    <p class="page-intro">What comes in and what you spend. Enter expenses as <b>after-tax spending</b>. The app works out the pre-tax income or withdrawals needed to cover them <span class="req">TAX-7</span>.</p>
+
+    <div class="row">
+      <!-- Left: income -->
+      <div class="col">
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Salaries <span class="req">IN-7</span></h3>
+          <table>
+            <tr><th>Person</th><th>Gross salary / yr</th><th>Growth / yr</th></tr>
+            <tr><td>Alex</td><td>$145,000</td><td><span class="chip">inflation + 1%</span></td></tr>
+            <tr><td>Sam</td><td>$110,000</td><td><span class="chip">inflation</span></td></tr>
+          </table>
+          <div class="hint" style="margin-top: 6px">Salaries stop at each person's retirement age.</div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Other income <span class="req">IN-8</span></h3>
+          <table>
+            <tr><th>Item</th><th>Who</th><th>Amount</th><th>When</th></tr>
+            <tr><td>Inheritance</td><td>Sam</td><td>$150,000</td><td>2041 (once)</td></tr>
+          </table>
+          <div style="margin-top: 10px"><span class="btn ghost">+ Add income</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Work after "retirement" <span class="req">IN-9</span></h3>
+          <table>
+            <tr><th>Person</th><th>Income / yr</th><th>Ages</th></tr>
+            <tr><td>Alex</td><td>$30,000</td><td>50 – 55</td></tr>
+          </table>
+          <div class="hint" style="margin-top: 6px">Optional part-time income (e.g. Barista FIRE).</div>
+        </div>
+      </div>
+
+      <!-- Right: expenses -->
+      <div class="col-2">
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Living expenses today <span class="req">EXP-1</span>
+            <span style="flex: 1"></span>
+            <span class="toggle"><span>Single total</span><span class="on">By bucket</span></span> <span class="req">EXP-1a</span>
+          </h3>
+          <table>
+            <tr><th>Bucket</th><th>Per year (after tax)</th><th>Type <span class="req">EXP-4</span></th><th>Grows at <span class="req">EXP-3 · EXP-5</span></th></tr>
+            <tr><td>Childcare</td><td>$0</td><td>essential</td><td>inflation</td></tr>
+            <tr><td>Food</td><td>$18,000</td><td>essential</td><td>inflation</td></tr>
+            <tr><td>Travel</td><td>$12,000</td><td>discretionary</td><td>inflation</td></tr>
+            <tr><td>Medical</td><td>$5,000</td><td>essential</td><td><b>inflation + 2%</b></td></tr>
+            <tr><td>Other</td><td>$25,000</td><td>discretionary</td><td>inflation</td></tr>
+            <tr><td><b>Total</b></td><td><b>$60,000</b></td><td></td><td></td></tr>
+          </table>
+          <div class="row" style="margin-top: 10px; align-items: center">
+            <span class="btn ghost">+ Add / rename category</span>
+            <div class="banner" style="flex: 1">Don't include mortgage repayments, rent or property costs here. They come from the Assets step <span class="req">EXP-8 · EXP-9</span></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 20px">
+          <div class="card">
+            <h3>Spending in retirement <span class="req">EXP-2</span></h3>
+            <div class="field"><label>Once both have retired</label>
+              <div class="row"><div class="toggle"><span>$ amount</span><span class="on">% of today</span></div><div class="input" style="flex: 1">90 <span class="unit">%</span></div></div></div>
+            <div class="field"><label>While only one has retired (optional)</label><div class="input">95 <span class="unit">%</span></div></div>
+          </div>
+          <div class="card">
+            <h3>Spending phases <span class="req">EXP-7</span></h3>
+            <table>
+              <tr><th>From age</th><th>Change</th><th>Applies to</th></tr>
+              <tr><td>50</td><td>+ $8,000 / yr</td><td>Travel</td></tr>
+              <tr><td>75</td><td>− 30%</td><td>Discretionary</td></tr>
+            </table>
+            <div style="margin-top: 10px"><span class="btn ghost">+ Add phase</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dated and one-off expenses <span class="req">EXP-6</span></h3>
+          <table>
+            <tr><th>Expense</th><th>Bucket</th><th>Amount</th><th>From</th><th>To</th></tr>
+            <tr><td>Childcare (first child)</td><td>Childcare</td><td>$24,000 / yr</td><td>2027</td><td>2031</td></tr>
+            <tr><td>School fees</td><td>Other</td><td>$12,000 / yr</td><td>2032</td><td>2044</td></tr>
+            <tr><td>Replace car</td><td>Other</td><td>$40,000</td><td colspan="2" style="text-align: center">2030 (once)</td></tr>
+          </table>
+          <div class="row" style="margin-top: 10px; align-items: center">
+            <span class="btn ghost">+ Add expense</span>
+            <span class="btn ghost">+ Add rent</span> <span class="muted small" style="flex: 1">For renters: rent has its own growth rate and stops if a home purchase is planned <span class="req">EXP-10</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-nav">
+      <span class="btn">← Household</span>
+      <span class="muted small">Totals are shown in today's dollars.</span>
+      <span class="btn primary">Next: Assets →</span>
+    </div>
+  </div>
+</div>
+<script src="header.js"></script>
+</body>
+</html>

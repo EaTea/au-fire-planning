@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>03c · Assets: investment property</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .waterfall td:last-child { font-variant-numeric: tabular-nums; }
+  .waterfall tr.total td { border-top: 2px solid var(--ink); font-weight: 700; }
+</style>
+</head>
+<body data-step="3" data-asset="investment-property">
+<div class="screen">
+  <header class="app-header"></header>
+  <div class="page">
+    <h1 class="page-title">Assets <span class="muted" style="font-size: 16px; font-weight: 400">· Investment property</span></h1>
+    <p class="page-intro">Rent coming in, costs and loan interest going out. The app works out the tax effect each year, including negative gearing, and how the property contributes to financial independence.</p>
+
+    <div class="row">
+      <div class="card asset-list" style="width: 260px; flex: none; padding: 10px"></div>
+
+      <div class="col">
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Investment unit, Geelong <span class="req">PROP-1</span></h3>
+          <div class="grid-4">
+            <div class="field"><label>Current value</label><div class="input">$620,000</div></div>
+            <div class="field"><label>Capital growth / yr</label><div class="input">4.0 <span class="unit">%</span></div></div>
+            <div class="field"><label>Purchase price &amp; year</label><div class="input">$540,000 · 2019</div></div>
+            <div class="field"><label>Owners</label><div class="input select">Alex 100%</div></div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-bottom: 20px">
+          <div class="card">
+            <h3>Rent in <span class="req">PROP-14</span></h3>
+            <div class="field"><label>Rent</label><div class="input">$520 <span class="unit">/ week</span></div></div>
+            <div class="grid-2">
+              <div class="field"><label>Rent growth</label><div class="input">3.0 <span class="unit">% / yr</span></div></div>
+              <div class="field"><label>Vacancy</label><div class="input">3 <span class="unit">%</span></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Costs out <span class="req">PROP-2</span></h3>
+            <table>
+              <tr><th>Cost</th><th>Per year</th></tr>
+              <tr><td>Council rates + water</td><td>$2,700</td></tr>
+              <tr><td>Strata</td><td>$3,200</td></tr>
+              <tr><td>Insurance (landlord)</td><td>$1,400</td></tr>
+              <tr><td>Maintenance</td><td>$1,500</td></tr>
+              <tr><td>Management fee</td><td>7% of rent</td></tr>
+              <tr><td>Land tax</td><td>$1,800</td></tr>
+            </table>
+            <div class="hint">Each cost grows at inflation unless changed.</div>
+          </div>
+
+          <div class="card">
+            <h3>Loan <span class="req">PROP-3 – PROP-6</span></h3>
+            <div class="grid-2">
+              <div class="field"><label>Balance</label><div class="input">$480,000</div></div>
+              <div class="field"><label>Repayments</label><div class="input select">Interest-only to 2029</div></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label>Current rate</label><div class="input">6.35 <span class="unit">% var.</span></div></div>
+              <div class="field"><label>Rate follows</label><div class="input select">Interest rate + 2.5%</div></div>
+            </div>
+            <div class="field"><label>Depreciation <span class="req">PROP-17</span></label><div class="input">$5,500 <span class="unit">/ yr to 2044</span></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card col">
+            <h3>This year's cash flow and tax <span class="req">PROP-15 · TAX-5 · TAX-6</span></h3>
+            <table class="waterfall">
+              <tr><td>Rent after 3% vacancy</td><td>$26,229</td></tr>
+              <tr><td>− Costs</td><td>−$12,436</td></tr>
+              <tr><td>− Loan interest (deductible)</td><td>−$30,480</td></tr>
+              <tr><td>− Depreciation (non-cash)</td><td>−$5,500</td></tr>
+              <tr class="total"><td>Net rental loss (negatively geared)</td><td>−$22,187</td></tr>
+              <tr><td>Tax saved at Alex's marginal rate (30% + 2% Medicare)</td><td>+$7,100</td></tr>
+              <tr class="total"><td>Cash cost to hold after tax</td><td>−$9,587 / yr</td></tr>
+            </table>
+          </div>
+
+          <div class="card col">
+            <h3>In retirement <span class="req">FIRE-5</span></h3>
+            <div class="radio"><b class="dot on"></b><span>Keep it. Net rent helps fund retirement spending.</span></div>
+            <div class="radio"><b class="dot"></b><span>Sell it to fund retirement in <span class="input" style="display: inline-flex; min-height: 0; padding: 1px 8px">2045</span>. Selling costs and CGT with the 50% discount apply <span class="req">PROP-16 · TAX-3</span></span></div>
+            <div class="banner" style="margin-top: 12px; display: block">Counts toward FI through its net income and equity ($140k today).</div>
+            <div style="margin-top: 12px"><span class="learn">Negative gearing explained</span> <span class="req">NFR-7</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-nav">
+      <span class="btn">← Income &amp; expenses</span>
+      <span class="muted small">Select any asset on the left to edit it.</span>
+      <span class="btn primary">Next: Assumptions →</span>
+    </div>
+  </div>
+</div>
+<script src="header.js"></script>
+<script src="assets-sidebar.js"></script>
+</body>
+</html>
