@@ -180,7 +180,7 @@ and any number of investment properties.
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| COAST-1 | The app calculates the **Coast FIRE number**: the amount that, if invested today with no further contributions, grows to the FI number by the target retirement age at the expected return. | Must |
+| COAST-1 | The app calculates the **Coast FIRE number**: the amount that, if invested today with no further contributions, grows to the FI number by the target retirement age at the expected return. As with the FI number (FIRE-1), it reports the Coast FIRE number in both today's dollars and nominal dollars at the target retirement age. | Must |
 | COAST-2 | The app reports whether the household has already reached Coast FIRE, and if not, the age at which it will on its current contribution path. | Must |
 | COAST-3 | The app calculates Coast FIRE separately for super (per person) and for outside-super assets. Super can "coast" to preservation age while outside-super assets are still being built for the bridge period. | Must |
 | COAST-4 | Once Coast FIRE is reached, the app shows the minimum income the household needs to cover current expenses without drawing on investments. | Should |
