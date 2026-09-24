@@ -279,11 +279,13 @@ requirements match reality, not so they can be hard-coded.
 | Company tax rate for franking | 30% (25% for base rate entities) |
 | Downsizer contribution | Up to $300,000 per person, from age 55 |
 
-## 10. Out of scope
+## 10. Out of scope (non-goals)
 
 These are not planned for this app. Items that may come later are in the
 backlog (§11) instead.
 
+- Backup or syncing of the household's financial data to any other service.
+  The data stays where the user keeps it (NFR-4).
 - The Age Pension and other Centrelink payments.
 - Personal financial advice or product recommendations.
 - Estate planning, death benefits and insurance inside super.
