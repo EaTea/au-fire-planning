@@ -17,8 +17,12 @@ and the rules for drawing down in retirement.
 
 This document only says **what** the app must do. It doesn't cover how the app
 is built or what it looks like. Where it requires visualisations, it says what
-each one must show, not how it is designed. Anything intended for later is in the backlog
-(§11), not in the requirements.
+each one must show, not how it is designed. Anything intended for later is in
+the backlog (§11), not in the requirements.
+
+Desktop wireframes that illustrate one possible user flow are in
+[`mockups/`](mockups/README.md). They are illustrative only: where they differ
+from this document, this document wins.
 
 ### 1.1 Terminology
 
