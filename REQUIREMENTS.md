@@ -250,6 +250,7 @@ by ownership percentage.
 | NFR-4 | **Privacy:** The household's financial data stays under the user's control and isn't shared with third parties. | Must |
 | NFR-5 | **Disclaimer:** The app states that its output is general information and modelling, not personal financial, tax or legal advice. | Must |
 | NFR-6 | **Accuracy:** Calculations are covered by tests using worked examples whose expected values have been checked independently. | Must |
+| NFR-7 | **Further reading:** The app links to reputable sources where the user can re-read and learn more about each concept it models: FIRE, Coast FIRE, the super rules, and the tax treatment of shares and property (e.g. ATO and Moneysmart pages). | Should |
 
 ## 9. Reference values (FY2025–26, to be verified)
 
