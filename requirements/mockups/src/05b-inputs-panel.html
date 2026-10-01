@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>05b · Inputs panel</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  /* The panel drops down from the header and overlays the top of the page. */
+  .inputs-panel {
+    border-bottom: 3px solid var(--ink);
+    box-shadow: 0 6px 0 rgba(0, 0, 0, .08);
+    background: var(--paper);
+    padding: 14px 32px 16px;
+  }
+
+  .inputs-panel .tabs { margin-bottom: 14px; }
+  .inputs-panel .field { margin-bottom: 8px; }
+
+  .changed .input { border-color: var(--ink); border-width: 2px; }
+  .was { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .was b { color: var(--ink); }
+
+  .pinned { border-left: 1.5px solid var(--line-soft); padding-left: 20px; }
+
+  .delta { display: inline-block; font-size: 11px; font-weight: 700; border: 1.5px solid var(--ink); border-radius: 3px; padding: 0 5px; margin-left: 6px; vertical-align: middle; }
+
+  /* The results underneath stay visible and recalculate live. */
+  .underneath { position: relative; }
+  .underneath::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0; height: 120px;
+    background: linear-gradient(rgba(255, 255, 255, 0), #fff);
+  }
+</style>
+</head>
+<body data-step="5" data-panel="open">
+<div class="screen">
+  <header class="app-header"></header>
+
+  <!-- Inputs panel, opened from "Edit inputs ▾" in the header. -->
+  <div class="inputs-panel">
+    <div class="row" style="align-items: center; margin-bottom: 4px">
+      <h1 class="page-title" style="font-size: 18px; margin: 0">Edit inputs</h1>
+      <span class="muted small">Editing <span class="dropdown">Base plan</span>. Changes apply straight away and the results below update live.</span>
+      <span style="flex: 1"></span>
+      <span class="input" style="width: 240px; min-height: 30px; color: var(--ink-faint)">🔍 Find an input…</span>
+      <span class="btn">Undo</span>
+      <span class="btn">Save as new scenario instead</span>
+      <span class="btn primary">Done ▴</span>
+    </div>
+
+    <div class="tabs">
+      <span class="on">Household</span><span>Income &amp; expenses</span><span>Assets</span><span>Assumptions</span>
+    </div>
+
+    <div class="row">
+      <!-- The active tab: the same inputs as the Household step, laid out compactly. -->
+      <div class="col-2">
+        <div class="grid-4">
+          <div class="field changed"><label>Alex: target retirement age <span class="req">IN-3</span></label><div class="input">48 <span class="unit">years</span></div><div class="was">was <b>50</b></div></div>
+          <div class="field"><label>Alex: super accessible at <span class="req">IN-5</span></label><div class="input default">65 <span class="unit">years</span></div></div>
+          <div class="field"><label>Sam: target retirement age <span class="req">IN-3</span></label><div class="input select">Earliest feasible</div></div>
+          <div class="field"><label>Sam: super accessible at <span class="req">IN-5</span></label><div class="input">60 <span class="unit">years</span></div></div>
+        </div>
+        <div class="grid-4">
+          <div class="field"><label>Household <span class="req">IN-1</span></label><div class="toggle"><span>Just me</span><span class="on">A couple</span></div></div>
+          <div class="field"><label>Alex: current age</label><div class="input">34</div></div>
+          <div class="field"><label>Sam: current age</label><div class="input">32</div></div>
+          <div class="field"><label>Plan until age <span class="req">IN-4</span></label><div class="input default">95</div></div>
+        </div>
+        <span class="learn">Open the full Household step →</span>
+      </div>
+
+      <!-- Pinned: the inputs people change most often, shown on every tab. -->
+      <div class="col pinned">
+        <div class="small muted" style="margin-bottom: 8px"><b>Pinned</b> · shown on every tab · <span class="learn">edit pins</span></div>
+        <div class="grid-2">
+          <div class="field"><label>Retirement spending</label><div class="input">90 <span class="unit">% of today</span></div></div>
+          <div class="field"><label>Share return</label><div class="input">8.0 <span class="unit">% / yr</span></div></div>
+          <div class="field"><label>Inflation</label><div class="input default">2.5 <span class="unit">%</span></div></div>
+          <div class="field"><label>Safe withdrawal rate</label><div class="input default">4.0 <span class="unit">%</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results underneath, still visible and recalculated for the edit above. -->
+  <div class="page underneath" style="padding-top: 18px">
+    <div class="howto" style="margin-bottom: 14px"><b>Inputs panel:</b> from Results, Year by year or Scenarios, "Edit inputs ▾" drops this panel over the page instead of sending the user back through the steps.
+      The results stay in view and update as they type. Changed figures show what they were, so the effect of each edit is easy to see.</div>
+
+    <div class="grid-4" style="margin-bottom: 20px">
+      <div class="metric">
+        <div class="label">FI number <span class="req">FIRE-1</span></div>
+        <div class="value">$1.60M</div>
+        <div class="sub">unchanged</div>
+      </div>
+      <div class="metric">
+        <div class="label">Progress to FI <span class="req">FIRE-2</span></div>
+        <div class="value">45%</div>
+        <div class="sub">unchanged</div>
+      </div>
+      <div class="metric">
+        <div class="label">Retirement <span class="req">FIRE-3</span></div>
+        <div class="value">2040 <span class="delta">was 2042</span></div>
+        <div class="sub">Alex 48 · Sam 46</div>
+      </div>
+      <div class="metric">
+        <div class="label">Coast FIRE number <span class="req">COAST-1</span></div>
+        <div class="value">$860k <span class="delta">was $790k</span></div>
+        <div class="sub">a retirement 2 years earlier needs more invested today</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Can you bridge to super? <span class="req">FIRE-4</span></h3>
+      <div class="row" style="align-items: center">
+        <span style="width: 260px">Bridge: outside super, 2040 → 2054</span>
+        <div style="flex: 1; height: 16px; border: 1.5px solid var(--ink); border-radius: 3px; position: relative"><b style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--fill-dark)"></b><s style="position: absolute; top: -4px; bottom: -4px; left: 97%; border-left: 2px dashed var(--ink)"></s></div>
+        <span class="status">MET</span><span class="delta">only just: was comfortable</span>
+      </div>
+      <div class="hint" style="margin: 4px 0 0 270px">Need $880k in 2040 · projected $905k</div>
+    </div>
+    <div style="height: 120px"></div>
+  </div>
+</div>
+<script src="header.js"></script>
+</body>
+</html>

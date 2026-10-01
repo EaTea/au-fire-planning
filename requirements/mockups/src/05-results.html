@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>05 · Results</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .chart text { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #666; }
+  .chart .axis { stroke: #999; stroke-width: 1; }
+  .chart .grid { stroke: #eee; stroke-width: 1; }
+  .chart .strong { font-weight: 700; fill: #222; }
+
+  .timeline { position: relative; height: 92px; margin: 8px 10px 0; }
+  .timeline .bar { position: absolute; left: 0; right: 0; top: 34px; border-top: 2px solid var(--ink); }
+  .timeline .m { position: absolute; top: 0; transform: translateX(-50%); text-align: center; font-size: 11px; width: 130px; }
+  .timeline .m b { display: block; font-size: 12px; }
+  .timeline .m i { display: block; width: 12px; height: 12px; background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; margin: 5px auto 0; }
+  .timeline .m.key i { background: var(--ink); }
+  .timeline .m span { display: block; margin-top: 4px; color: var(--ink-soft); }
+
+  .section-title { display: flex; align-items: center; gap: 10px; margin: 28px 0 12px; font-size: 18px; }
+  .section-title::after { content: ""; flex: 1; border-top: 1px solid var(--line-soft); }
+
+  .check { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+  .check .meter { flex: 1; height: 16px; border: 1.5px solid var(--ink); border-radius: 3px; position: relative; background: var(--paper); }
+  .check .meter b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fill-dark); }
+  .check .meter s { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed var(--ink); }
+
+  .trace { position: absolute; width: 300px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 4px; padding: 10px 12px; font-size: 12px; box-shadow: 4px 4px 0 rgba(0,0,0,.12); z-index: 2; }
+  .trace table td { padding: 3px 4px; font-size: 12px; }
+</style>
+</head>
+<body data-step="5">
+<div class="screen">
+  <header class="app-header"></header>
+  <div class="page" style="position: relative">
+    <div class="row" style="align-items: center; margin-bottom: 16px">
+      <div class="col">
+        <h1 class="page-title">Results</h1>
+        <p class="page-intro" style="margin: 0">Based on your inputs and assumptions. Everything recalculates as soon as you change an input.</p>
+      </div>
+      <span class="toggle"><span class="on">Today's dollars</span><span>Nominal</span></span> <span class="req">OUT-2</span>
+      <span class="btn">Year by year →</span>
+      <span class="btn primary">Save as scenario</span>
+    </div>
+
+    <!-- Headline numbers -->
+    <div class="grid-4" style="margin-bottom: 20px">
+      <div class="metric">
+        <div class="label">FI number <span class="req">FIRE-1</span></div>
+        <div class="value">$1.60M</div>
+        <div class="sub">$2.38M nominal in 2042 · $64k/yr spending ÷ 4%</div>
+      </div>
+      <div class="metric">
+        <div class="label">Progress to FI <span class="req">FIRE-2</span></div>
+        <div class="value">45%</div>
+        <div class="check" style="margin: 4px 0 2px"><div class="meter"><b style="width: 45%"></b></div></div>
+        <div class="sub">$720k investable of $1.60M</div>
+      </div>
+      <div class="metric">
+        <div class="label">Retirement <span class="req">FIRE-3</span></div>
+        <div class="value">2042</div>
+        <div class="sub">Alex 50 · Sam 48 · FI reached in 2039, so retiring from 2039 is feasible</div>
+      </div>
+      <div class="metric">
+        <div class="label">Coast FIRE number <span class="req">COAST-1 · COAST-2</span></div>
+        <div class="value">$790k</div>
+        <div class="sub">$1.17M nominal in 2042 · <span class="status no">NOT YET</span> reached in 2028</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom: 20px">
+      <!-- Bridge check: the Australian two-stage retirement. -->
+      <div class="card col-2">
+        <h3>Can you bridge to super? <span class="req">FIRE-4</span></h3>
+        <div class="check"><span style="width: 250px">Bridge: outside super, 2042 → 2054</span>
+          <div class="meter"><b style="width: 100%"></b><s style="left: 86%"></s></div><span class="status">MET</span></div>
+        <div class="hint" style="margin: -4px 0 12px 260px">Need $780k in 2042 · projected $905k (dashed line = amount needed)</div>
+        <div class="check"><span style="width: 250px">After super is accessible, 2054 → 2089</span>
+          <div class="meter"><b style="width: 100%"></b><s style="left: 71%"></s></div><span class="status">MET</span></div>
+        <div class="hint" style="margin: -4px 0 0 260px">Need $1.10M · projected $1.55M (super + what's left outside)</div>
+      </div>
+
+      <!-- Traceability: clicking any number opens its breakdown (NFR-1). -->
+      <div class="card col">
+        <h3>Example: clicking the FI number <span class="req">NFR-1</span></h3>
+        <table>
+          <tr><td>Retirement spending (90% of $60k)</td><td>$54,000</td></tr>
+          <tr><td>+ Home holding costs</td><td>$9,700</td></tr>
+          <tr><td>= Spending to fund</td><td>$63,700</td></tr>
+          <tr><td>÷ Safe withdrawal rate</td><td>4.0%</td></tr>
+          <tr><td><b>= FI number</b></td><td><b>$1.59M ≈ $1.60M</b></td></tr>
+        </table>
+        <div style="margin-top: 8px"><span class="learn">Edit these inputs</span></div>
+      </div>
+    </div>
+
+    <!-- Key milestones along the timeline. -->
+      <div class="card">
+        <h3>Milestones <span class="req">OUT-4</span></h3>
+        <div class="timeline">
+          <div class="bar"></div>
+          <div class="m" style="left: 4%"><b>2028</b><i></i><span>Coast FIRE</span></div>
+          <div class="m key" style="left: 15%"><b>2039</b><i></i><span>FI reached</span></div>
+          <div class="m key" style="left: 26%"><b>2042</b><i></i><span>Both retire</span></div>
+          <div class="m" style="left: 37%"><b>2047</b><i></i><span>Home loan paid off</span></div>
+          <div class="m" style="left: 50%"><b>2054</b><i></i><span>Sam's super accessible</span></div>
+          <div class="m" style="left: 64%"><b>2057</b><i></i><span>Alex's super accessible → retirement phase</span></div>
+          <div class="m key" style="left: 88%"><b>2089+</b><i></i><span>Money lasts past end of plan ✓</span></div>
+        </div>
+      </div>
+
+    <!-- FIRE visualisations (FIRE-7). -->
+    <div class="section-title">FIRE <span class="req">FIRE-7</span> <span class="muted small" style="font-weight: 400">Hover any chart for exact values</span> <span class="learn" style="font-size: 12px; font-weight: 400">What is FIRE? <span class="req">NFR-7</span></span></div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>(a) Investable net worth vs FI number</h3>
+        <div class="chart">
+          <svg viewBox="0 0 400 200">
+            <line class="axis" x1="30" y1="175" x2="395" y2="175"/><line class="axis" x1="30" y1="10" x2="30" y2="175"/>
+            <line x1="30" y1="70" x2="395" y2="70" stroke="#222" stroke-width="1.5" stroke-dasharray="6 4"/>
+            <text x="300" y="64">FI number $1.60M</text>
+            <path d="M30,140 C60,122 88,92 105,70 C150,40 220,52 260,66 C300,82 350,100 395,110" fill="none" stroke="#222" stroke-width="2.2"/>
+            <line x1="105" y1="20" x2="105" y2="175" stroke="#999" stroke-dasharray="3 3"/>
+            <line x1="123" y1="20" x2="123" y2="175" stroke="#222" stroke-dasharray="3 3"/>
+            <circle cx="105" cy="70" r="5" fill="#222"/>
+            <text class="strong" x="101" y="28" text-anchor="end">FI 2039</text>
+            <text class="strong" x="127" y="28">retire 2042</text>
+            <text x="30" y="190">2026</text><text x="92" y="190">2039</text><text x="118" y="190">2042</text><text x="200" y="190">2060</text><text x="370" y="190">2089</text>
+            <text x="2" y="74">1.6M</text>
+          </svg>
+          <div class="legend"><span><i></i>investable net worth</span><span><i class="dash"></i>FI number</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>(b) Bridge period: outside super, then super</h3>
+        <div class="chart">
+          <svg viewBox="0 0 400 200">
+            <rect x="120" y="10" width="80" height="165" fill="#f2f2f2"/>
+            <text class="strong" x="126" y="24">bridge</text><text x="126" y="36">2042 → 2054</text>
+            <line class="axis" x1="30" y1="175" x2="395" y2="175"/><line class="axis" x1="30" y1="10" x2="30" y2="175"/>
+            <!-- super (bottom band) -->
+            <path d="M30,175 L30,160 C80,150 120,130 160,112 C200,96 240,95 260,100 C320,112 360,135 395,150 L395,175 Z" fill="#d9d9d9"/>
+            <!-- outside super stacked on top -->
+            <path d="M30,160 C80,150 120,130 160,112 C200,96 240,95 260,100 C320,112 360,135 395,150 L395,150 C360,135 320,112 260,100 C240,95 220,94 200,94 C170,80 150,60 120,50 C90,70 60,120 30,150 Z" fill="#9a9a9a"/>
+            <text x="30" y="190">2026</text><text x="108" y="190">2042</text><text x="188" y="190">2054</text><text x="370" y="190">2089</text>
+          </svg>
+          <div class="legend"><span><i class="block2"></i>outside super</span><span><i class="block"></i>super (both)</span><span><i class="block" style="background: #f2f2f2; border: 1px solid #ccc"></i>bridge period</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>(c) Money in and out each year</h3>
+        <div class="chart">
+          <svg viewBox="0 0 400 200">
+            <line class="axis" x1="30" y1="100" x2="395" y2="100"/>
+            <!-- Working years: salary in (up), spending/tax/contributions out (down). -->
+            <g fill="#222"><rect x="40" y="40" width="14" height="60"/><rect x="60" y="36" width="14" height="64"/><rect x="80" y="32" width="14" height="68"/><rect x="100" y="28" width="14" height="72"/></g>
+            <g fill="#9a9a9a"><rect x="140" y="62" width="14" height="38"/><rect x="160" y="62" width="14" height="38"/><rect x="180" y="62" width="14" height="38"/><rect x="220" y="64" width="14" height="36"/><rect x="260" y="64" width="14" height="36"/><rect x="300" y="66" width="14" height="34"/><rect x="340" y="68" width="14" height="32"/></g>
+            <g fill="#d9d9d9"><rect x="40" y="100" width="14" height="30"/><rect x="60" y="100" width="14" height="30"/><rect x="80" y="100" width="14" height="31"/><rect x="100" y="100" width="14" height="32"/>
+              <rect x="140" y="100" width="14" height="36"/><rect x="160" y="100" width="14" height="36"/><rect x="180" y="100" width="14" height="36"/><rect x="220" y="100" width="14" height="34"/><rect x="260" y="100" width="14" height="34"/><rect x="300" y="100" width="14" height="32"/><rect x="340" y="100" width="14" height="30"/></g>
+            <g fill="#fff" stroke="#222"><rect x="40" y="130" width="14" height="22"/><rect x="60" y="130" width="14" height="22"/><rect x="80" y="131" width="14" height="23"/><rect x="100" y="132" width="14" height="24"/>
+              <rect x="140" y="136" width="14" height="2"/><rect x="160" y="136" width="14" height="2"/><rect x="180" y="136" width="14" height="2"/></g>
+            <text x="36" y="20">working</text><text x="140" y="20">retired: withdrawals fund spending</text>
+            <text x="36" y="190">2026</text><text x="134" y="190">2042</text><text x="330" y="190">2089</text>
+          </svg>
+          <div class="legend"><span><i class="block" style="background: #222"></i>salary</span><span><i class="block2"></i>withdrawals &amp; rent</span><span><i class="block"></i>spending</span><span><i class="block" style="background: #fff; border: 1px solid #222"></i>tax &amp; contributions</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coast FIRE visualisations (COAST-6). -->
+    <div class="section-title">Coast FIRE <span class="req">COAST-6</span> <span class="learn" style="font-size: 12px; font-weight: 400">What is Coast FIRE? <span class="req">NFR-7</span></span></div>
+    <div class="row">
+      <div class="card col-2">
+        <h3>(a, b) When could you stop contributing?</h3>
+        <div class="chart">
+          <svg viewBox="0 0 820 220">
+            <line class="axis" x1="40" y1="195" x2="810" y2="195"/><line class="axis" x1="40" y1="10" x2="40" y2="195"/>
+            <line x1="40" y1="30" x2="810" y2="30" stroke="#222" stroke-width="1.5" stroke-dasharray="6 4"/>
+            <!-- Coast FIRE number rises toward the FI number by 2042 -->
+            <path d="M40,120 C250,100 500,70 810,30" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="3 3"/>
+            <!-- Projected assets with contributions -->
+            <path d="M40,140 C120,112 200,90 300,70 C450,48 580,36 665,30 C720,26 770,22 810,18" fill="none" stroke="#222" stroke-width="2.2"/>
+            <circle cx="665" cy="30" r="5" fill="#222"/>
+            <text class="strong" x="655" y="21" text-anchor="end">keep contributing: FI 2039</text>
+            <!-- Stop contributing at Coast FIRE: the balance then tracks the Coast FIRE number to the FI number in 2042 -->
+            <clipPath id="after-coast"><rect x="112" y="0" width="720" height="220"/></clipPath>
+            <path d="M40,120 C250,100 500,70 810,30" fill="none" stroke="#888" stroke-width="3.5" clip-path="url(#after-coast)"/>
+            <circle cx="810" cy="30" r="5" fill="#888"/>
+            <!-- Current assets with no further contributions -->
+            <path d="M40,140 C300,120 550,85 810,55" fill="none" stroke="#222" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
+            <circle cx="112" cy="115" r="6" fill="#222"/>
+            <line x1="112" y1="115" x2="112" y2="195" stroke="#999" stroke-dasharray="3 3"/>
+            <text class="strong" x="120" y="150">Coast FIRE reached: 2028 (projected)</text>
+            <text x="120" y="164">from here, contributions are optional</text>
+            <text x="40" y="212">2026</text><text x="100" y="212">2028</text><text x="785" y="212">2042</text>
+          </svg>
+          <div class="legend"><span><i></i>projected assets (current contributions)</span><span><i class="dash light"></i>Coast FIRE number</span><span><i class="dash"></i>FI number</span><span><i class="block2" style="height: 3px"></i>stop contributing at Coast FIRE: FI 2042 on target</span><span>··· today's $720k with no further contributions (reaches $1.45M, short of FI)</span></div>
+        </div>
+      </div>
+
+      <div class="card col">
+        <h3>(c) Super and outside super separately <span class="req">COAST-3</span></h3>
+        <div class="metric" style="margin-bottom: 10px">
+          <div class="label">Super (both) · must last from 2054</div>
+          <div class="value"><span class="status">COASTING</span></div>
+          <div class="sub">Grows to $1.10M by 2054 even with no further voluntary contributions</div>
+        </div>
+        <div class="metric" style="margin-bottom: 10px">
+          <div class="label">Outside super · funds the bridge 2042 → 2054</div>
+          <div class="value"><span class="status no">NOT YET</span> 2028</div>
+          <div class="sub">Needs $470k today to coast · has $275k</div>
+        </div>
+        <div class="metric">
+          <div class="label">Once coasting, minimum income needed <span class="req">COAST-4 · COAST-5</span></div>
+          <div class="value">$74k<span class="small muted"> / yr, household gross</span></div>
+          <div class="sub">Covers today's spending. Employer super keeps flowing while working.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px">
+      <h3>After Coast FIRE in 2028: keep contributing, ease off, or stop? <span class="req">COAST-7</span></h3>
+      <table>
+        <tr><th>Option from 2028</th><th>Voluntary contributions / yr</th><th>FI reached</th><th>Investable in 2042</th><th>What it buys</th></tr>
+        <tr><td><b>Keep contributing</b> (current plan)</td><td>$60k</td><td><b>2039</b> · 3 years early</td><td>$2.05M</td><td>Retire from 2039, or about $18k/yr more retirement spending</td></tr>
+        <tr><td>Halve contributions</td><td>$30k</td><td>2041 · 1 year early</td><td>$1.82M</td><td>$30k/yr freed now · about $9k/yr more retirement spending</td></tr>
+        <tr><td>Stop contributing (coast)</td><td>$0 · employer super continues</td><td>2042 · on target</td><td>$1.60M</td><td>$60k/yr freed now · household needs $74k/yr gross income <span class="req">COAST-4</span></td></tr>
+      </table>
+      <div class="hint" style="margin-top: 6px">Voluntary contributions are the ETF contributions plus salary sacrifice. Choose an option to save it as a scenario.</div>
+    </div>
+
+    <div class="footer-nav">
+      <span class="btn">← Assumptions</span>
+      <span class="muted small">Click any number to see how it was calculated.</span>
+      <span class="btn primary">Year by year →</span>
+    </div>
+  </div>
+</div>
+<script src="header.js"></script>
+</body>
+</html>

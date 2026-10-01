@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>01 · Household</title>
+<link rel="stylesheet" href="wireframe.css">
+</head>
+<body data-step="1">
+<div class="screen">
+  <header class="app-header"></header>
+  <div class="page">
+    <h1 class="page-title">Who is this plan for?</h1>
+    <p class="page-intro">Start with the people in the household. Tax, super contributions and super access are all worked out per person.</p>
+
+    <div class="banner" style="margin-bottom: 20px">
+      Your data is stored only on this device and never sent anywhere <span class="req">NFR-4</span>
+      &nbsp;·&nbsp; This is general modelling, not financial advice <span class="req">NFR-5</span>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px">
+      <h3>Household <span class="req">IN-1</span></h3>
+      <div class="row" style="align-items: center">
+        <div class="toggle"><span>Just me</span><span class="on">A couple</span></div>
+        <span class="muted small">A couple adds a second person with their own salary and super.</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- One card per person; the second only appears for a couple. -->
+      <div class="card">
+        <h3>Person 1</h3>
+        <div class="field"><label>Name (optional, used for labels only)</label><div class="input">Alex</div></div>
+        <div class="grid-2">
+          <div class="field"><label>Current age <span class="req">IN-2</span></label><div class="input">34 <span class="unit">years</span></div>
+            <div class="hint">We only ask for age, not date of birth.</div></div>
+          <div class="field"><label>Target retirement age <span class="req">IN-3</span></label><div class="input">50 <span class="unit">years</span></div>
+            <div class="hint">☐ Find my earliest feasible age instead <span class="req">FIRE-3</span></div></div>
+        </div>
+        <div class="field"><label>Super becomes accessible at <span class="req">IN-5</span></label><div class="input default">65 <span class="unit">years</span></div>
+          <div class="hint">65 = released with no conditions. You can lower it to 60 (preservation age) if you'll have retired by then. <span class="learn">What is preservation age?</span> <span class="req">NFR-7</span></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Person 2</h3>
+        <div class="field"><label>Name (optional, used for labels only)</label><div class="input">Sam</div></div>
+        <div class="grid-2">
+          <div class="field"><label>Current age <span class="req">IN-2</span></label><div class="input">32 <span class="unit">years</span></div></div>
+          <div class="field"><label>Target retirement age <span class="req">IN-3</span></label><div class="input">52 <span class="unit">years</span></div>
+            <div class="hint">☑ Find my earliest feasible age instead <span class="req">FIRE-3</span></div></div>
+        </div>
+        <div class="field"><label>Super becomes accessible at <span class="req">IN-5</span></label><div class="input">60 <span class="unit">years</span></div>
+          <div class="hint">Changed from the default of 65.</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px">
+      <h3>Planning horizon <span class="req">IN-4</span></h3>
+      <div class="row" style="align-items: center">
+        <div class="field" style="width: 220px; margin: 0"><label>Plan until age</label><div class="input default">95 <span class="unit">years</span></div></div>
+        <div class="muted small" style="flex: 1">For a couple, the projection runs until the younger partner (Sam) reaches this age: <b>63 years, to 2089</b>.</div>
+        <span class="chip">Tax, caps and super rules applied per person <span class="req">IN-6</span></span>
+      </div>
+    </div>
+
+    <div class="footer-nav">
+      <span class="btn ghost">Back to welcome</span>
+      <span class="muted small">Dashed fields are defaults. You can change them any time.</span>
+      <span class="btn primary">Next: Income &amp; expenses →</span>
+    </div>
+  </div>
+</div>
+<script src="header.js"></script>
+</body>
+</html>

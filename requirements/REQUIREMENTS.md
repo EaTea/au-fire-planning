@@ -17,8 +17,12 @@ and the rules for drawing down in retirement.
 
 This document only says **what** the app must do. It doesn't cover how the app
 is built or what it looks like. Where it requires visualisations, it says what
-each one must show, not how it is designed. Anything intended for later is in the backlog
-(§11), not in the requirements.
+each one must show, not how it is designed. Anything intended for later is in
+the backlog (§11), not in the requirements.
+
+Desktop wireframes that illustrate one possible user flow are in
+[`mockups/`](mockups/README.md). They are illustrative only: where they differ
+from this document, this document wins.
 
 ### 1.1 Terminology
 
@@ -186,6 +190,7 @@ and any number of investment properties.
 | COAST-4 | Once Coast FIRE is reached, the app shows the minimum income the household needs to cover current expenses without drawing on investments. | Should |
 | COAST-5 | Coast FIRE calculations account for employer super contributions that continue while a person keeps working after reaching Coast FIRE. | Should |
 | COAST-6 | The app provides **visualisations** that explain the Coast FIRE model. At minimum they must show: (a) current invested assets growing with no further contributions against the FI number, and the Coast FIRE number over time; (b) the point at which Coast FIRE is or will be reached on the current contribution path; and (c) super and outside-super assets separately (COAST-3). | Must |
+| COAST-7 | The app shows what happens to contributions **after Coast FIRE is reached**. It compares continuing the current contributions, reducing them, and stopping them entirely, by the FI date each one reaches and the balance at the target retirement age. | Should |
 
 ## 5. Superannuation rules
 
@@ -307,3 +312,4 @@ written before it is scheduled.
 | BL-3 | **Self-managed super funds (SMSFs):** modelling an SMSF instead of, or alongside, a public super fund, including its running costs and investment choices. | |
 | BL-4 | **Family trusts:** holding investments in a discretionary trust and distributing income between beneficiaries. | |
 | BL-5 | **Companies:** holding investments in a company (e.g. a "bucket company"), including company tax and franked dividends paid to shareholders. | |
+| BL-6 | **Mobile responsive design:** the app works well on phones and tablets as well as desktop browsers, with inputs, results, charts and the year-by-year projection adapting to smaller screens. | The first version targets desktop web; the mockups in `requirements/mockups/` are desktop-only. |

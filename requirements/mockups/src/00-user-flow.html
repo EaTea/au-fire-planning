@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>00 · User flow</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .flow text { font: 13px "Helvetica Neue", Arial, sans-serif; fill: #222; }
+  .flow .title { font-weight: 700; font-size: 14px; }
+  .flow .sub { font-size: 11.5px; fill: #666; }
+  .flow .req { font: 600 10.5px Menlo, Consolas, monospace; fill: #1f5fbf; }
+  .flow .edge-label { font-size: 11.5px; fill: #444; font-style: italic; }
+  .flow .node { fill: #fff; stroke: #222; stroke-width: 1.8; }
+  .flow .node.step { fill: #f2f2f2; }
+  .flow .node.hub { fill: #d9d9d9; stroke-width: 2.4; }
+  .flow .node.side { stroke-dasharray: 5 4; }
+  .flow .node.panel { fill: #e8f0fc; stroke: #1f5fbf; stroke-width: 2; }
+  .flow .edge { stroke: #222; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+  .flow .edge.loop { stroke-dasharray: 6 5; stroke: #555; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="page">
+    <h1 class="page-title">User flow</h1>
+    <p class="page-intro">
+      How a user moves through the app. First-time users go through the four input steps in order.
+      Returning users land straight on their results. From the results they can drill into the
+      projection or save and compare scenarios. To change an input, they open the inputs panel without leaving the screen they're on.
+    </p>
+
+    <svg class="flow" viewBox="0 96 1376 630" width="1376">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+        </marker>
+      </defs>
+
+      <!-- Row 1: entry and the input steps -->
+      <rect class="node" x="20" y="120" width="170" height="76" rx="38"/>
+      <text class="title" x="105" y="155" text-anchor="middle">Open app</text>
+      <text class="sub" x="105" y="173" text-anchor="middle">data loads from this device</text>
+
+      <polygon class="node" points="330,112 420,158 330,204 240,158"/>
+      <text class="title" x="330" y="155" text-anchor="middle">Saved plan?</text>
+      <text class="sub" x="330" y="171" text-anchor="middle">on this device</text>
+
+      <rect class="node" x="470" y="120" width="180" height="76" rx="6"/>
+      <text class="title" x="560" y="146" text-anchor="middle">Welcome</text>
+      <text class="sub" x="560" y="164" text-anchor="middle">what the app does, disclaimer</text>
+      <text class="req" x="560" y="182" text-anchor="middle">NFR-4 · NFR-5</text>
+
+      <rect class="node step" x="700" y="120" width="180" height="76" rx="6"/>
+      <text class="title" x="790" y="146" text-anchor="middle">1 · Household</text>
+      <text class="sub" x="790" y="164" text-anchor="middle">single / couple, ages</text>
+      <text class="req" x="790" y="182" text-anchor="middle">IN-1 – IN-6</text>
+
+      <rect class="node step" x="930" y="120" width="180" height="76" rx="6"/>
+      <text class="title" x="1020" y="146" text-anchor="middle">2 · Income &amp; expenses</text>
+      <text class="sub" x="1020" y="164" text-anchor="middle">salaries, buckets, phases</text>
+      <text class="req" x="1020" y="182" text-anchor="middle">IN-7 – IN-9 · EXP-*</text>
+
+      <rect class="node step" x="1160" y="120" width="180" height="76" rx="6"/>
+      <text class="title" x="1250" y="146" text-anchor="middle">3 · Assets</text>
+      <text class="sub" x="1250" y="164" text-anchor="middle">shares, property, super, cash</text>
+      <text class="req" x="1250" y="182" text-anchor="middle">IN-14 – 27 · PROP-*</text>
+
+      <!-- Row 2: assumptions, results hub and drill-downs -->
+      <rect class="node step" x="1160" y="380" width="180" height="76" rx="6"/>
+      <text class="title" x="1250" y="406" text-anchor="middle">4 · Assumptions</text>
+      <text class="sub" x="1250" y="424" text-anchor="middle">inflation, rates, drawdown</text>
+      <text class="req" x="1250" y="442" text-anchor="middle">IN-10 – IN-13</text>
+
+      <rect class="node hub" x="840" y="372" width="230" height="92" rx="8"/>
+      <text class="title" x="955" y="400" text-anchor="middle">5 · Results dashboard</text>
+      <text class="sub" x="955" y="418" text-anchor="middle">FI &amp; Coast FIRE numbers,</text>
+      <text class="sub" x="955" y="434" text-anchor="middle">milestones, charts</text>
+      <text class="req" x="955" y="452" text-anchor="middle">FIRE-* · COAST-* · OUT-4</text>
+
+      <rect class="node step" x="540" y="380" width="200" height="76" rx="6"/>
+      <text class="title" x="640" y="406" text-anchor="middle">6 · Projection</text>
+      <text class="sub" x="640" y="424" text-anchor="middle">year-by-year table</text>
+      <text class="req" x="640" y="442" text-anchor="middle">OUT-1 – OUT-3</text>
+
+      <rect class="node step" x="220" y="380" width="220" height="76" rx="6"/>
+      <text class="title" x="330" y="406" text-anchor="middle">7 · Scenarios</text>
+      <text class="sub" x="330" y="424" text-anchor="middle">compare &amp; sensitivity</text>
+      <text class="req" x="330" y="442" text-anchor="middle">OUT-5 · OUT-6</text>
+
+      <!-- Row 3: side actions from the results -->
+      <rect class="node side" x="850" y="590" width="210" height="70" rx="6"/>
+      <text class="title" x="955" y="618" text-anchor="middle">Save as scenario</text>
+      <text class="sub" x="955" y="636" text-anchor="middle">copy plan, change assumptions</text>
+
+      <rect class="node side" x="1150" y="590" width="200" height="70" rx="6"/>
+      <text class="title" x="1250" y="618" text-anchor="middle">Learn more</text>
+      <text class="sub" x="1250" y="636" text-anchor="middle">links to ATO, Moneysmart</text>
+      <text class="req" x="1250" y="652" text-anchor="middle">NFR-7</text>
+
+      <rect class="node side" x="540" y="590" width="200" height="70" rx="6"/>
+      <text class="title" x="640" y="618" text-anchor="middle">Export</text>
+      <text class="sub" x="640" y="636" text-anchor="middle">inputs + projection file</text>
+      <text class="req" x="640" y="652" text-anchor="middle">OUT-7</text>
+
+      <!-- Edges: first-time path -->
+      <path class="edge" d="M190,158 L238,158"/>
+      <path class="edge" d="M420,158 L468,158"/>
+      <text class="edge-label" x="430" y="148">no</text>
+      <path class="edge" d="M650,158 L698,158"/>
+      <path class="edge" d="M880,158 L928,158"/>
+      <path class="edge" d="M1110,158 L1158,158"/>
+      <path class="edge" d="M1250,196 L1250,378"/>
+      <path class="edge" d="M1160,418 L1072,418"/>
+      <text class="edge-label" x="1082" y="408">calculate</text>
+
+      <!-- Returning users skip straight to results -->
+      <path class="edge" d="M330,204 L330,335 L880,335 L880,370"/>
+      <text class="edge-label" x="340" y="327">yes: go straight to results</text>
+
+      <!-- Inputs panel: edit any input without leaving the results or scenarios -->
+      <rect class="node panel" x="590" y="226" width="270" height="76" rx="6"/>
+      <text class="title" x="725" y="250" text-anchor="middle">Inputs panel</text>
+      <text class="sub" x="725" y="267" text-anchor="middle">drops down over Results, Projection</text>
+      <text class="sub" x="725" y="282" text-anchor="middle">or Scenarios; results update live</text>
+      <text class="req" x="725" y="296" text-anchor="middle">05b</text>
+
+      <path class="edge" d="M1000,372 L1000,264 L862,264"/>
+      <text class="edge-label" x="1010" y="300">"Edit inputs ▾"</text>
+      <text class="edge-label" x="1010" y="315">from the header</text>
+      <path class="edge loop" d="M790,226 L790,198"/>
+      <text class="edge-label" x="800" y="216">open full step</text>
+
+      <!-- Drill-downs from the results hub -->
+      <path class="edge" d="M840,408 L742,408"/>
+      <path class="edge" d="M742,430 L838,430"/>
+      <text class="edge-label" x="752" y="398">year by year</text>
+      <text class="edge-label" x="760" y="448">back</text>
+
+      <path class="edge" d="M540,418 L442,418"/>
+      <text class="edge-label" x="458" y="408">compare</text>
+
+      <path class="edge" d="M955,464 L955,588"/>
+      <path class="edge" d="M955,660 L955,700 L330,700 L330,458"/>
+      <text class="edge-label" x="600" y="580"></text>
+      <text class="edge-label" x="340" y="680">new scenario appears in comparison</text>
+
+      <path class="edge" d="M1070,440 L1180,588"/>
+      <path class="edge" d="M900,464 L700,588"/>
+    </svg>
+
+    <div class="grid-3" style="margin-top: 8px">
+      <div class="banner" style="display:block"><b>Grey box:</b> numbered step in the header nav. <b>Dashed box:</b> action available from the results.</div>
+      <div class="banner" style="display:block"><b>Inputs panel (blue):</b> after the first run, inputs are edited in a panel that drops down over the current screen, so the user keeps their place. The steps stay available for full edits.</div>
+      <div class="banner">All data stays on this device. No backup or sync to other services (§10)</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

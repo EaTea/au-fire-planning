@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>04 · Assumptions</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .order li { display: flex; gap: 10px; align-items: center; border: 1.5px solid var(--line); border-radius: 4px; padding: 7px 10px; margin-bottom: 6px; font-size: 13px; }
+  .order li .grip { color: var(--ink-faint); letter-spacing: -2px; }
+  .order { list-style: none; padding: 0; margin: 0; }
+  .disabled { opacity: .45; }
+</style>
+</head>
+<body data-step="4">
+<div class="screen">
+  <header class="app-header"></header>
+  <div class="page">
+    <h1 class="page-title">Assumptions</h1>
+    <p class="page-intro">The economic assumptions and rules that drive the projection. Sensible defaults are pre-filled. Change any of them to see how the results respond.</p>
+
+    <div class="row">
+      <div class="col">
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Economy</h3>
+          <div class="grid-2">
+            <div class="field"><label>Inflation <span class="req">IN-11</span></label><div class="input default">2.5 <span class="unit">% / yr</span></div>
+              <div class="hint">Grows expenses and salaries. Converts results to today's dollars.</div></div>
+            <div class="field"><label>General interest rate <span class="req">IN-12</span></label><div class="input">4.0 <span class="unit">% / yr</span></div>
+              <div class="hint">Paid on cash. Variable mortgages can follow it plus a margin.</div></div>
+          </div>
+          <h4>Temporary changes <span class="req">IN-13</span></h4>
+          <table>
+            <tr><th>Years</th><th>Inflation</th><th>Interest rate</th><th class="act"></th></tr>
+            <tr><td>2026 – 2028</td><td>3.5%</td><td>4.5%</td><td class="act">⋯</td></tr>
+          </table>
+          <div style="margin-top: 10px"><span class="btn ghost">+ Add a period</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Drawdown <span class="req">IN-10</span></h3>
+          <div class="grid-2">
+            <div class="field"><label>Safe withdrawal rate (sizes the FI number)</label><div class="input default">4.0 <span class="unit">%</span></div>
+              <div class="hint">FI number = retirement spending ÷ this rate <span class="req">FIRE-1</span></div></div>
+            <div class="field"><label>Withdrawal in retirement</label><div class="input select">Constant, inflation-adjusted</div>
+              <div class="hint disabled">Guardrails and %-of-portfolio strategies: later <span class="req">BL-1</span></div></div>
+          </div>
+          <span class="learn">Where does the 4% rule come from?</span> <span class="req">NFR-7</span>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card" style="margin-bottom: 20px">
+          <h3>Withdrawal order in retirement <span class="req">TAX-8</span>
+            <span style="flex: 1"></span><span class="chip dark">Tax-minimising (default)</span></h3>
+          <ol class="order">
+            <li><span class="grip">⋮⋮</span> 1. Cash above a $20,000 buffer</li>
+            <li><span class="grip">⋮⋮</span> 2. Shares: sell parcels with the lowest gains first, in the lower-income partner's name where possible</li>
+            <li><span class="grip">⋮⋮</span> 3. Super, once accessible (tax-free from 60) <span class="req">SUPER-8</span></li>
+            <li><span class="grip">⋮⋮</span> 4. Investment property sale, only if chosen in Assets <span class="req">FIRE-5</span></li>
+          </ol>
+          <div class="hint">Drag to reorder. Minimum super drawdowns are always taken, whatever the order <span class="req">SUPER-7</span>.</div>
+        </div>
+
+        <div class="card">
+          <h3>Tax &amp; super rules <span class="req">NFR-3</span>
+            <span style="flex: 1"></span><span class="chip">FY2025–26 · effective 1 Jul 2025</span></h3>
+          <table>
+            <tr><th>Rule</th><th>Value</th></tr>
+            <tr><td>Income tax brackets, Medicare levy</td><td>FY2025–26 resident rates <span class="req">TAX-1</span></td></tr>
+            <tr><td>Concessional / non-concessional cap</td><td>$30,000 / $120,000</td></tr>
+            <tr><td>Transfer balance cap</td><td>$2,000,000</td></tr>
+            <tr><td>Minimum drawdown by age</td><td>4% → 14%</td></tr>
+            <tr><td>Division 296 thresholds · extra rate <span class="req">SUPER-9</span></td><td>$3M · 15% &nbsp;/&nbsp; $10M · 25%</td></tr>
+            <tr><td>Division 296 earnings basis · start</td><td>Realised · 1 Jul 2026</td></tr>
+          </table>
+          <div class="row" style="margin-top: 10px; align-items: center">
+            <span class="hint" style="flex: 1">☑ Private hospital cover (no Medicare levy surcharge) <span class="req">TAX-10</span><br>
+              Rules are stored as data with effective dates. Future years use the latest known rules.</span>
+            <span class="btn ghost">View all rules</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-nav">
+      <span class="btn">← Assets</span>
+      <span class="muted small">Dashed fields are defaults.</span>
+      <span class="btn primary">Calculate results →</span>
+    </div>
+  </div>
+</div>
+<script src="header.js"></script>
+</body>
+</html>
