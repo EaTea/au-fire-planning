@@ -103,8 +103,17 @@ body {
   border-top: 1px solid var(--colour-border-soft);
 }
 
+/*
+ * Used on links (Back/Next) and on the welcome page's "Start planning"
+ * <button>. The background, font and cursor are set explicitly because a
+ * <button> otherwise keeps the browser's light grey background, which put
+ * white text on near-white.
+ */
 .footer-link {
   color: var(--colour-text);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   text-decoration: none;
   border: 1.5px solid var(--colour-border-strong);
   border-radius: 4px;

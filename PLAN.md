@@ -1613,7 +1613,7 @@ how to run or test the app, it updates the README in that step.
 ### Colour scheme: green and gold
 
 **Status:** plan agreed in chat with the owner (deep green pages chosen
-over light cream pages). Being implemented.
+over light cream pages). Implemented; awaiting the owner's verification.
 
 **Kind:** behavior change. Only the app's appearance changes. The layout,
 navigation and content stay the same.
@@ -1715,7 +1715,7 @@ comes from.
   should be deep green and the current step pill gold.
 - **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 3 · In-browser contrast sweep (E2E)
+#### Step 3 · In-browser contrast sweep (E2E): done
 
 - Add `tests/e2e/contrast.spec.ts`. On every page, with fields empty, then
   filled with valid values, then filled with invalid values, and with each
@@ -1724,9 +1724,11 @@ comes from.
   between its rendered text colour and the first opaque background behind
   it, and fails with a list of offenders below 4.5:1. It also checks every
   link, button and input while hovered and focused.
-- If the white-on-white case the owner saw in Chrome isn't reproduced by
-  then, ask for the page and the element, and add that exact state to the
-  sweep.
+- The sweep reproduced the case the owner saw in Chrome: the welcome page's
+  "Start planning" `<button>` uses `.footer-link`, which never set a
+  background, so it kept Chrome's light grey button background behind
+  white text (1.15:1). `.footer-link` now sets a transparent background
+  and inherits the page font.
 - **Check:** `npm run test:e2e` passes.
 
 ## Next steps
@@ -1742,5 +1744,5 @@ comes from.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
 - [ ] Approve the green and gold colour scheme plan (this PR).
-- [ ] Implement the green and gold scheme (steps 1 to 3), one PR.
+- [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [ ] Plan M2 in its own PR.
