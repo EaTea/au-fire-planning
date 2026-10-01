@@ -15,6 +15,11 @@ They show one possible user flow and screen layout for the requirements in
 - **Example data.** Every screen uses the same fictional couple, "Alex & Sam",
   so the figures line up across screens. The numbers are illustrative only.
 - **Desktop only.** A mobile responsive design is in the backlog (BL-6).
+- **Interactions a static image can't show:**
+  - **Tables:** click any cell to edit it in place. Hover a row for its ⋯
+    menu (Duplicate, Delete). See screen 02.
+  - **Charts:** hovering shows a guide line and a tooltip with that year's
+    values, and clicking opens the year in Year by year. See screen 03b.
 
 ## Screens
 
