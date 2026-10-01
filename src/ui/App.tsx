@@ -4,27 +4,34 @@ import { HashRouter, Navigate, Route, Routes } from "react-router";
 import { PlanProvider } from "../plan/PlanProvider";
 import { PersistenceProvider } from "../persistence/PersistenceProvider";
 import type { PlanStore } from "../persistence/planStore";
+import { DollarsModeProvider } from "./dollarsMode";
 import { AppShell } from "./components/AppShell";
 import { firstStep, steps, type StepId } from "./navigation/steps";
 import { AssetsScreen } from "./screens/AssetsScreen";
 import { AssumptionsScreen } from "./screens/AssumptionsScreen";
+import { HouseholdScreen } from "./screens/HouseholdScreen";
 import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
+import { YearByYearScreen } from "./screens/YearByYearScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 
 /** The steps that have a real screen; every other step still shows a placeholder. */
 const realScreens: Partial<Record<StepId, ReactElement>> = {
+  household: <HouseholdScreen />,
   "income-expenses": <IncomeExpensesScreen />,
   assets: <AssetsScreen />,
   assumptions: <AssumptionsScreen />,
   results: <ResultsScreen />,
+  "year-by-year": <YearByYearScreen />,
 };
 
 /** Props of App. */
 interface AppProps {
   /** Where the plan is stored. Omitted in the real app (browser storage); component tests pass an in-memory store. */
   readonly openStore?: () => Promise<PlanStore>;
+  /** Calendar year of today in the projection. Omitted in the real app (the clock is used); tests fix it, e.g. 2026. */
+  readonly startYear?: number;
 }
 
 /**
@@ -36,27 +43,29 @@ interface AppProps {
  * so every screen can read and edit the plan, and the persistence provider
  * (inside it) loads the saved plan and autosaves edits.
  */
-export function App({ openStore }: AppProps) {
+export function App({ openStore, startYear }: AppProps) {
   return (
-    <PlanProvider>
+    <PlanProvider startYear={startYear}>
       <PersistenceProvider openStore={openStore}>
-        <HashRouter>
-          <AppShell>
-            <Routes>
-              {steps.map((step) => (
-                <Route
-                  key={step.id}
-                  path={step.path}
-                  element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
-                />
-              ))}
+        <DollarsModeProvider>
+          <HashRouter>
+            <AppShell>
+              <Routes>
+                {steps.map((step) => (
+                  <Route
+                    key={step.id}
+                    path={step.path}
+                    element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
+                  />
+                ))}
 
-              <Route path="/welcome" element={<WelcomeScreen />} />
+                <Route path="/welcome" element={<WelcomeScreen />} />
 
-              <Route path="*" element={<Navigate to={firstStep.path} replace />} />
-            </Routes>
-          </AppShell>
-        </HashRouter>
+                <Route path="*" element={<Navigate to={firstStep.path} replace />} />
+              </Routes>
+            </AppShell>
+          </HashRouter>
+        </DollarsModeProvider>
       </PersistenceProvider>
     </PlanProvider>
   );

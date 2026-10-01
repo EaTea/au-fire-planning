@@ -8,8 +8,10 @@
 import type { MissingInput } from "../../plan/resolvePlanInputs";
 import type { StepId } from "../navigation/steps";
 
-/** The step that edits each missing-able field; both M1 fields are on Income & expenses. */
+/** The step that edits each missing-able field: the M1 fields are on Income & expenses, the ages on Household. */
 export const missingInputSteps: Record<MissingInput["field"], StepId> = {
   livingExpenses: "income-expenses",
   retirementSpending: "income-expenses",
+  currentAge: "household",
+  targetRetirementAge: "household",
 };

@@ -19,6 +19,9 @@ import { z } from "zod";
  */
 export const CURRENT_SCHEMA_VERSION = 1;
 
+/** An age in whole years, 0 to 120. Shared by every stored age so the range is defined once. */
+const ageYearsSchema = z.number().int().min(0).max(120);
+
 /**
  * Zod schema for version 1 of the plan document. It is the single definition:
  * the TypeScript type below is inferred from it, and `parsePlanDocument`
@@ -27,7 +30,14 @@ export const CURRENT_SCHEMA_VERSION = 1;
 export const planDocumentV1Schema = z.object({
   schemaVersion: z.literal(1),
   household: z.object({
-    people: z.array(z.object({ id: z.string(), label: z.string().optional() })),
+    people: z.array(
+      z.object({
+        id: z.string(),
+        label: z.string().optional(),
+        currentAgeYears: ageYearsSchema.optional(),
+        targetRetirementAgeYears: ageYearsSchema.optional(),
+      }),
+    ),
   }),
   expenses: z.object({
     livingAnnualDollars: z.number().nonnegative().optional(),
@@ -38,10 +48,20 @@ export const planDocumentV1Schema = z.object({
       ])
       .optional(),
   }),
-  assumptions: z.object({ safeWithdrawalRatePercent: z.number().positive().optional() }),
+  assumptions: z.object({
+    safeWithdrawalRatePercent: z.number().positive().optional(),
+    inflationPercent: z.number().nonnegative().optional(),
+  }),
   portfolios: z.array(
     // Optional (unlike the first sketch in the plan): "store only what the user set".
-    z.object({ id: z.string(), name: z.string(), valueDollars: z.number().optional() }),
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      valueDollars: z.number().optional(),
+      expectedReturnPercent: z.number().nonnegative().optional(),
+      annualContributionDollars: z.number().nonnegative().optional(),
+      contributionsStopAgeYears: ageYearsSchema.optional(),
+    }),
   ),
 });
 

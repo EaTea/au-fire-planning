@@ -1282,7 +1282,7 @@ comes from.
 
 ### M2 · Growth over time: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** implemented (steps 1–7), awaiting the owner's verification in the M2 PR.
 
 **Goal:** the plan gains time. The user enters their age, a target
 retirement age, inflation, the portfolio's expected return and regular
@@ -1457,7 +1457,7 @@ No new dependencies.
 
 #### Step 1 · Projection engine
 
-- [ ] Done
+- [x] Done
 
 1. Add the new optional fields to `src/plan/types.ts`, and the new defaults
    to `src/plan/defaults.ts`.
@@ -1492,13 +1492,25 @@ No new dependencies.
      - every row's balance equals the previous row's balance plus growth
        plus contribution.
 
+**As built:**
+- `findFiReached`'s last line is "FI reached" with operator `=` and the
+  margin (balance − FI number) as its value, because explanation lines need
+  a number. The FI number line uses `−`.
+- A target retirement age below the current age makes the projection
+  incomplete, with the `MissingInput` label "Target retirement age must be
+  at or after your current age".
+- The opening balance is the total of all portfolios; return, contribution
+  and stop age come from the first portfolio.
+- "Inflation growth over N years" is a `fraction` line, so it would display
+  as a percentage (132.13%). Step 4 adds a `factor` unit for it (below).
+
 **Check:** `npm run check` passes. Existing callers of `summarisePlan` now
 pass a start year. Update `PlanProvider` to pass one (see step 2), so the
 app still works.
 
 #### Step 2 · Plan state
 
-- [ ] Done
+- [x] Done
 
 1. Add reducer actions, each with an `undefined` payload clearing the value
    back to its default:
@@ -1517,7 +1529,7 @@ app still works.
 
 #### Step 3 · Wire format
 
-- [ ] Done
+- [x] Done
 
 1. Add the optional wire fields above to `planDocumentV1Schema`. Ages are
    integers from 0 to 120, and percents are non-negative.
@@ -1532,7 +1544,7 @@ app still works.
 
 #### Step 4 · Shared pieces: age field and dollars mode
 
-- [ ] Done
+- [x] Done
 
 1. `AgeField` in `src/ui/components/`: a `NumberField` for whole years. It
    accepts `34`, rejects `34.5` and text, takes `min`/`max`, and supports the
@@ -1540,8 +1552,14 @@ app still works.
 2. `src/ui/dollarsMode.tsx`: `DollarsModeProvider`, `useDollarsMode()`,
    `useMoneyFormatter()` and `DollarsModeToggle`, as described above. Wrap
    the app in the provider.
-3. Tests:
+3. Add a `factor` unit to `ExplainedUnit` (src/engine/explained.ts),
+   displayed to four decimal places, e.g. "1.3213", wherever explanations
+   are formatted. The "×" comes from the line's operator, like the "÷" on
+   the withdrawal rate line. Use it for the "Inflation growth over N years" line in
+   `calculateFiNumberAtRetirement`.
+4. Tests:
    - `AgeField` parsing and limits;
+   - the `factor` unit's formatting;
    - `formatMoney` in both modes (e.g. $1,640,000 with index 1.025 shows as
      $1,600,000 in today's mode);
    - the toggle switches the mode.
@@ -1550,7 +1568,7 @@ app still works.
 
 #### Step 5 · Inputs: household, assets, assumptions
 
-- [ ] Done
+- [x] Done
 
 1. `src/ui/sections/PersonAgesSection.tsx`, a card "About you":
    - `AgeField` "Current age" (min 15, max 99, no default);
@@ -1580,7 +1598,7 @@ app still works.
 
 #### Step 6 · Results: nominal FI number and FI year
 
-- [ ] Done
+- [x] Done
 
 1. On Results, when the projection is complete:
    - **FI number tile:** add a second sub-line, "{nominal} at age {retirement
@@ -1600,9 +1618,14 @@ app still works.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
+**As built:** the `complete` variant of `ProjectionSummary` also carries
+`retirementAge: number` and `retirementYear: number` (start year + retirement
+age − current age), so screens never derive them. Results reads them from
+the summary.
+
 #### Step 7 · Year by year
 
-- [ ] Done
+- [x] Done
 
 1. `ProjectionTable` in `src/ui/components/` (part 2's component map),
    generic over column definitions `{ header, cell(row) }`. It renders one row
@@ -1627,7 +1650,8 @@ app still works.
    - enter worked example A through the screens;
    - Results shows FI reached in 2038 at age 46;
    - Year by year shows the 2038 row highlighted;
-   - switching to today's dollars changes the balances;
+   - the toggle starts on today's dollars, and switching to nominal changes
+     the balances;
    - after a reload, the values are still there.
 
    The test fixes the start year at 2026. The app reads it from a `Clock`,
@@ -1636,6 +1660,19 @@ app still works.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
 table is readable on the deep green page.
+
+**As built:**
+- `MissingInputsBanner` moved out of `ResultsScreen` into
+  `src/ui/screens/MissingInputsBanner.tsx`, so Results and Year by year share
+  it.
+- `ProjectionTable` takes `rows`, `columns`, `getRowKey`, `isHighlighted` and
+  an accessible `label`. The highlighted row has class
+  `projection-row-highlight` and `data-highlighted="true"`, and is bold on a
+  raised background (existing role pair, already in the contrast test).
+- Progress is the closing balance ÷ that row's FI number, shown as a percent.
+  It doesn't change with the dollars toggle.
+- The E2E spec uses `page.clock.install({ time })` to fix the date in 2026.
+- README gained a "What it does" section.
 
 #### Follow-ups
 
@@ -1657,7 +1694,8 @@ table is readable on the deep green page.
 - [x] Owner verifies and merges the M1 PR.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
-- [ ] Approve the M2 step-by-step plan (this PR).
-- [ ] Implement M2 (subagent, step by step), then open the M2 PR for verification.
-- [ ] Approve the green and gold colour scheme plan (this PR).
+- [x] Approve the M2 step-by-step plan.
+- [x] Approve the green and gold colour scheme plan.
 - [x] Implement the green and gold scheme (steps 1 to 3), one PR.
+- [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
+- [ ] Owner verifies and merges the M2 PR.

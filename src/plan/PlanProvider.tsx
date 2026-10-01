@@ -18,6 +18,7 @@ import {
 } from "react";
 
 import { summarisePlan, type PlanSummary } from "../engine/fiNumber";
+import { currentCalendarYear } from "./clock";
 import { createNewPlan } from "./createNewPlan";
 import { planReducer, type PlanAction } from "./planReducer";
 import type { Plan } from "./types";
@@ -29,6 +30,12 @@ const PlanDispatchContext = createContext<Dispatch<PlanAction> | null>(null);
 interface PlanProviderProps {
   /** The plan to start from. Defaults to a new blank plan (e.g. when no saved plan exists). */
   readonly initialPlan?: Plan;
+  /**
+   * The calendar year of row 0 of the projection. Defaults to the current year
+   * from the clock; tests pass a fixed year (e.g. 2026) so results don't
+   * depend on today's date.
+   */
+  readonly startYear?: number;
   readonly children: ReactNode;
 }
 
@@ -38,7 +45,7 @@ interface PlanProviderProps {
  * The plan lives in memory only for now; saving to the browser arrives in
  * step 7. The summary is recomputed by the engine only when the plan changes.
  */
-export function PlanProvider({ initialPlan, children }: PlanProviderProps) {
+export function PlanProvider({ initialPlan, startYear, children }: PlanProviderProps) {
   // The third argument makes React build the blank plan once, not on every render.
   const [plan, dispatch] = useReducer(
     planReducer,
@@ -46,7 +53,9 @@ export function PlanProvider({ initialPlan, children }: PlanProviderProps) {
     (startingPlan) => startingPlan ?? createNewPlan(() => crypto.randomUUID()),
   );
 
-  const summary = useMemo(() => summarisePlan(plan), [plan]);
+  const resolvedStartYear = startYear ?? currentCalendarYear();
+
+  const summary = useMemo(() => summarisePlan(plan, resolvedStartYear), [plan, resolvedStartYear]);
 
   return (
     <PlanDispatchContext.Provider value={dispatch}>

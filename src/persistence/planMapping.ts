@@ -70,10 +70,26 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
     assumptions.safeWithdrawalRatePercent = fractionToPercent(plan.assumptions.safeWithdrawalRate);
   }
 
+  if (plan.assumptions.inflationRate !== undefined) {
+    assumptions.inflationPercent = fractionToPercent(plan.assumptions.inflationRate);
+  }
+
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     household: {
-      people: plan.household.people.map((person) => ({ id: person.id, label: person.label })),
+      people: plan.household.people.map((person) => {
+        const wirePerson: PlanDocumentV1["household"]["people"][number] = {
+          id: person.id,
+          label: person.label,
+        };
+        if (person.currentAge !== undefined) {
+          wirePerson.currentAgeYears = person.currentAge;
+        }
+        if (person.targetRetirementAge !== undefined) {
+          wirePerson.targetRetirementAgeYears = person.targetRetirementAge;
+        }
+        return wirePerson;
+      }),
     },
     expenses,
     assumptions,
@@ -84,6 +100,15 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
       };
       if (portfolio.value !== undefined) {
         wirePortfolio.valueDollars = portfolio.value;
+      }
+      if (portfolio.expectedReturn !== undefined) {
+        wirePortfolio.expectedReturnPercent = fractionToPercent(portfolio.expectedReturn);
+      }
+      if (portfolio.annualContribution !== undefined) {
+        wirePortfolio.annualContributionDollars = portfolio.annualContribution;
+      }
+      if (portfolio.contributionsStopAge !== undefined) {
+        wirePortfolio.contributionsStopAgeYears = portfolio.contributionsStopAge;
       }
       return wirePortfolio;
     }),
@@ -100,12 +125,25 @@ export function planFromWire(document: PlanDocumentV1): Plan {
   const people: Person[] = document.household.people.map((wirePerson, index) => ({
     id: wirePerson.id,
     label: wirePerson.label ?? `Person ${index + 1}`,
+    ...(wirePerson.currentAgeYears !== undefined ? { currentAge: wirePerson.currentAgeYears } : {}),
+    ...(wirePerson.targetRetirementAgeYears !== undefined
+      ? { targetRetirementAge: wirePerson.targetRetirementAgeYears }
+      : {}),
   }));
 
   const portfolios: Portfolio[] = document.portfolios.map((wirePortfolio) => ({
     id: wirePortfolio.id,
     name: wirePortfolio.name,
     ...(wirePortfolio.valueDollars !== undefined ? { value: wirePortfolio.valueDollars } : {}),
+    ...(wirePortfolio.expectedReturnPercent !== undefined
+      ? { expectedReturn: percentToFraction(wirePortfolio.expectedReturnPercent) }
+      : {}),
+    ...(wirePortfolio.annualContributionDollars !== undefined
+      ? { annualContribution: wirePortfolio.annualContributionDollars }
+      : {}),
+    ...(wirePortfolio.contributionsStopAgeYears !== undefined
+      ? { contributionsStopAge: wirePortfolio.contributionsStopAgeYears }
+      : {}),
   }));
 
   return {
@@ -121,6 +159,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
     assumptions: {
       ...(document.assumptions.safeWithdrawalRatePercent !== undefined
         ? { safeWithdrawalRate: percentToFraction(document.assumptions.safeWithdrawalRatePercent) }
+        : {}),
+      ...(document.assumptions.inflationPercent !== undefined
+        ? { inflationRate: percentToFraction(document.assumptions.inflationPercent) }
         : {}),
     },
     portfolios,

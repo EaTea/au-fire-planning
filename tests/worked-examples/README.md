@@ -29,6 +29,11 @@ loads every file in this folder and checks the engine against it to the cent.
   `"hand calculation"`, or a named external calculator or spreadsheet).
 - `arithmetic` is the working, so a reviewer can re-check it without running code.
 - Figures are compared to the nearest cent (within half a cent).
+- Files with a projection (M2 onward) add a top-level `startYear`: the
+  calendar year of row 0 (today). Their `expected.rows` lists only the rows
+  worth checking, each with only the fields worth checking, and
+  `expected.fiReached` is the first row where the balance reaches the FI
+  number (absent if it's never reached).
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.

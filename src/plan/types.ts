@@ -15,6 +15,10 @@ export interface Person {
   readonly id: string;
   /** Display label, e.g. "Person 1". */
   readonly label: string;
+  /** Age in whole years today. `undefined` means "not set" (no default). */
+  readonly currentAge?: number;
+  /** Age in whole years at which they plan to retire. `undefined` means "not set" (no default). */
+  readonly targetRetirementAge?: number;
 }
 
 /** One share portfolio. M1 has exactly one; several arrive in later milestones. */
@@ -23,6 +27,12 @@ export interface Portfolio {
   readonly name: string;
   /** Current value in today's dollars. `undefined` means "not set" (default $0). */
   readonly value?: number;
+  /** Expected nominal total return as a fraction, e.g. 0.07. `undefined` means default (7%). */
+  readonly expectedReturn?: number;
+  /** Dollars added each year, the same amount every year (not indexed). `undefined` means default ($0). */
+  readonly annualContribution?: number;
+  /** Last age (whole years) in which a contribution is made. `undefined` means the target retirement age. */
+  readonly contributionsStopAge?: number;
 }
 
 /** How retirement spending is expressed: a dollar amount or a share of today's spending. */
@@ -42,6 +52,8 @@ export interface Plan {
   readonly assumptions: {
     /** A fraction, e.g. 0.04 for 4%. */
     readonly safeWithdrawalRate?: number;
+    /** A fraction, e.g. 0.025 for 2.5%. `undefined` means default (2.5%). */
+    readonly inflationRate?: number;
   };
   /** M1: exactly one portfolio. */
   readonly portfolios: readonly Portfolio[];

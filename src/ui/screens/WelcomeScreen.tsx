@@ -2,15 +2,16 @@ import { useNavigate } from "react-router";
 
 import { useDisclaimer } from "../../persistence/PersistenceProvider";
 import { Card } from "../components/Card";
+import { firstStep } from "../navigation/steps";
 
-/** Where "Start planning" goes: the first step with inputs in M1 (Household arrives in M2). */
-const FIRST_INPUT_STEP_PATH = "/income-expenses";
+/** Where "Start planning" goes: the first step, Household. */
+const FIRST_INPUT_STEP_PATH = firstStep.path;
 
 /**
  * The first-run welcome page at `#/welcome` (not one of the seven steps). It
  * explains what the app does, shows the disclaimer (NFR-5) and the privacy
  * note (NFR-4), and its "Start planning" button records acceptance and moves
- * on to the first step with inputs.
+ * on to the first step (Household).
  *
  * Connections: PersistenceProvider redirects every first visit here before the
  * router mounts, and supplies `acceptDisclaimer` through `useDisclaimer`. If
@@ -21,7 +22,7 @@ export function WelcomeScreen() {
   const { acceptDisclaimer } = useDisclaimer();
   const navigate = useNavigate();
 
-  /** Stores acceptance, then goes to the first input step. Wired to the button. */
+  /** Stores acceptance, then goes to the first step. Wired to the button. */
   async function startPlanning() {
     await acceptDisclaimer();
     navigate(FIRST_INPUT_STEP_PATH);

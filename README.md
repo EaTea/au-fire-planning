@@ -4,6 +4,23 @@ A web app for planning financial independence and early retirement (FIRE) in
 Australia. See [requirements/REQUIREMENTS.md](requirements/REQUIREMENTS.md) for
 what it should do and [PLAN.md](PLAN.md) for how it is being built.
 
+## What it does
+
+Everything is calculated in your browser and saved only on your device.
+
+- **Household:** enter your current age and target retirement age.
+- **Income & expenses, Assets, Assumptions:** enter your living expenses, how
+  much you spend in retirement, your portfolio (value, expected return and
+  yearly contributions), inflation and your safe withdrawal rate.
+- **Results:** your FI number (in today's dollars, and in nominal dollars at
+  your retirement age), your progress to it, and the year you reach FI, each
+  with a "How is this calculated?" breakdown.
+- **Year by year:** the portfolio's projection, one row per year, in today's or
+  nominal dollars, with the year FI is reached highlighted.
+
+Withdrawals in retirement, super, tax and property aren't modelled yet; see
+[PLAN.md](PLAN.md) for what comes next.
+
 ## Prerequisites
 
 - Node 22 (see `.nvmrc`)

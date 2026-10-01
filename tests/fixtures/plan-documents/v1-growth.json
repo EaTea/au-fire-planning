@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [
+      {
+        "id": "person-1",
+        "label": "Person 1",
+        "currentAgeYears": 34,
+        "targetRetirementAgeYears": 50
+      }
+    ]
+  },
+  "expenses": { "livingAnnualDollars": 64000 },
+  "assumptions": { "inflationPercent": 2.5 },
+  "portfolios": [
+    {
+      "id": "portfolio-1",
+      "name": "Share portfolio",
+      "valueDollars": 720000,
+      "expectedReturnPercent": 7,
+      "annualContributionDollars": 30000,
+      "contributionsStopAgeYears": 50
+    }
+  ]
+}

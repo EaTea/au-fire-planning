@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDollars, formatPercent, parseDollars, parsePercent } from "./format";
+import {
+  formatAge,
+  formatDollars,
+  formatFactor,
+  formatPercent,
+  parseAge,
+  parseDollars,
+  parsePercent,
+} from "./format";
 
 // Unit tests for the number formatting and parsing used by every field and result.
 describe("formatDollars", () => {
@@ -72,5 +80,28 @@ describe("parsePercent", () => {
     expect(parsePercent("abc")).toBeNaN();
     expect(parsePercent("4%%")).toBeNaN();
     expect(parsePercent("-4")).toBeNaN();
+  });
+});
+
+describe("formatFactor", () => {
+  it("shows four decimal places", () => {
+    expect(formatFactor(1.025 ** 12)).toBe("1.3449");
+    expect(formatFactor(1.32129)).toBe("1.3213");
+    expect(formatFactor(1)).toBe("1.0000");
+  });
+});
+
+describe("parseAge and formatAge", () => {
+  it("accepts whole years and ignores surrounding spaces", () => {
+    expect(parseAge("34")).toBe(34);
+    expect(parseAge(" 34 ")).toBe(34);
+    expect(formatAge(34)).toBe("34");
+  });
+
+  it("returns undefined for empty text and NaN for anything else", () => {
+    expect(parseAge("")).toBeUndefined();
+    expect(parseAge("34.5")).toBeNaN();
+    expect(parseAge("abc")).toBeNaN();
+    expect(parseAge("-3")).toBeNaN();
   });
 });
