@@ -640,7 +640,7 @@ UI or storage. It takes a plan and a rule set and returns a projection. Everythi
  │    │  │                                 ▲                        │
  │    ▼  │                                 │                        │
  │  Persistence                       Rules                         │
- │  PlanFile (wire) ⇄ Plan            RulesFile (wire) ⇄ RuleSet    │
+ │  PlanDocument (wire) ⇄ Plan        RulesFile (wire) ⇄ RuleSet    │
  │    │  ▲                            dated data per FY (NFR-3)     │
  │    ▼  │                                                          │
  │  IndexedDB (this device only, NFR-4)                             │
@@ -669,7 +669,7 @@ UI or storage. It takes a plan and a rule set and returns a projection. Everythi
 
 | Boundary | Wire type | Internal type | Mapping |
 | --- | --- | --- | --- |
-| Saved plan in IndexedDB, later export (OUT-7) | `PlanFileV1` (versioned JSON, validated with Zod) | `Plan` | `planFromWire` / `planToWire`, plus migrations between versions |
+| Saved plan in IndexedDB, later export (OUT-7) | `PlanDocument` (versioned, validated with Zod) inside a `PlanRecord` | `Plan` | `planFromWire` / `planToWire`, plus migrations between versions. See [Data representations and storage](#data-representations-and-storage) |
 | Statutory rules data | `RulesFile` (JSON per financial year, validated with Zod) | `RuleSet` | `ruleSetFromWire` |
 | Engine output to UI | none: stays in memory | `Projection` → view models | Formatting functions in the UI layer |
 
@@ -691,12 +691,180 @@ src/
   engine/        pure calculations: project(), FI and Coast FIRE metrics
   rules/         RuleSet types, wire parsing, data/fy*.json
   plan/          Plan types, reducer, defaults
-  persistence/   PlanFile wire types, migrations, IndexedDB store
+  persistence/   PlanDocument wire types, migrations, PlanStore (IndexedDB)
   ui/            screens/ (one per mockup) and components/
 tests/
   worked-examples/   NFR-6 fixtures: inputs, expected outputs, how checked
   e2e/               Playwright user flows
 ```
+
+### Data representations and storage
+
+Data handling is where projects like this usually get hard, so storage is
+kept away from the calculations and designed up front.
+
+#### Three representations, kept apart
+
+The same plan exists in three forms. Only the mapping functions between
+them know about more than one form.
+
+```
+  UI form state            In-memory model                Serialised (wire)
+  (what is being typed)    (what the engine computes on)  (what is stored)
+
+  "4.0" in a % field  ──►  Plan                      ──►  PlanDocumentV1
+                           safeWithdrawalRate: 0.04       safeWithdrawalRatePercent: 4
+                           (fractions, numbers,           (explicit units in names,
+                            IDs, no defaults missing)      only user-set values,
+                                │                          schemaVersion, ISO dates)
+                                ▼                               │
+                           Engine → Projection                  ▼
+                           (never serialised:              IndexedDB (and, in M22,
+                            recomputed on load, NFR-2)      export files)
+```
+
+- **The in-memory model and the engine never import anything from
+  persistence.** They can be written and tested without any thought of
+  storage. That's what keeps the calculations simple: storage-format
+  questions (versions, units, missing fields) are answered once, in the
+  mappers, instead of throughout the engine.
+- **Representation decisions are made at the boundary.** They come up the
+  first time anything is written to IndexedDB (M1), and are settled then:
+  - **Units:** the wire format spells units out in field names
+    (`…Percent`, `…Dollars`). Internally, rates are fractions.
+  - **Defaults:** the wire format stores only values the user has set.
+    Defaults are applied by `planFromWire`, so an improved default (e.g. a
+    new inflation default) reaches plans that never overrode it. This also
+    lets the UI show dashed "default" fields, as in the mockups.
+  - **Identifiers:** every person, portfolio, property and row has a stable
+    string ID (`crypto.randomUUID()`) assigned when it is created, never
+    derived from its position in a list.
+  - **Dates:** ISO 8601 strings in the wire format.
+  - **Derived data is never stored:** projections, FI numbers and
+    explanations are always recomputed, so stored data can't disagree with
+    the engine.
+- **Statutory rules** (`RulesFile` → `RuleSet`) ship with the app as static
+  JSON. They are not stored in IndexedDB.
+
+#### Why IndexedDB and not localStorage
+
+| | localStorage | IndexedDB |
+| --- | --- | --- |
+| API | Synchronous: every save blocks the page, and autosave runs on every edit | Asynchronous: saving never freezes typing or charts |
+| What it stores | Strings only: the whole plan is re-stringified and rewritten on each save | Structured objects, written per record |
+| Space | About 5 MB per origin, and the GitHub Pages origin is shared with every other Pages site on the account | Much larger quotas (a share of free disk space). Persistence can be requested with `navigator.storage.persist()` to make eviction less likely |
+| Many records | One key per value, no transactions | Object stores with keys and indexes. Plans and scenarios (OUT-5) are separate records written in atomic transactions |
+| Schema changes | None built in | A versioned database with an upgrade hook (`onupgradeneeded`) for adding stores and indexes |
+| Failure modes | Throws when full | Errors per transaction, which can be caught and reported |
+
+localStorage would be enough for M1 alone, a single small plan. But
+scenarios (M16), autosave on every edit, and schema changes over 25
+milestones all point to IndexedDB. Starting there avoids a data migration
+between storage technologies later, which is the riskiest kind.
+
+#### Library: `idb`
+
+- **[`idb`](https://github.com/jakearchibald/idb)** (version 8, about 1 kB)
+  wraps IndexedDB in promises and lets the database schema be declared as a
+  TypeScript type (`DBSchema`). Store names, keys and record shapes are then
+  type-checked. It stays close to the standard API, so its behaviour is
+  predictable and well documented.
+- **Alternative: [Dexie.js](https://dexie.org/)** (version 4). It's richer:
+  declarative schema versions, query helpers and live queries. Our access
+  pattern is simple (get, put and list records by key), so Dexie's extra
+  layer isn't needed yet. If querying grows (e.g. many scenarios with
+  filtering), Dexie can replace `idb` behind the same `PlanStore`
+  interface.
+- All IndexedDB access goes through one module, `src/persistence/`, behind
+  a small interface:
+
+  ```ts
+  interface PlanStore {
+    loadActivePlan(): Promise<LoadResult>;     // migrated + validated, or an error
+    savePlan(plan: Plan): Promise<SaveResult>; // maps to wire, validates, writes
+    listPlans(): Promise<PlanSummary[]>;       // for scenarios (M16)
+  }
+  ```
+
+  The rest of the app never touches IndexedDB directly.
+
+#### Database schema
+
+Database `au-fire-planner`, **database version 1**. The database version
+covers the *structure* (stores and indexes). It is separate from the
+*document* version inside each record (`schemaVersion`), which covers the
+shape of the plan itself.
+
+| Object store | Key | Indexes | Record | Introduced |
+| --- | --- | --- | --- | --- |
+| `plans` | `id` | `byUpdatedAt`, `byBaseId` | `PlanRecord`: `{ id, name, kind: "base" \| "scenario", baseId?, createdAt, updatedAt, document: PlanDocument }` | M1 (one base plan). Scenarios use `kind`/`baseId` from M16 |
+| `meta` | `key` | none | `{ key, value }`: active plan ID, when the disclaimer was accepted, display preferences (e.g. today's or nominal dollars) | M1 |
+
+The plan document, as first written in M1. It is defined once as a Zod
+schema, and its TypeScript type is inferred from it:
+
+```ts
+const PlanDocumentV1 = z.object({
+  schemaVersion: z.literal(1),
+  household: z.object({
+    people: z.array(z.object({ id: z.string(), label: z.string().optional() })),
+  }),
+  expenses: z.object({
+    livingAnnualDollars: z.number().nonnegative().optional(),
+    retirement: z
+      .discriminatedUnion("kind", [
+        z.object({ kind: z.literal("amount"), annualDollars: z.number().nonnegative() }),
+        z.object({ kind: z.literal("percentOfToday"), percent: z.number().nonnegative() }),
+      ])
+      .optional(),
+  }),
+  assumptions: z.object({ safeWithdrawalRatePercent: z.number().positive().optional() }),
+  portfolios: z.array(z.object({ id: z.string(), name: z.string(), valueDollars: z.number() })),
+});
+```
+
+Each later milestone that adds inputs either adds optional fields (no new
+version needed) or, when the meaning of existing fields changes, bumps
+`schemaVersion` and adds a migration.
+
+#### Save and load paths
+
+```
+ save:  edit ─► reducer ─► Plan ─► (debounce ~500 ms) ─► planToWire
+        ─► validate (Zod) ─► check updatedAt hasn't moved ─► put in a transaction
+
+ load:  get record ─► read schemaVersion ─► migrate step by step to latest
+        ─► validate (Zod) ─► planFromWire (apply defaults) ─► Plan
+        ─► if migrated: write the upgraded record back
+```
+
+- **Migrations** are pure functions (`migrateV1toV2(document)`), applied in
+  sequence. Every released `schemaVersion` keeps a fixture file in
+  `tests/fixtures/plan-documents/`, and tests migrate each one to the
+  latest version, so old saved plans keep loading.
+- **Never overwrite what can't be read.** If a stored record fails
+  validation or migration, it is left untouched, the app reports the
+  problem, and the user can start a new plan without losing the old record.
+- **Several tabs open:** each save checks that the stored `updatedAt`
+  matches the version this tab loaded. If another tab saved in between,
+  the app warns instead of silently overwriting. A `BroadcastChannel`
+  tells other open tabs to reload. When the database version is upgraded,
+  older tabs get a `versionchange` event and are asked to reload.
+- **Unavailable storage:** in some private-browsing modes, IndexedDB is
+  missing or cleared on close. The app then runs on in-memory data and
+  shows that the plan won't be kept.
+
+#### Testing the data layer
+
+- **Mappers and migrations:** Vitest unit tests for round trips
+  (`Plan → PlanDocument → Plan`), defaults, unit conversion, rejection of
+  malformed documents, and every stored fixture version.
+- **`PlanStore` against IndexedDB:** Vitest with
+  [`fake-indexeddb`](https://github.com/dumbmatter/fakeIndexedDB), an
+  in-memory implementation of the IndexedDB API, so tests run in Node
+  without a browser.
+- **Real browser:** Playwright E2E tests that edit a plan, reload the page
+  and check that the plan is still there.
 
 ### Hosting and deployment
 
