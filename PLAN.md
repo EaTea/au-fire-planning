@@ -1610,6 +1610,97 @@ The lead ticks each step as it's committed, marks M1 done, and opens the
 milestone PR. The README needs no new commands in M1. If any step changes
 how to run or test the app, it updates the README in that step.
 
+### Colour scheme: Australian flag
+
+**Status:** plan agreed in chat with the owner (navy pages chosen over
+light pages). Implemented; awaiting the owner's verification.
+
+**Kind:** behavior change. Only the app's appearance changes. The layout,
+navigation and content stay the same.
+
+**Goal:** replace M0's greyscale wireframe look with a scheme based on the
+Australian flag. The app is predominantly dark blue, with red highlights,
+white text and a near-black header.
+
+#### Design decisions
+
+- **Two layers of colour variables, both in `src/ui/styles/tokens.css`.**
+  - *Palette* variables name the four flag colours and are used nowhere
+    else: `--flag-navy` `#012169`, `--flag-red` `#E4002B`, `--flag-white`
+    `#FFFFFF` and `--flag-black` `#0B0F1A`. The navy and red are the
+    flag's official colours (Pantone 280 and 185 C).
+  - *Role* variables say what a colour is for, such as
+    `--colour-page-background`, `--colour-text`, `--colour-text-muted`,
+    `--colour-border`, `--colour-header-background`, `--colour-accent` and
+    `--colour-on-accent`. They are defined in terms of the palette.
+    `app.css` and every later stylesheet use **only role variables**, so a
+    future change to the scheme touches one file.
+  - The greyscale variables from M0 (`--ink`, `--paper`, `--fill` and the
+    rest) are removed once nothing uses them.
+- **Where each colour goes.**
+
+  ```
+  +---------------------------------------------------------+
+  | [AU FIRE Planner]  (1 red pill)(2)(3)(4)(5)(6)(7)       |  near-black header
+  +=========================================================+  red underline
+  |  Page title (white)                                     |
+  |  Intro text (muted blue-white)                          |  navy page
+  |  [ content, light-blue dashed borders ]                 |
+  |                                  [ Next: ... -> ]       |  white outline button
+  +---------------------------------------------------------+
+  ```
+
+  - The current step pill is filled red with white text. The other pills
+    have light-blue outlines and muted text, and turn a lighter navy on
+    hover.
+  - Back and Next are white-outlined buttons that fill with a lighter navy
+    on hover.
+- **Contrast meets WCAG AA (at least 4.5:1) for every text and background
+  pair.** White on navy is 14.8:1, muted text `#C9D4F2` on navy is 10.0:1,
+  faint text `#8FA3D9` on navy is 5.9:1, white on red is 4.9:1, and white on
+  near-black is 19.1:1. **Red is never used for text on navy**, because that
+  is only 3.1:1. It is used only for fills and borders.
+- **The mockups stay greyscale.** `requirements/mockups/` are wireframes
+  showing layout, not visual design.
+
+#### Step 1 · Palette and role variables, with a contrast test: done
+
+- Add the palette and role variables to `tokens.css`, next to the existing
+  greyscale ones. Nothing uses the new variables yet, so the app looks the
+  same after this step.
+- Add `src/ui/styles/tokens.test.ts`. It reads `tokens.css` from disk as
+  text, resolves each role variable to a hex colour, and checks
+  that every text and background pair the app uses has a contrast ratio of
+  at least 4.5:1. If a later palette edit makes text unreadable, this test
+  fails.
+- **Check:** `npm run check` passes.
+
+#### Step 2 · Apply the scheme to the app shell: done
+
+- Change `app.css` to use the role variables: the near-black header with a
+  red underline, red for the current step, the navy page and white text.
+  Remove the greyscale variables from `tokens.css`. Links get a white
+  keyboard-focus outline, since the browser's default blue ring disappears
+  on navy.
+- Add an E2E test that checks the page background is navy and the current
+  step pill is red. This makes sure the stylesheet is actually loaded and
+  applied in the production build.
+- **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
+  every page looks right.
+
+#### Follow-ups
+
+- **Done when M1 was merged with the colour scheme:** M1's input fields,
+  results and validation messages use role variables only. New roles in
+  `tokens.css`:
+  - `--colour-text-error` (`#FF5A6E`, 4.9:1 on navy);
+  - `--colour-input-background` (white) and `--colour-input-text` (navy),
+    14.8:1. Fields on their default are drawn as a dashed outline on the
+    page background instead.
+
+  Both pairs are in the contrast test. Keyboard focus outlines now cover
+  buttons as well as links.
+
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
@@ -1620,4 +1711,6 @@ how to run or test the app, it updates the README in that step.
 - [x] Approve the M1 step-by-step plan.
 - [x] Implement M1 (subagent, step by step).
 - [ ] Owner verifies the M1 PR.
+- [x] Approve the colour scheme plan.
+- [x] Implement the colour scheme (steps 1 and 2), one PR.
 - [ ] Plan M2 in its own PR.

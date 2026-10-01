@@ -1,17 +1,75 @@
 /*
- * Design tokens: colour, spacing and font variables, taken from the mockups'
- * requirements/mockups/src/wireframe.css (greyscale ink, line and fill values
- * plus the paper background). Imported from src/main.tsx before app.css.
+ * Design tokens: colour, spacing and font variables. Imported from
+ * src/main.tsx before app.css.
+ *
+ * Colours come in two layers (see "Colour scheme: Australian flag" in
+ * PLAN.md):
+ *
+ *   palette variables   raw colours, named after what they are
+ *         |             (only ever referenced from this file)
+ *         v
+ *   role variables      what a colour is for: page background, text, accent...
+ *         |             (the only colour variables stylesheets may use)
+ *         v
+ *   app.css and later stylesheets
+ *
+ * Changing the look means changing which palette colour a role points at,
+ * here, rather than hunting through stylesheets. src/ui/styles/tokens.test.ts
+ * checks every text/background role pair still meets WCAG AA contrast.
  */
 :root {
-  --ink: #222;
-  --ink-soft: #666;
-  --ink-faint: #999;
-  --line: #bbb;
-  --line-soft: #ddd;
-  --fill: #f2f2f2;
-  --fill-dark: #d9d9d9;
-  --paper: #fff;
+  /* ---------- Palette: the Australian flag, plus navy tints ---------- */
+
+  /* The flag's official blue and red (Pantone 280 and 185 C). */
+  --flag-navy: #012169;
+  --flag-red: #e4002b;
+  --flag-white: #ffffff;
+  /* Not on the flag: a blue-tinged near-black for the header. */
+  --flag-black: #0b0f1a;
+
+  /* Lighter navy for hover fills, and a subtle navy for dividers. */
+  --navy-raised: #0f3489;
+  --navy-divider: #2b4a94;
+  /* Blue-tinted whites for secondary text and outlines on navy. */
+  --blue-white: #c9d4f2;
+  --blue-grey: #8fa3d9;
+  /* A lighter red for error text: the flag red is too dark to read on navy. */
+  --red-light: #ff5a6e;
+
+  /* ---------- Roles: what stylesheets use ---------- */
+
+  --colour-page-background: var(--flag-navy);
+  --colour-header-background: var(--flag-black);
+  /* Background for hovered pills and buttons. */
+  --colour-surface-raised: var(--navy-raised);
+
+  --colour-text: var(--flag-white);
+  /* Intro paragraphs and inactive step pills. */
+  --colour-text-muted: var(--blue-white);
+  /* Placeholder notes and other low-emphasis text. */
+  --colour-text-faint: var(--blue-grey);
+
+  --colour-border: var(--blue-grey);
+  --colour-border-soft: var(--navy-divider);
+  /* Outline of the logo and the Back/Next buttons. */
+  --colour-border-strong: var(--flag-white);
+
+  /*
+   * Red is for fills and borders only. Red text on navy is just 3.1:1, below
+   * the 4.5:1 WCAG AA minimum, so anything red that carries text puts
+   * --colour-on-accent text on a red fill instead.
+   */
+  --colour-accent: var(--flag-red);
+  --colour-on-accent: var(--flag-white);
+  /* Validation messages on the navy page (4.9:1). */
+  --colour-text-error: var(--red-light);
+
+  /* Input boxes holding a value: white with navy text, so entries stand out.
+     A field still on its default is drawn on the page background instead. */
+  --colour-input-background: var(--flag-white);
+  --colour-input-text: var(--flag-navy);
+
+  /* ---------- Type and spacing ---------- */
 
   --font-body: "Helvetica Neue", Arial, sans-serif;
 
