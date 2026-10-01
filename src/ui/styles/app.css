@@ -369,3 +369,42 @@ button:focus-visible {
   outline: 2px solid var(--colour-border-strong);
   outline-offset: 2px;
 }
+
+/* ---------- Year by year table ---------- */
+
+/* Wide tables scroll sideways inside their own box instead of widening the page. */
+.projection-table-wrapper {
+  overflow-x: auto;
+}
+
+.projection-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.projection-table th,
+.projection-table td {
+  border-bottom: 1px solid var(--colour-border-soft);
+  padding: 7px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Year is the row's label, so it reads from the left. */
+.projection-table th:first-child,
+.projection-table td:first-child {
+  text-align: left;
+}
+
+.projection-table th {
+  font-weight: 700;
+  color: var(--colour-text-muted);
+  border-bottom-color: var(--colour-border);
+}
+
+/* The year FI is reached: raised background and bold, so it doesn't rely on colour alone. */
+.projection-row-highlight td {
+  background: var(--colour-surface-raised);
+  font-weight: 700;
+}

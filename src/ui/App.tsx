@@ -13,6 +13,7 @@ import { HouseholdScreen } from "./screens/HouseholdScreen";
 import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
+import { YearByYearScreen } from "./screens/YearByYearScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 
 /** The steps that have a real screen; every other step still shows a placeholder. */
@@ -22,6 +23,7 @@ const realScreens: Partial<Record<StepId, ReactElement>> = {
   assets: <AssetsScreen />,
   assumptions: <AssumptionsScreen />,
   results: <ResultsScreen />,
+  "year-by-year": <YearByYearScreen />,
 };
 
 /** Props of App. */

@@ -1169,7 +1169,7 @@ stylesheet must follow:
 
 ### M2 · Growth over time: step-by-step plan
 
-**Status:** approved. Implementation in progress, one step at a time.
+**Status:** implemented (steps 1–7), awaiting the owner's verification in the M2 PR.
 
 **Goal:** the plan gains time. The user enters their age, a target
 retirement age, inflation, the portfolio's expected return and regular
@@ -1512,7 +1512,7 @@ the summary.
 
 #### Step 7 · Year by year
 
-- [ ] Done
+- [x] Done
 
 1. `ProjectionTable` in `src/ui/components/` (part 2's component map),
    generic over column definitions `{ header, cell(row) }`. It renders one row
@@ -1546,6 +1546,19 @@ the summary.
    API. It must not depend on the real date.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
+
+**As built:**
+- `MissingInputsBanner` moved out of `ResultsScreen` into
+  `src/ui/screens/MissingInputsBanner.tsx`, so Results and Year by year share
+  it.
+- `ProjectionTable` takes `rows`, `columns`, `getRowKey`, `isHighlighted` and
+  an accessible `label`. The highlighted row has class
+  `projection-row-highlight` and `data-highlighted="true"`, and is bold on a
+  raised background (existing role pair, already in the contrast test).
+- Progress is the closing balance ÷ that row's FI number, shown as a percent.
+  It doesn't change with the dollars toggle.
+- The E2E spec uses `page.clock.install({ time })` to fix the date in 2026.
+- README gained a "What it does" section.
 table is readable on navy.
 
 #### Follow-ups
@@ -1569,4 +1582,5 @@ table is readable on navy.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
 - [x] Approve the M2 step-by-step plan.
-- [ ] Implement M2 (subagent, step by step), then open the M2 PR for verification.
+- [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
+- [ ] Owner verifies and merges the M2 PR.
