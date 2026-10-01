@@ -613,8 +613,9 @@ These come straight from the requirements and mockups:
 | Charts | **Recharts** | Line, stacked area and bar charts, reference lines and tooltips cover every chart in the mockups (FIRE-7, COAST-6, sensitivity) without hand-written D3. | D3 directly: most flexible but most code. Chart.js: canvas-based, harder to test and annotate. Observable Plot: good, but less interactive out of the box. |
 | App state | **React state with a reducer** around a single `Plan` | The whole app is one plan document plus derived results. A reducer keeps every edit explicit, which makes undo (mockup 05b) straightforward later. | Redux/Zustand: more machinery than one document needs. Can be adopted later if state grows. |
 | Validation at boundaries | **Zod** | Parses and validates the wire formats (saved plans, rules data) before mapping them to internal types. | Hand-written validators: more code, easy to miss a field. |
-| Storage | **Browser storage** (IndexedDB, via a small wrapper) | Keeps the plan on the device (NFR-4) with no server. A versioned wire format allows future migrations. | localStorage: simpler but size-limited and synchronous. Files only: safest against data loss, but clunkier for everyday use (see open question 2). |
+| Storage | **IndexedDB**, via the `idb` library | Keeps the plan on the device (NFR-4) with no server. See [Data representations and storage](#data-representations-and-storage) for the schema, the library and why not localStorage. | localStorage, Dexie.js: compared in that section. |
 | Money arithmetic | **JavaScript numbers (64-bit floats)**, rounded to cents only for display and comparison | A projection compounds rates over decades, so the model is approximate by nature, and floats are deterministic in JavaScript (NFR-2). Tests compare to the cent. | Decimal library (decimal.js): exact cents but slower and noisier code, with no real accuracy gain for a projection. |
+| Hosting | **GitHub Pages**, deployed by GitHub Actions on every merge to `main` | Free static hosting next to the code. Nothing is sent anywhere: the app runs entirely in the browser. See [Hosting and deployment](#hosting-and-deployment). | Local-only: no shareable URL. Netlify/Vercel: another account to manage, with no benefit for static files. |
 | Tooling | **Node 22 LTS**, npm, ESLint, Prettier, TypeScript type-checking | Standard, and already available in this environment. | pnpm/yarn: no need yet. |
 
 Library versions are pinned in M0. Current majors at the time of writing:
@@ -697,6 +698,29 @@ tests/
   e2e/               Playwright user flows
 ```
 
+### Hosting and deployment
+
+- **Build:** `npm run build` produces static files in `dist/`. Vite's `base`
+  is set to `/au-fire-planning/` so asset paths work under the Pages URL
+  (`https://eatea.github.io/au-fire-planning/`).
+- **Deploy:** a `deploy.yml` GitHub Actions workflow runs on every push to
+  `main`. It builds the app, runs the full checks, then publishes `dist/`
+  with GitHub's official Pages actions (`upload-pages-artifact`,
+  `deploy-pages`). A PR that fails its checks can't reach the live site.
+  The deploy workflow is added in M0, so the skeleton is live from the start.
+- **One-off setup by the repository owner:** in the repository's Settings →
+  Pages, set the source to "GitHub Actions".
+- **No tracking:** no analytics, fonts or scripts are loaded from other
+  sites, so a visit sends nothing beyond the request for the static files.
+- **Shared-origin caveat:** every GitHub Pages project site under an account
+  shares one origin (`https://eatea.github.io`). Browser storage,
+  IndexedDB and localStorage alike, is scoped per origin, so any other
+  Pages site published from this account could read this app's stored
+  plan. That's acceptable while every site on the account is the owner's
+  own. If that changes, the fix is a custom subdomain
+  (e.g. `fire.example.com`), which gives the app an origin of its own. See
+  open question 1.
+
 ### Testing approach
 
 | Layer | Tool | What it covers |
@@ -717,19 +741,21 @@ so every milestone PR is checked the same way.
 formatting and unit tests. `npm run test:e2e` runs the browser tests. Both
 must pass before any commit is proposed (CLAUDE.md rule 4).
 
+## Decisions on part 2
+
+Agreed in review:
+
+1. **Hosting:** GitHub Pages, deployed by GitHub Actions from `main`. Set up in M0.
+2. **No file save before M22:** saving to and opening from a file stays with
+   export (OUT-7) in M22. No backup mechanism for now.
+3. **CI:** GitHub Actions checks on every PR, from M0.
+
 ## Open questions
 
-1. **Hosting.** The app is static files, so it can run locally
-   (`npm run dev` / `npm run preview`) or be hosted on any static host,
-   e.g. GitHub Pages. Hosting wouldn't send any data anywhere, because
-   everything runs in the browser. Local-only for now, or set up GitHub
-   Pages early?
-2. **Protecting against lost data.** Browser storage can be wiped when a
-   user clears their browsing data. Should a simple "save to file / open
-   file" (a slice of OUT-7, which is a Could in M22) move into M1? Files
-   stay on the device, so this keeps NFR-4 and the no-sync non-goal.
-3. **CI in M0.** Is a GitHub Actions workflow on every PR wanted from the
-   start?
+1. **Shared GitHub Pages origin.** Every Pages site under the account shares
+   the `eatea.github.io` origin and its browser storage (see
+   [Hosting and deployment](#hosting-and-deployment)). Is that acceptable
+   for now, or should the app get its own custom subdomain?
 
 ## Next steps
 
