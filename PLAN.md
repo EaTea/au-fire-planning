@@ -1507,7 +1507,7 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 7 · Saving to IndexedDB
 
-- [ ] Done
+- [x] Done
 
 1. Install `idb` and `fake-indexeddb`. Add `src/persistence/database.ts`:
    `openPlannerDatabase()` using `idb`'s `openDB` with a typed `DBSchema`.
@@ -1590,6 +1590,17 @@ values survive a reload.
 5. Unit tests for the redirect, and for `disclaimerAcceptedAt` being stored.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Follow-ups found while building M1
+
+- **Flush on close:** an edit made less than 500 ms before the tab closes
+  isn't saved. Add a save on `pagehide`/`visibilitychange` (small; any
+  milestone).
+- **Write back migrated records:** when the first migration is added
+  (`schemaVersion` 2), the load path must write the upgraded record back,
+  as part 2 describes.
+- **Two tabs on an empty database** can each create a record on first save.
+  Resolve alongside multi-plan support and `BroadcastChannel` in M16.
 
 #### After the last step
 

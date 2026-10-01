@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // End-to-end test for M1's headline flow (FIRE-1, FIRE-2): enter the worked
 // example's values through the real input screens, then read the FI number and

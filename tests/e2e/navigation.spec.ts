@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // End-to-end tests for the M0 walking skeleton: the header, the seven-step
 // navigation and the placeholder pages, driven through a real browser against
