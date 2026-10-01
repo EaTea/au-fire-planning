@@ -190,6 +190,7 @@ and any number of investment properties.
 | COAST-4 | Once Coast FIRE is reached, the app shows the minimum income the household needs to cover current expenses without drawing on investments. | Should |
 | COAST-5 | Coast FIRE calculations account for employer super contributions that continue while a person keeps working after reaching Coast FIRE. | Should |
 | COAST-6 | The app provides **visualisations** that explain the Coast FIRE model. At minimum they must show: (a) current invested assets growing with no further contributions against the FI number, and the Coast FIRE number over time; (b) the point at which Coast FIRE is or will be reached on the current contribution path; and (c) super and outside-super assets separately (COAST-3). | Must |
+| COAST-7 | The app shows what happens to contributions **after Coast FIRE is reached**. It compares continuing the current contributions, reducing them, and stopping them entirely, by the FI date each one reaches and the balance at the target retirement age. | Should |
 
 ## 5. Superannuation rules
 
