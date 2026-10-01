@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { expect, startFresh, test } from "./fixtures";
 
@@ -15,11 +15,18 @@ import { expect, startFresh, test } from "./fixtures";
 /** WCAG AA minimum contrast for normal-size text. */
 const minimumTextContrast = 4.5;
 
-/** The step pages that exist in M1, by hash route. */
-const stepPages = ["#/income-expenses", "#/assets", "#/assumptions", "#/results"];
+/** The step pages that exist so far (M2), by hash route. */
+const stepPages = [
+  "#/household",
+  "#/income-expenses",
+  "#/assets",
+  "#/assumptions",
+  "#/results",
+  "#/year-by-year",
+];
 
 /** Pages with input fields, filled in by fillEveryInput. */
-const inputPages = ["#/income-expenses", "#/assets", "#/assumptions"];
+const inputPages = ["#/household", "#/income-expenses", "#/assets", "#/assumptions"];
 
 /**
  * Runs in the page: returns one line for every visible element whose text
@@ -125,12 +132,28 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
   return failures;
 }
 
-/** Types the same value into every input on the current page, then moves focus away. */
-async function fillEveryInput(page: Page, value: string): Promise<void> {
+/**
+ * Types a value into every input on the current page, then moves focus away.
+ * "valid" uses a value every field accepts: 50 for ages (15 to 100), and 5
+ * for everything else (percentages are capped at 15%). "invalid" uses -5,
+ * which every field rejects.
+ */
+async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<void> {
   for (const input of await page.locator("input").all()) {
-    await input.fill(value);
+    const isAge = /age/i.test(await labelTextOf(input));
+
+    if (values === "invalid") {
+      await input.fill("-5");
+    } else {
+      await input.fill(isAge ? "50" : "5");
+    }
   }
   await page.locator("h1").click();
+}
+
+/** The text of the <label> that names `input`, or "" if it has none. */
+async function labelTextOf(input: Locator): Promise<string> {
+  return input.evaluate((element) => (element as HTMLInputElement).labels?.[0]?.textContent ?? "");
 }
 
 test("the welcome page has readable text, including while hovering and focusing", async ({
@@ -159,15 +182,17 @@ test("every step page has readable text with its fields empty", async ({ page })
 test("every input page has readable text with valid and with invalid values", async ({ page }) => {
   await startFresh(page);
 
-  // "50" is valid in every M1 field; "-5" is invalid in every one.
-  for (const value of ["50", "-5"]) {
+  for (const value of ["valid", "invalid"] as const) {
     for (const inputPage of inputPages) {
       await page.goto(inputPage);
       await fillEveryInput(page, value);
 
-      // Makes sure the invalid pass really shows error messages to check.
-      if (value === "-5") {
+      // Makes sure each pass is what it says: errors to check in the invalid
+      // pass, and none in the valid one.
+      if (value === "invalid") {
         await expect(page.locator(".field-error").first()).toBeVisible();
+      } else {
+        await expect(page.locator(".field-error")).toHaveCount(0);
       }
 
       expect(await findLowContrastText(page), `${inputPage} with ${value}`).toEqual([]);
@@ -181,7 +206,7 @@ test("the results page has readable text with every explanation open", async ({ 
 
   for (const inputPage of inputPages) {
     await page.goto(inputPage);
-    await fillEveryInput(page, "50");
+    await fillEveryInput(page, "valid");
   }
 
   await page.goto("#/results");
@@ -191,4 +216,24 @@ test("the results page has readable text with every explanation open", async ({ 
 
   expect(await findLowContrastText(page)).toEqual([]);
   expect(await findLowContrastWhileInteracting(page)).toEqual([]);
+});
+
+test("the year by year table has readable text in both dollar modes, including the FI row", async ({
+  page,
+}) => {
+  await startFresh(page);
+  for (const inputPage of inputPages) {
+    await page.goto(inputPage);
+    await fillEveryInput(page, "valid");
+  }
+  await page.goto("#/year-by-year");
+
+  // The highlighted FI row is the one styled differently, so make sure it's there.
+  await expect(page.locator("tr[data-highlighted='true']")).toHaveCount(1);
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
 });
