@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 implemented, awaiting the owner's verification.
+**Current status:** M0 done and deployed. M1 plan drafted, awaiting approval.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan approved |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 plan in review |
 
 ## 1. Requirement ordering
 
@@ -735,10 +735,11 @@ them know about more than one form.
   first time anything is written to IndexedDB (M1), and are settled then:
   - **Units:** the wire format spells units out in field names
     (`…Percent`, `…Dollars`). Internally, rates are fractions.
-  - **Defaults:** the wire format stores only values the user has set.
-    Defaults are applied by `planFromWire`, so an improved default (e.g. a
-    new inflation default) reaches plans that never overrode it. This also
-    lets the UI show dashed "default" fields, as in the mockups.
+  - **Defaults:** the wire format, and the in-memory `Plan`, hold only
+    values the user has set. Defaults are applied just before calculating,
+    by `resolvePlanInputs` (refined in the M1 plan), so an improved default
+    (e.g. a new inflation default) reaches plans that never overrode it, and
+    the UI can show dashed "default" fields, as in the mockups.
   - **Identifiers:** every person, portfolio, property and row has a stable
     string ID (`crypto.randomUUID()`) assigned when it is created, never
     derived from its position in a list.
@@ -1087,312 +1088,482 @@ code are repeated here.
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` when
   running E2E tests instead (see M0 step 5).
 
-### M0 · Walking skeleton: step-by-step plan
+### M0 · Walking skeleton: done
 
-**Status:** implemented, all seven steps done. Awaiting the owner's verification in the M0 PR.
+Delivered in PR #7: the app shell and seven-step hash-routed navigation,
+ESLint and Prettier, Vitest with React Testing Library, Playwright E2E,
+CI on every PR, and deployment to GitHub Pages. The full step-by-step plan
+is in git history.
 
-**Goal:** an app that builds, runs, tests and deploys, with no planning
-features yet. It shows the header and seven-step navigation from the
-mockups (`requirements/mockups/`, screens 01–07), with a placeholder page
-for each step. Every later milestone adds real behaviour on top of it.
+Conventions settled while building M0, which later milestones rely on:
+
+- `tsconfig.json` has `skipLibCheck: true`. Library declaration files
+  aren't type-checked, but our own code is.
+- `eslint.config.js` uses ESLint's `defineConfig()`, with browser globals and
+  React Hooks rules for `src/**`, `tests/unit/**` and `tests/setup/**`, and
+  Node globals for `*.config.*` and `tests/e2e/**`.
+- `src/vite-env.d.ts` references `vite/client`, so CSS imports type-check.
+- `tests/setup/vitest.setup.ts` calls React Testing Library's `cleanup()`
+  after each test, because Vitest globals are off.
+- The steps are defined once, in `src/ui/navigation/steps.ts`. The page
+  layout is `StepPage`, and screens live in `src/ui/screens/`.
+- E2E tests run against the production build. Locally,
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` points them at a preinstalled
+  Chromium.
+
+### M1 · FI number: step-by-step plan
+
+**Status:** draft, awaiting the owner's approval. Do not implement yet.
+
+**Goal:** the first real feature. One person enters their living expenses,
+their retirement spending, one share portfolio's value and a safe
+withdrawal rate. The Results page then shows their **FI number** and
+**progress to FI**, each with a "how was this calculated?" breakdown. The
+plan is saved in the browser (IndexedDB) and survives a reload. A first-run
+welcome page shows the disclaimer.
+
+**Requirements delivered** (from part 1): NFR-5 disclaimer, NFR-4 data saved
+only on this device, EXP-1 living expenses (single total), EXP-2 retirement
+spending (amount or % of today), IN-10 safe withdrawal rate, IN-14 one
+portfolio's value, FIRE-1 FI number in today's dollars, FIRE-2 progress to
+FI, NFR-1 breakdown of the FI number and progress, NFR-2 determinism, NFR-6
+worked examples.
+
+**Out of scope for M1:** anything over time (ages, inflation, growth,
+contributions and nominal dollars all arrive in M2), several portfolios or
+people, super, tax, property, the asset sidebar (M5), the inputs panel
+(M16), scenarios (M16), and listing several plans (M16).
 
 **Definition of done:**
 
-- `npm ci && npm run dev` serves the app at
-  `http://localhost:5173/au-fire-planning/`. The header shows "AU FIRE
-  Planner" and the seven numbered steps. Each step opens its placeholder
-  page, and Back/Next move between steps.
-- `npm run check` (type-check, lint, format check, unit and component tests)
-  and `npm run test:e2e` (Playwright) both pass.
-- A PR runs both in GitHub Actions. A merge to `main` deploys to
-  `https://eatea.github.io/au-fire-planning/`.
-- `README.md` explains how to install, run, build, test and deploy.
+- A first-time visitor sees a welcome page with the disclaimer. After
+  accepting, they don't see it again on this device.
+- On Income & expenses, Assets and Assumptions, the user can enter living
+  expenses, retirement spending (as a % of today or a dollar amount), a
+  portfolio's value, and a safe withdrawal rate. Unset values with a default
+  (retirement spending 100%, rate 4%, portfolio $0) show as dashed "default"
+  fields.
+- With living expenses of $64,000, retirement spending at the default 100%,
+  a portfolio of $720,000 and the default 4%, Results shows an FI number of
+  **$1,600,000** and progress of **45%**. Each figure can show its
+  breakdown. If living expenses aren't entered, Results says so and links to
+  Income & expenses instead of showing a number.
+- Reloading the page keeps every input.
+- Results states what isn't modelled yet.
+- `npm run check` and `npm run test:e2e` pass, and CI is green.
 
-**Out of scope for M0:** any inputs, calculations, storage (IndexedDB
-arrives in M1), the disclaimer (M1), and the header's "Edit inputs", plan
-picker and export buttons (later milestones).
+#### Design decisions for M1
 
-#### Pinned versions
+These refine part 2 now that the first data is stored.
 
-Install exactly these versions (`npm install --save-exact`):
+**Defaults stay unset in the in-memory plan.** Part 2 said defaults are
+applied when a saved plan is loaded. To show dashed default fields, the
+in-memory `Plan` must know which values the user hasn't set, so instead:
+
+- `Plan` holds **only what the user entered**. Unset values are `undefined`.
+- `resolvePlanInputs(plan)` (in `src/plan/`) applies the defaults from
+  `src/plan/defaults.ts` and returns the complete inputs the engine needs,
+  or a list of what's missing. The engine never sees `undefined` values.
+- The UI shows a field as "default" when the plan's value is `undefined`,
+  displaying the default value.
+
+This keeps part 2's intent: an improved default still reaches plans that
+never overrode it.
+
+**The in-memory plan (internal types)**, `src/plan/types.ts`:
+
+```ts
+interface Plan {
+  readonly household: { readonly people: readonly Person[] }; // M1: exactly one person
+  readonly expenses: {
+    readonly livingAnnual?: number;                           // dollars per year, after tax
+    readonly retirementSpending?: RetirementSpending;
+  };
+  readonly assumptions: { readonly safeWithdrawalRate?: number }; // fraction, e.g. 0.04
+  readonly portfolios: readonly Portfolio[];                    // M1: exactly one portfolio
+}
+interface Person { readonly id: string; readonly label: string }  // label e.g. "Person 1"
+interface Portfolio { readonly id: string; readonly name: string; readonly value?: number }
+type RetirementSpending =
+  | { readonly kind: "amount"; readonly annual: number }            // dollars per year
+  | { readonly kind: "percentOfToday"; readonly fraction: number }; // e.g. 0.9
+```
+
+Defaults (`src/plan/defaults.ts`): safe withdrawal rate 0.04; retirement
+spending 100% of today (`{ kind: "percentOfToday", fraction: 1 }`); portfolio
+value 0. Living expenses have **no default**: without them there's nothing
+to calculate.
+
+**Engine output carries its explanation** (NFR-1), in `src/engine/`:
+
+```ts
+interface Explained {
+  readonly value: number;
+  readonly unit: "dollars" | "fraction";
+  readonly lines: readonly ExplanationLine[]; // the breakdown shown by ExplainPanel
+}
+interface ExplanationLine {
+  readonly label: string;   // e.g. "Retirement spending (90% of $60,000)"
+  readonly value: number;
+  readonly unit: "dollars" | "fraction";
+  readonly operator?: "+" | "−" | "×" | "÷" | "="; // how this line combines with the ones above
+  readonly source: "input" | "default" | "calculated";
+}
+type PlanSummary =
+  | { readonly status: "complete"; readonly fiNumber: Explained; readonly progressToFi: Explained;
+      readonly investable: Explained }
+  | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
+interface MissingInput { readonly field: "livingExpenses"; readonly label: string }
+// The engine names the missing field. The UI maps each field to the step where it is entered.
+```
+
+`summarisePlan(plan): PlanSummary` is M1's engine entry point. It calls
+`resolvePlanInputs`, then the pure functions `retirementSpendingAnnual`,
+`calculateFiNumber` and `calculateProgressToFi`. Part 2's `project()`
+arrives in M2, when there's a projection over time. The engine imports
+nothing from `src/ui/` or `src/persistence/`, and never reads the clock.
+
+**The stored plan (wire types)**, `src/persistence/`. `PlanDocumentV1` is
+exactly the Zod schema shown in part 2, with one change: `valueDollars` on
+portfolios is optional, matching "store only what the user set". Units are in
+the field names: `livingAnnualDollars`, `annualDollars`,
+`percent` (e.g. `90`), `safeWithdrawalRatePercent` (e.g. `4`). The mappers
+convert percent ↔ fraction. `PlanRecord` and the database schema (`plans` and
+`meta` stores, database version 1) are as in part 2. `PlanStore` in M1 has
+`loadActivePlan` and `savePlan`, plus `getMeta`/`setMeta` for the disclaimer.
+`listPlans` waits for M16.
+
+**IDs and time are injected.** IDs come from an `IdGenerator` (default
+`() => crypto.randomUUID()`), and timestamps from a `Clock` (default
+`() => new Date()`). Both are passed in rather than called directly, so tests
+are deterministic.
+
+**Money display in M1:** `formatDollars(value)` uses
+`Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })`,
+and `formatPercent(fraction)` shows one decimal place at most (e.g. "45%",
+"4.5%"). The today's/nominal-aware `formatMoney` replaces `formatDollars`
+in M2.
+
+#### Pinned versions (new in M1)
 
 | Package | Version | Kind |
 | --- | --- | --- |
-| `react`, `react-dom` | 19.3.0 | dependency |
-| `react-router` | 8.4.0 | dependency |
-| `vite` | 8.3.1 | dev |
-| `@vitejs/plugin-react` | 6.1.1 | dev |
-| `typescript` | 6.0.3 | dev (not 7.x: see part 2) |
-| `@types/react`, `@types/react-dom` | 19.3.0 | dev |
-| `@types/node` | 22.20.4 | dev (matches Node 22) |
-| `eslint` | 10.11.0 | dev |
-| `@eslint/js` | 10.0.1 | dev |
-| `typescript-eslint` | 8.71.0 | dev |
-| `eslint-plugin-react-hooks` | 7.1.1 | dev |
-| `eslint-config-prettier` | 10.1.8 | dev |
-| `globals` | 17.13.0 | dev |
-| `prettier` | 3.9.9 | dev |
-| `vitest` | 5.0.3 | dev |
-| `jsdom` | 30.1.1 | dev |
-| `@testing-library/react` | 16.3.3 | dev |
-| `@testing-library/dom` | 10.4.2 | dev |
-| `@testing-library/jest-dom` | 7.0.1 | dev |
-| `@testing-library/user-event` | 14.6.7 | dev |
-| `@playwright/test` | 1.63.0 | dev |
+| `zod` | 4.6.5 | dependency |
+| `idb` | 8.0.3 | dependency |
+| `fake-indexeddb` | 6.2.5 | dev |
+| `fast-check` | 4.10.2 | dev |
+| `@fast-check/vitest` | 0.5.0 | dev |
 
-GitHub Actions versions: `actions/checkout@v7`, `actions/setup-node@v7`,
-`actions/upload-artifact@v7`, `actions/configure-pages@v6`,
-`actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`.
+#### Step 1 · Plan types and the FI calculations
 
-#### The steps, in one place
+- [ ] Done
 
-The seven steps of the app, used by the router, the navigation, the
-Back/Next footer and the tests. Define this list once (step 4) and derive
-everything else from it:
+1. Add `src/plan/types.ts` (types above), `src/plan/defaults.ts`, and
+   `src/plan/resolvePlanInputs.ts`. `resolvePlanInputs` returns either
+   `{ status: "complete", inputs }` with every value filled in, or
+   `{ status: "incomplete", missing }`. Living expenses are the only input
+   that can be missing in M1. They're missing when `undefined`, reported as
+   `{ field: "livingExpenses", label: "Living expenses" }`.
+2. Add `src/plan/createNewPlan.ts`: `createNewPlan(generateId)` returns a plan
+   with one person labelled "Person 1", one portfolio named "Share
+   portfolio", and nothing else set.
+3. Add `src/engine/explained.ts` (the `Explained` and `ExplanationLine`
+   types) and `src/engine/fiNumber.ts` with:
+   - `retirementSpendingAnnual(livingAnnual, retirementSpending): Explained`.
+     For an amount, it's the amount. For a percentage, it's
+     `livingAnnual × fraction`, with a line showing the multiplication.
+   - `calculateFiNumber(retirementSpending: Explained, safeWithdrawalRate, rateSource): Explained`,
+     equal to `retirementSpending ÷ safeWithdrawalRate`. It throws a
+     `RangeError` if the rate isn't greater than 0 (the UI prevents this).
+   - `calculateProgressToFi(investable: Explained, fiNumber: Explained): Explained`,
+     equal to `investable ÷ fiNumber` as a fraction. It isn't capped at 100%,
+     so 1.25 means 125%.
+   - `summarisePlan(plan): PlanSummary`. The investable amount is the
+     portfolio's value (the sum over portfolios, ready for M9).
+   Each explanation line records whether the value came from an input, a
+   default or a calculation.
+4. Tests (Vitest, next to the code):
+   - Worked values: $64,000 ÷ 4% = $1,600,000. 90% of $60,000 = $54,000, so
+     an FI number of $1,350,000 at 4%. $720,000 of $1,600,000 = 45%. A
+     $0 portfolio gives 0%. $2,000,000 of $1,600,000 = 125%.
+   - Living expenses missing → `incomplete`, with the `livingExpenses` field.
+   - Defaults used when unset (4%, 100% of today, $0), and their explanation
+     lines say `"default"`.
+   - A rate ≤ 0 throws.
+5. Add `tests/worked-examples/`:
+   - `README.md` explaining the fixture format: inputs, expected figures to
+     the cent, and how each was independently checked;
+   - `m1-fi-number.json` with the three scenarios above, each with
+     `"checkedBy": "hand calculation"` and the arithmetic written out;
+   - `tests/unit/workedExamples.test.ts`, which loads every fixture file and
+     checks `summarisePlan` against it to the cent.
+6. Property-based tests with `@fast-check/vitest` (install `fast-check` and
+   `@fast-check/vitest` now):
+   - **determinism**: summarising the same plan twice gives deep-equal
+     results;
+   - doubling retirement spending doubles the FI number;
+   - a higher withdrawal rate never gives a higher FI number;
+   - progress × FI number equals the investable amount, to the cent.
 
-| # | `id` | Label | Route | Placeholder says it arrives in |
-| --- | --- | --- | --- | --- |
-| 1 | `household` | Household | `#/household` | M2 |
-| 2 | `income-expenses` | Income & expenses | `#/income-expenses` | M1 |
-| 3 | `assets` | Assets | `#/assets` | M1 |
-| 4 | `assumptions` | Assumptions | `#/assumptions` | M1 |
-| 5 | `results` | Results | `#/results` | M1 |
-| 6 | `year-by-year` | Year by year | `#/year-by-year` | M2 |
-| 7 | `scenarios` | Scenarios | `#/scenarios` | M16 |
+**Check:** `npm run check` passes. The app is unchanged in the browser, since
+nothing uses this code yet.
 
-Routing uses **hash URLs** (`HashRouter` from `react-router`) because
-GitHub Pages can't route other paths back to `index.html`. `#/` and any
-unknown route redirect to `#/household`.
+#### Step 2 · Plan state: reducer and provider
 
-#### Step 1 · Minimal app that builds and runs
+- [ ] Done
 
-- [x] Done
+1. Add `src/plan/planReducer.ts`: a pure `planReducer(plan, action)` with
+   these actions:
+   - `setLivingExpenses { annual?: number }`
+   - `setRetirementSpending { spending?: RetirementSpending }`
+   - `setSafeWithdrawalRate { rate?: number }`
+   - `setPortfolioValue { portfolioId, value?: number }`
+   - `renamePortfolio { portfolioId, name }`
+   - `replacePlan { plan }` (used when a saved plan loads)
 
-1. Create `package.json` by hand (not with an interactive generator):
-   `"name": "au-fire-planner"`, `"private": true`, `"type": "module"`,
-   `"engines": { "node": ">=22" }`, and scripts `dev` (`vite`), `build`
-   (`vite build`), `preview` (`vite preview`) and `typecheck`
-   (`tsc --noEmit`). Install `react`, `react-dom`, `vite`,
-   `@vitejs/plugin-react`, `typescript`, `@types/react`,
-   `@types/react-dom` and `@types/node` at the pinned versions. `@types/node`
-   types the config files (`vite.config.ts`, and `playwright.config.ts`'s use
-   of `process.env` in step 5).
-2. Add `.nvmrc` containing `22`.
-3. Add `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`,
-   `noImplicitOverride`, `verbatimModuleSyntax`, `"jsx": "react-jsx"`,
-   `"module": "ESNext"`, `"moduleResolution": "bundler"`,
-   `"target": "ES2022"`, `"lib": ["ES2022", "DOM", "DOM.Iterable"]`,
-   `"noEmit": true`, `"skipLibCheck": true`, and
-   `"include": ["src", "tests", "*.config.ts"]`. `skipLibCheck` skips
-   type-checking libraries' own declaration files: Vite 8's declarations
-   need Node types and newer `lib` settings that don't apply to this app.
-   Our own code is still fully checked.
-4. Add `vite.config.ts` with the React plugin and `base: "/au-fire-planning/"`
-   (needed for GitHub Pages).
-5. Add `index.html` (title "AU FIRE Planner", a `#root` element) and
-   `src/main.tsx`, which renders `src/ui/App.tsx`. For now, `App` renders an
-   `<h1>` reading "AU FIRE Planner".
-6. Extend `.gitignore` with `dist/`, `test-results/`, `playwright-report/`
-   and `blob-report/` (`node_modules/` is already there).
-7. Add `README.md` with: what the app is (one paragraph, linking to
-   `requirements/REQUIREMENTS.md` and `PLAN.md`), prerequisites (Node 22,
-   npm), install (`npm ci`), run (`npm run dev`, then open
-   `http://localhost:5173/au-fire-planning/`), and build and preview
-   (`npm run build`, `npm run preview`).
+   Passing `undefined` clears a value back to its default. It returns a new
+   plan object and never mutates the old one.
+2. Add `src/plan/PlanProvider.tsx`: a React context holding the plan (via
+   `useReducer`) and its derived `PlanSummary` (memoised with `useMemo`).
+   Hooks: `usePlan()`, `usePlanSummary()`, `usePlanDispatch()`.
+   `PlanProvider` takes an optional `initialPlan` prop. It defaults to
+   `createNewPlan`.
+3. Wrap the app in `PlanProvider` in `App.tsx`. The plan is kept in memory
+   only for now. Saving arrives in step 7.
+4. Tests: each reducer action, including clearing to default and not mutating
+   the input. The provider's hooks give the summary for a dispatched change
+   (render a tiny test component).
 
-**Check:** `npm run typecheck` and `npm run build` succeed. `npm run dev`
-serves the heading at the URL above.
+**Check:** `npm run check` passes. The app still works as in M0.
 
-#### Step 2 · Static checks: ESLint and Prettier
+#### Step 3 · Shared input and output components
 
-- [x] Done
+- [ ] Done
 
-1. Install `eslint`, `@eslint/js`, `typescript-eslint`,
-   `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals` and
-   `prettier` at the pinned versions.
-2. Add `eslint.config.js` (flat config, built with `defineConfig` from
-   `eslint/config`; `tseslint.config()` is deprecated) combining `@eslint/js` recommended,
-   `typescript-eslint` recommended, the React Hooks recommended rules, and
-   `eslint-config-prettier` last. Scope browser globals and the React Hooks
-   rules to `src/**/*.{ts,tsx}`, and Node globals to `*.config.{js,ts}`. Ignore `dist/`, `playwright-report/`,
-   `test-results/` and `requirements/` (the mockup sources aren't app code).
-3. Add `.prettierrc.json` (defaults, plus `"printWidth": 100`) and a
-   `.prettierignore` listing `dist/`, `playwright-report/`, `test-results/`,
-   `requirements/`, `package-lock.json` and `*.md`. Markdown is ignored so
-   the hand-wrapped documents (`PLAN.md`, `CLAUDE.md`, requirements) aren't
-   reflowed.
-4. Add scripts `lint` (`eslint .`), `format` (`prettier --write .`) and
-   `format:check` (`prettier --check .`). Run `npm run format` once.
-5. Add a "Checks" section to the README listing `typecheck`, `lint`,
-   `format` and `format:check`.
+Add the first shared components from part 2's component map, in
+`src/ui/components/`, with styles in `app.css` following
+`requirements/mockups/src/wireframe.css` (`.card`, `.field`, `.input`,
+`.input.default`, `.toggle`, `.metric`, `.banner`):
 
-**Check:** `npm run typecheck`, `npm run lint` and `npm run format:check`
-all pass.
+1. `Card` (a titled box) and `Banner` (a notice, with a `tone` of `"info"` or
+   `"warning"`).
+2. `src/ui/format.ts`: `formatDollars(value)` and `formatPercent(fraction)`
+   as described above, plus `parseDollars(text)` (accepts `60000`,
+   `60,000`, `$60,000` and `60000.50`, and returns `undefined` for empty
+   text and `NaN` for anything else) and `parsePercent(text)` (accepts `4`,
+   `4.5` and `4.5%`, and returns a fraction).
+3. `MoneyField` and `PercentField`: a labelled text input. Props: `label`,
+   `value?: number` (the plan's value; `undefined` means "not set"),
+   `defaultValue?: number`, `onChange(value?: number)`, optional `hint`, and
+   for percentages `min`/`max`. Behaviour:
+   - While typing, keep a local text draft. Commit on blur or Enter.
+   - Empty text commits `undefined`. If there's a `defaultValue`, the field
+     then shows it in the dashed "default" style, labelled "default".
+   - Invalid text, or out-of-range numbers, show an inline error and commit
+     nothing.
+   - The input has an accessible label, so tests can find it with
+     `getByLabelText`.
+4. `TextField`: a labelled text input that commits on blur or Enter (used for
+   the portfolio name).
+5. `SegmentedToggle`: two or three exclusive options shown as the mockups'
+   toggle, built with buttons that have `aria-pressed`.
+6. `MetricTile`: a label, a large value, a sub-line, and an optional
+   "How is this calculated?" button that reveals an `ExplainPanel` beneath it.
+7. `ExplainPanel`: renders an `Explained` as the mockups' breakdown table.
+   One row per line, with its operator, label and formatted value. Default
+   values are marked "(default)", and the result line is bold.
+8. Component tests (React Testing Library and user-event) for every
+   component: drafts commit on blur and Enter; empty → default style;
+   invalid input shows an error and doesn't commit; the toggle's
+   `aria-pressed`; the metric tile reveals its explanation; and the parse
+   and format functions, including the edge cases above.
 
-#### Step 3 · Unit and component tests: Vitest
+**Check:** `npm run check` passes.
 
-- [x] Done
+#### Step 4 · Input screens: income & expenses, assets, assumptions
 
-1. Install `vitest`, `jsdom`, `@testing-library/react`,
-   `@testing-library/dom`, `@testing-library/jest-dom` and
-   `@testing-library/user-event` at the pinned versions.
-2. Configure Vitest in `vite.config.ts` (import `defineConfig` from
-   `vitest/config`): `environment: "jsdom"`,
-   `include: ["src/**/*.test.{ts,tsx}", "tests/unit/**/*.test.{ts,tsx}"]`,
-   `setupFiles: ["tests/setup/vitest.setup.ts"]`. The setup file imports
-   `@testing-library/jest-dom/vitest`.
-3. In `eslint.config.js`, widen the browser-globals block to also cover
-   `tests/unit/**` and `tests/setup/**`.
-4. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
-   the "AU FIRE Planner" heading. Import `describe`/`it`/`expect`
-   explicitly from `vitest` rather than relying on globals.
-5. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
-   (`npm run typecheck && npm run lint && npm run format:check && npm test`).
-6. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
-   `npm run check`, noting that `npm run check` must pass before every
-   commit.
+- [ ] Done
 
-**Check:** `npm run check` passes, and making the test's expected text wrong
-makes it fail (then restore it).
+Replace three placeholders with real screens, each built from
+**self-contained form sections** (part 2: the M16 inputs panel will reuse
+them). A section reads the plan with `usePlan()`, dispatches with
+`usePlanDispatch()`, and has no page layout of its own.
 
-#### Step 4 · App shell, step navigation and placeholder pages
+1. `src/ui/sections/LivingExpensesSection.tsx` (EXP-1): a card "Living
+   expenses today" with a `MoneyField` "Per year, after tax". Hint: "What
+   your household spends in a year, after tax. Leave out mortgage repayments
+   and rent: they come later."
+2. `src/ui/sections/RetirementSpendingSection.tsx` (EXP-2): a card "Spending
+   in retirement" with a `SegmentedToggle` "% of today" / "$ amount", and
+   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`.
+   Switching the toggle keeps the equivalent value where possible (e.g. 90%
+   of $60,000 becomes $54,000), or clears it if living expenses aren't set.
+3. `src/ui/sections/PortfolioSection.tsx` (IN-14, one portfolio): a card
+   with a `TextField` "Name" and a `MoneyField` "Current value" (default $0).
+4. `src/ui/sections/DrawdownSection.tsx` (IN-10): a card "Drawdown" with a
+   `PercentField` "Safe withdrawal rate" (default 4%, min 0.5%, max 10%).
+   Hint: "FI number = retirement spending ÷ this rate".
+5. Screens in `src/ui/screens/`: `IncomeExpensesScreen` (living expenses and
+   retirement spending), `AssetsScreen` (portfolio) and `AssumptionsScreen`
+   (drawdown). Each is a `StepPage` with an intro sentence. Route them in
+   `App.tsx` in place of their placeholders. The other steps keep their
+   placeholders, and "arrives in" for Results stays until step 5.
+6. Tests: for each section, entering a value dispatches the right action and
+   the field shows it; clearing restores the dashed default; the toggle
+   conversion works.
 
-- [x] Done
+**Check:** `npm run check` passes. In `npm run dev`, all three screens take
+input, and values survive moving between steps (but not a reload yet).
 
-1. Install `react-router` at the pinned version.
-2. Add `src/ui/navigation/steps.ts`: the step list from the table above, as
-   a typed, read-only array of `{ number, id, label, path, arrivesIn }`.
-   Also add helpers `findStepByPath(path)` and
-   `getNeighbouringSteps(stepId)` (returning the previous and next step,
-   either of which may be absent).
-3. Add components in `src/ui/components/`, following the mockups' layout
-   (header with a logo box, then pill-shaped numbered steps, with the
-   current step filled):
-   - `AppShell`: the header (the "AU FIRE Planner" logo and `StepNav`), with
-     the page content below it.
-   - `StepNav`: one `NavLink` per step, showing its number and label. The
-     current step gets `aria-current="page"` (`NavLink` does this) and the
-     filled style.
-   - `StepPage`: the page title (`<h1>`, the step's label), an intro paragraph, the content,
-     and a footer with "← {previous label}" and "Next: {next label} →"
-     links, each hidden when there's no previous or next step.
-4. Add `src/ui/screens/PlaceholderScreen.tsx`, a `StepPage` that says what
-   the step will do and "Arrives in milestone {arrivesIn}". Use one-sentence
-   purposes taken from the mockups, e.g. Household: "Who the plan is for:
-   ages, retirement ages and when super becomes accessible."
-5. Update `App` to render `AppShell` inside a `HashRouter`, with one route
-   per step rendering its placeholder, and a catch-all redirect to
-   `#/household`.
-6. Add `src/ui/styles/tokens.css` (colour, spacing and font variables taken
-   from `requirements/mockups/src/wireframe.css`: the greyscale ink, line and
-   fill values, plus the paper background) and `src/ui/styles/app.css`
-   (header, step pills, page and footer layout), imported from `main.tsx`.
-   Keep it plain CSS. No CSS framework. Add `src/vite-env.d.ts` containing
-   `/// <reference types="vite/client" />`, so TypeScript accepts the CSS
-   imports.
-7. Tests (Vitest + React Testing Library):
-   - `steps.test.ts`: there are 7 steps, numbered 1–7 in order, with unique
-     ids and paths. `getNeighbouringSteps` returns nothing before step 1 or
-     after step 7.
-   - `StepNav.test.tsx`: renders 7 links, and marks only the current one
-     with `aria-current="page"`.
-   - `StepPage.test.tsx`: the first step has no Back link, the last has no
-     Next link, and a middle step links to both neighbours.
-   - In `tests/setup/vitest.setup.ts`, call React Testing Library's
-     `cleanup()` in an `afterEach`. Without Vitest globals, its automatic
-     cleanup isn't registered, and renders leak between tests.
-   - Update `App.test.tsx`: an unknown route lands on the Household
-     placeholder, and clicking "Next" moves to Income & expenses (use
-     `@testing-library/user-event`).
+#### Step 5 · Results: FI number and progress
 
-**Check:** `npm run check` passes. In `npm run dev`, every step is reachable
-from the header and through Back/Next, and reloading on any step keeps you
-on it.
+- [ ] Done
 
-#### Step 5 · End-to-end tests: Playwright
+1. `src/ui/screens/ResultsScreen.tsx`, using `usePlanSummary()`:
+   - **complete:** two `MetricTile`s. "FI number" (FIRE-1): value, then a
+     sub-line "{retirement spending}/yr ÷ {rate}". "Progress to FI"
+     (FIRE-2): value, then a sub-line "{investable} invested of
+     {FI number}". Each has its `ExplainPanel`.
+   - **incomplete:** a `Banner` listing what's missing, each item a link to
+     the step where it's entered (e.g. "Living expenses → Income & expenses").
+     The field-to-step map (`livingExpenses` → `income-expenses`) lives in the
+     UI, in `src/ui/screens/missingInputSteps.ts`, so the engine never
+     imports UI code.
+   - Always: a `Banner` "Not yet modelled: growth over time and retirement
+     age (M2), super (M5), tax (M8), property (M12) and more. These figures
+     use today's spending and today's portfolio only." The milestone
+     numbers come from `PLAN.md` part 1.
+2. Route it in place of the Results placeholder.
+3. Tests: complete and incomplete states. The worked values ($1,600,000 and
+   45%) appear and the explanation shows its lines. Missing-input links go to
+   the right step.
+4. Add `tests/e2e/fiNumber.spec.ts`: enter living expenses $64,000,
+   retirement spending 100%, portfolio $720,000 and rate 4% (by typing
+   into the fields and pressing Tab). Results then shows $1,600,000 and 45%,
+   and the FI number's breakdown can be opened.
 
-- [x] Done
+**Check:** `npm run check` and `npm run test:e2e` pass.
 
-1. Install `@playwright/test` at the pinned version.
-2. Add `playwright.config.ts`:
-   - `testDir: "tests/e2e"`, one `chromium` project, and
-     `use.baseURL: "http://localhost:4173/au-fire-planning/"`;
-   - `webServer`: command `npm run build && npm run preview -- --port 4173 --strictPort`,
-     url the same as `baseURL`, `reuseExistingServer: !process.env.CI`;
-   - `use.launchOptions.executablePath` set from the environment variable
-     `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when present, otherwise left
-     unset. This lets environments with a preinstalled Chromium use it,
-     while CI uses Playwright's own;
-   - `retries: process.env.CI ? 1 : 0`, `trace: "on-first-retry"`,
-     `reporter`: `"list"` locally, `"html"` plus `"list"` in CI.
-3. Add `tests/e2e/navigation.spec.ts`:
-   - opening the app shows the "AU FIRE Planner" header, all seven steps,
-     and the Household page;
-   - pressing "Next" six times visits every step in order, ending on
-     Scenarios with no Next link;
-   - opening `#/results` directly shows Results as the current step;
-   - no errors are logged to the browser console on any page.
-4. Exclude `tests/e2e/` from Vitest (it's already outside Vitest's
-   `include`), and make sure ESLint and TypeScript cover it: add
-   `tests/e2e/**` to the Node-globals block in `eslint.config.js` (the
-   Playwright tests run in Node, and drive the browser through `page`).
-5. Add script `test:e2e` (`playwright test`). In the README, document it,
-   including installing the browser once with
-   `npx playwright install chromium`, and the
-   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` option for a preinstalled Chromium.
+#### Step 6 · Wire format and mappers
 
-**Check:** with
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium npm run test:e2e`,
-all E2E tests pass, and `npm run check` still passes.
+- [ ] Done
 
-#### Step 6 · Continuous integration on every PR
+1. Install `zod`. Add `src/persistence/planDocument.ts`: the
+   `PlanDocumentV1` Zod schema (as in part 2, with optional `valueDollars`),
+   its inferred type, and `CURRENT_SCHEMA_VERSION = 1`.
+2. Add `src/persistence/planMapping.ts`:
+   - `planToWire(plan): PlanDocumentV1`, which writes only values that are
+     set and converts fractions to percent;
+   - `planFromWire(document): Plan`, the inverse, which leaves unset values
+     `undefined`.
+3. Add `src/persistence/migrations.ts`: `parsePlanDocument(unknownJson)`.
+   It reads `schemaVersion`, applies migrations up to the current version
+   (none yet, but the loop and a version-to-migration map exist),
+   validates with Zod, and returns `{ ok: true, document }` or
+   `{ ok: false, error }`. It never throws for bad input.
+4. Add `tests/fixtures/plan-documents/v1-basic.json`, a complete v1
+   document. Keep it forever. Future versions add their own fixture.
+5. Tests:
+   - round trip `Plan → wire → Plan` gives a deep-equal plan, including
+     unset values (property-based, with arbitrary plans from fast-check);
+   - percent ↔ fraction conversion (4% ↔ 0.04);
+   - the fixture parses;
+   - malformed documents are rejected with an error, not a throw: wrong
+     types, a missing `schemaVersion`, an unknown future `schemaVersion`.
 
-- [x] Done
+**Check:** `npm run check` passes.
 
-1. Add `.github/workflows/ci.yml`:
-   - runs on `pull_request` and `workflow_dispatch`, and cancels in-progress
-     runs for the same branch (`concurrency` with `cancel-in-progress`);
-   - job `check`: checkout, `setup-node` (using `.nvmrc`, npm cache),
-     `npm ci`, `npm run check`;
-   - job `e2e`: checkout, `setup-node`, `npm ci`,
-     `npx playwright install --with-deps chromium`, `npm run test:e2e`.
-     On failure, upload `playwright-report/` and `test-results/` as an
-     artifact;
-   - `permissions: contents: read`.
-2. Add a "Continuous integration" section to the README describing the two
-   jobs.
+#### Step 7 · Saving to IndexedDB
 
-**Check:** the workflow file is valid YAML and every command it runs passes
-locally. The real run happens when the lead opens the milestone PR.
+- [ ] Done
 
-#### Step 7 · Deploy to GitHub Pages
+1. Install `idb` and `fake-indexeddb`. Add `src/persistence/database.ts`:
+   `openPlannerDatabase()` using `idb`'s `openDB` with a typed `DBSchema`.
+   It sets up database `au-fire-planner` version 1, with the `plans` store
+   (key `id`, indexes `byUpdatedAt` and `byBaseId`) and the `meta` store
+   (key `key`). It handles `versionchange` by closing the connection.
+2. Add `src/persistence/planStore.ts`: the `PlanStore` interface and
+   `IndexedDbPlanStore` (taking the database, `Clock` and `IdGenerator`):
+   - `loadActivePlan()` → `{ status: "none" }` |
+     `{ status: "loaded", plan, recordId, updatedAt }` |
+     `{ status: "unreadable", recordId, error }`. The active plan's ID is in
+     `meta` under `activePlanId`;
+   - `savePlan(plan, { recordId?, expectedUpdatedAt? })`. On first save it
+     creates a `PlanRecord` (`kind: "base"`, name "My plan") and sets
+     `activePlanId`. If the stored `updatedAt` differs from
+     `expectedUpdatedAt`, it returns `{ status: "conflict" }` and writes
+     nothing. Otherwise it writes in one transaction and returns
+     `{ status: "saved", recordId, updatedAt }`;
+   - `getMeta(key)` and `setMeta(key, value)`;
+   - **never overwrites an unreadable record**: when one is found, the app
+     saves new work under a new record ID.
+   Also add `InMemoryPlanStore`, which has the same interface. It's used
+   when IndexedDB can't be opened, and in component tests.
+3. Add `src/persistence/PersistenceProvider.tsx`, inside `PlanProvider`:
+   - On start, it opens the store. If that fails, it uses
+     `InMemoryPlanStore` and shows a warning `Banner`: "Your browser isn't
+     letting this app store data, so your plan won't be kept after you close
+     this tab."
+   - It loads the active plan. While loading, it shows "Loading your plan…".
+     If the plan is loaded, it dispatches `replacePlan`. If it's
+     unreadable, it shows a warning `Banner`: "Your saved plan couldn't be
+     read. It has been kept unchanged, and your new changes will be saved
+     separately."
+   - It **autosaves** 500 ms after the last change, through `planToWire`. On
+     the first successful save, it calls `navigator.storage.persist?.()`
+     once.
+   - On `conflict`, it shows a `Banner`: "This plan was changed in another
+     tab. Reload to see the latest version." Then it stops autosaving.
+4. Tests:
+   - `IndexedDbPlanStore` with `fake-indexeddb` (`import "fake-indexeddb/auto"`
+     in that test file): save then load gives an equal plan; `none` on an
+     empty database; an unreadable record is reported and kept untouched
+     after a later save; a conflict is detected when `expectedUpdatedAt` is
+     stale;
+   - `PersistenceProvider` with `InMemoryPlanStore` and fake timers: one
+     save after a burst of edits.
+5. E2E (`tests/e2e/persistence.spec.ts`): enter values, wait for the save,
+   reload, and the values and FI number are still there. Also add a check to
+   every E2E test that the page makes **no requests to any other origin**
+   (NFR-4): record `page.on("request")` and assert every URL starts with the
+   base URL's origin.
 
-- [x] Done
+**Check:** `npm run check` and `npm run test:e2e` pass. In `npm run dev`,
+values survive a reload.
 
-1. Add `.github/workflows/deploy.yml`:
-   - runs on `push` to `main` and `workflow_dispatch`;
-   - `permissions`: `contents: read`, `pages: write`, `id-token: write`;
-     and `concurrency: { group: "pages", cancel-in-progress: false }`;
-   - job `build`: checkout, `setup-node`, `npm ci`, `npm run check`,
-     `npx playwright install --with-deps chromium`, `npm run test:e2e`,
-     `npm run build`, `actions/configure-pages`, then
-     `actions/upload-pages-artifact` with `path: dist`;
-   - job `deploy`: needs `build`, environment `github-pages` with the
-     deployed URL, runs `actions/deploy-pages`.
-2. Add a "Deployment" section to the README:
-   - merges to `main` deploy to `https://eatea.github.io/au-fire-planning/`,
-     after the same checks as CI;
-   - one-off setup: repository Settings → Pages → Source: "GitHub Actions";
-   - everything runs in the browser, and no data is sent anywhere.
+#### Step 8 · Welcome page and disclaimer
 
-**Check:** the workflow file is valid YAML, and `npm run build` produces
-`dist/index.html` with asset paths under `/au-fire-planning/`.
+- [ ] Done
+
+1. Add `src/ui/screens/WelcomeScreen.tsx` at route `#/welcome`. It's not in
+   the step list or the header navigation. It shows:
+   - what the app does (two sentences);
+   - the disclaimer (NFR-5): "This app gives general information and
+     modelling only. It isn't personal financial, tax or legal advice.
+     Consider getting advice for your situation.";
+   - the privacy note (NFR-4): "Your plan is stored only in this browser on
+     this device. Nothing is sent anywhere.";
+   - a "Start planning" button. It stores `disclaimerAcceptedAt` (ISO time
+     from the `Clock`) in `meta`, then goes to `#/income-expenses`, the first
+     step with inputs in M1.
+2. On start, if `disclaimerAcceptedAt` isn't set, `PersistenceProvider`
+   redirects to `#/welcome`, whatever the URL.
+3. Add a one-line footer to `AppShell` on every page: "General information
+   only, not financial advice. Your data stays on this device."
+4. Update the E2E tests. Add a helper, `startFresh(page)`, that opens the
+   app, accepts the welcome page and returns. Use it in the existing specs
+   so they don't hit the redirect. Add `tests/e2e/welcome.spec.ts`: a first
+   visit shows the welcome page and disclaimer; after accepting and
+   reloading, it isn't shown again.
+5. Unit tests for the redirect, and for `disclaimerAcceptedAt` being stored.
+
+**Check:** `npm run check` and `npm run test:e2e` pass.
 
 #### After the last step
 
-The lead ticks each step above as it's committed, marks M0 done in the
-Next steps list below, and opens the milestone PR. Once it's merged, the
-owner sets the Pages source (step 7) and checks the live site.
+The lead ticks each step as it's committed, marks M1 done, and opens the
+milestone PR. The README needs no new commands in M1. If any step changes
+how to run or test the app, it updates the README in that step.
 
 ## Next steps
 
@@ -1400,5 +1571,6 @@ owner sets the Pages source (step 7) and checks the live site.
 - [x] Part 2: agree the tech stack, architecture and testing approach.
 - [x] Part 3: approve the M0 step-by-step plan.
 - [x] Implement M0 (subagent, step by step).
-- [ ] Owner verifies the M0 PR, then sets Settings → Pages → Source to "GitHub Actions".
-- [ ] Plan M1 in its own PR.
+- [x] Owner verifies and merges the M0 PR.
+- [ ] Approve the M1 step-by-step plan (this PR).
+- [ ] Implement M1 (subagent, step by step), then open the M1 PR for verification.
