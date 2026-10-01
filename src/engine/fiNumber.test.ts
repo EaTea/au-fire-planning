@@ -298,6 +298,14 @@ describe("calculateFiNumberAtRetirement", () => {
     expect(calculateFiNumberAtRetirement(dollars(1600000), 0.025, 0).value).toBe(1600000);
   });
 
+  // The growth multiplier is a factor, so the UI shows "× 1.4845", not "148.5%".
+  it("labels the inflation growth line with the factor unit", () => {
+    const result = calculateFiNumberAtRetirement(dollars(1600000), 0.025, 16);
+
+    expect(result.lines[1]).toMatchObject({ unit: "factor", operator: "×" });
+    expect(result.lines[1]?.value).toBeCloseTo(1.025 ** 16, 12);
+  });
+
   // $1,600,000 × 1.025^16.
   it("grows today's FI number by inflation over the years", () => {
     expect(calculateFiNumberAtRetirement(dollars(1600000), 0.025, 16).value).toBeCloseTo(

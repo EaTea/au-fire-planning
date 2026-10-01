@@ -5,8 +5,11 @@
 // lines as-is, so the breakdown a user sees is always the calculation that was
 // actually done, never a separate description that could drift.
 
-/** The unit of a figure: whole dollars, or a fraction (0.45 means 45%). */
-export type ExplainedUnit = "dollars" | "fraction";
+/**
+ * The unit of a figure: whole dollars, a fraction (0.45 means 45%), or a
+ * factor to multiply by (1.3213 means "× 1.3213", e.g. inflation growth).
+ */
+export type ExplainedUnit = "dollars" | "fraction" | "factor";
 
 /** One line of working, e.g. "Safe withdrawal rate  ÷  4%". */
 export interface ExplanationLine {

@@ -1,10 +1,11 @@
-// Formatting and parsing of the two kinds of number M1 shows: dollars and
-// percentages. The fields (MoneyField, PercentField), ExplainPanel and the
-// results screens all go through here so a figure looks the same wherever it
-// appears, and so what a user types is read back the same way it is shown.
+// Formatting and parsing of the kinds of number the app shows: dollars,
+// percentages, ages and growth factors. The fields (MoneyField, PercentField,
+// AgeField), ExplainPanel and the results screens all go through here so a
+// figure looks the same wherever it appears, and so what a user types is read
+// back the same way it is shown.
 //
-// M1 shows today's dollars only. `formatDollars` is replaced by a
-// today's/nominal-aware `formatMoney` in M2.
+// `formatDollars` shows a dollar value as given; the today's/nominal choice is
+// applied before it, by `useMoneyFormatter` (dollarsMode.tsx).
 
 const dollarFormatter = new Intl.NumberFormat("en-AU", {
   style: "currency",
@@ -77,4 +78,39 @@ export function parsePercent(text: string): number | undefined {
   // Rounding removes binary floating-point noise from the division
   // (so 4.1% is 0.041, not 0.040999999999999995).
   return Number((percentNumber / 100).toFixed(10));
+}
+
+/**
+ * Formats a growth factor to four decimal places, e.g. 1.32129 becomes
+ * "1.3213". Used by ExplainPanel for `factor` lines; the "×" in front comes
+ * from the line's operator.
+ */
+export function formatFactor(factor: number): string {
+  return factor.toFixed(4);
+}
+
+/** Formats an age in whole years for a field, e.g. 34 becomes "34". */
+export function formatAge(age: number): string {
+  return String(age);
+}
+
+// Whole numbers only: digits, nothing else.
+const ageTextPattern = /^\d+$/;
+
+/**
+ * Reads the text a user typed into an AgeField. Accepts whole years such as
+ * "34". Returns undefined for empty text (cleared) and NaN for anything else
+ * ("34.5", "abc", "-3"), matching the other parse functions.
+ */
+export function parseAge(text: string): number | undefined {
+  const trimmed = text.trim();
+
+  if (trimmed === "") {
+    return undefined;
+  }
+  if (!ageTextPattern.test(trimmed)) {
+    return NaN;
+  }
+
+  return Number(trimmed);
 }

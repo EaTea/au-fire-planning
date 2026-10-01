@@ -307,7 +307,7 @@ export function calculateFiNumberAtRetirement(
       {
         label: `Inflation growth over ${yearsUntilRetirement} years`,
         value: inflationGrowth,
-        unit: "fraction",
+        unit: "factor",
         operator: "×",
         source: "calculated",
       },

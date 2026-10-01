@@ -1431,7 +1431,7 @@ app still works.
 
 #### Step 4 · Shared pieces: age field and dollars mode
 
-- [ ] Done
+- [x] Done
 
 1. `AgeField` in `src/ui/components/`: a `NumberField` for whole years. It
    accepts `34`, rejects `34.5` and text, takes `min`/`max`, and supports the
@@ -1440,8 +1440,9 @@ app still works.
    `useMoneyFormatter()` and `DollarsModeToggle`, as described above. Wrap
    the app in the provider.
 3. Add a `factor` unit to `ExplainedUnit` (src/engine/explained.ts),
-   displayed as "× 1.3213" (four decimal places) wherever explanations are
-   formatted. Use it for the "Inflation growth over N years" line in
+   displayed to four decimal places, e.g. "1.3213", wherever explanations
+   are formatted. The "×" comes from the line's operator, like the "÷" on
+   the withdrawal rate line. Use it for the "Inflation growth over N years" line in
    `calculateFiNumberAtRetirement`.
 4. Tests:
    - `AgeField` parsing and limits;
@@ -1531,7 +1532,8 @@ app still works.
    - enter worked example A through the screens;
    - Results shows FI reached in 2038 at age 46;
    - Year by year shows the 2038 row highlighted;
-   - switching to today's dollars changes the balances;
+   - the toggle starts on today's dollars, and switching to nominal changes
+     the balances;
    - after a reload, the values are still there.
 
    The test fixes the start year at 2026. The app reads it from a `Clock`,

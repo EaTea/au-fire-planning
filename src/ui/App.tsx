@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router";
 import { PlanProvider } from "../plan/PlanProvider";
 import { PersistenceProvider } from "../persistence/PersistenceProvider";
 import type { PlanStore } from "../persistence/planStore";
+import { DollarsModeProvider } from "./dollarsMode";
 import { AppShell } from "./components/AppShell";
 import { firstStep, steps, type StepId } from "./navigation/steps";
 import { AssetsScreen } from "./screens/AssetsScreen";
@@ -42,23 +43,25 @@ export function App({ openStore, startYear }: AppProps) {
   return (
     <PlanProvider startYear={startYear}>
       <PersistenceProvider openStore={openStore}>
-        <HashRouter>
-          <AppShell>
-            <Routes>
-              {steps.map((step) => (
-                <Route
-                  key={step.id}
-                  path={step.path}
-                  element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
-                />
-              ))}
+        <DollarsModeProvider>
+          <HashRouter>
+            <AppShell>
+              <Routes>
+                {steps.map((step) => (
+                  <Route
+                    key={step.id}
+                    path={step.path}
+                    element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
+                  />
+                ))}
 
-              <Route path="/welcome" element={<WelcomeScreen />} />
+                <Route path="/welcome" element={<WelcomeScreen />} />
 
-              <Route path="*" element={<Navigate to={firstStep.path} replace />} />
-            </Routes>
-          </AppShell>
-        </HashRouter>
+                <Route path="*" element={<Navigate to={firstStep.path} replace />} />
+              </Routes>
+            </AppShell>
+          </HashRouter>
+        </DollarsModeProvider>
       </PersistenceProvider>
     </PlanProvider>
   );

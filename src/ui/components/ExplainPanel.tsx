@@ -1,5 +1,5 @@
 import type { Explained, ExplanationLine } from "../../engine/explained";
-import { formatDollars, formatPercent } from "../format";
+import { formatDollars, formatFactor, formatPercent } from "../format";
 
 /** What ExplainPanel needs: the explained figure whose working it shows. */
 interface ExplainPanelProps {
@@ -8,10 +8,17 @@ interface ExplainPanelProps {
 
 /**
  * Formats one line's value according to its unit, so a rate prints as a
- * percentage and an amount as dollars. Used for each row of the breakdown.
+ * percentage, an amount as dollars and a growth multiplier as a factor. Used for each row of the breakdown.
  */
 function formatLineValue(line: ExplanationLine): string {
-  return line.unit === "dollars" ? formatDollars(line.value) : formatPercent(line.value);
+  switch (line.unit) {
+    case "dollars":
+      return formatDollars(line.value);
+    case "factor":
+      return formatFactor(line.value);
+    case "fraction":
+      return formatPercent(line.value);
+  }
 }
 
 /**

@@ -58,4 +58,36 @@ describe("ExplainPanel", () => {
     expect(firstRow.querySelector("b")).toBeNull();
     expect(middleRow.querySelector("b")).toBeNull();
   });
+
+  // A factor line reads "× Label ... 1.3213": the × comes from the operator, the value is a plain multiplier.
+  it("shows a factor line as a four-decimal multiplier", () => {
+    const inflationExplained: Explained = {
+      value: 2375208.99,
+      unit: "dollars",
+      lines: [
+        { label: "FI number today", value: 1600000, unit: "dollars", source: "calculated" },
+        {
+          label: "Inflation growth over 16 years",
+          value: 1.484505,
+          unit: "factor",
+          operator: "×",
+          source: "calculated",
+        },
+        {
+          label: "FI number at retirement",
+          value: 2375208.99,
+          unit: "dollars",
+          operator: "=",
+          source: "calculated",
+        },
+      ],
+    };
+
+    render(<ExplainPanel explained={inflationExplained} />);
+
+    const row = screen.getAllByRole("row")[1];
+    expect(row).toHaveTextContent("× Inflation growth over 16 years");
+    expect(row).toHaveTextContent("1.4845");
+    expect(row).not.toHaveTextContent("%");
+  });
 });
