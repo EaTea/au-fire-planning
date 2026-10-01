@@ -1,0 +1,117 @@
+/*
+ * Layout styles for the app shell: header, step pills, page and footer.
+ * Values follow the mockups (requirements/mockups/src/wireframe.css); colours
+ * and spacing come from tokens.css.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  font: 14px/1.4 var(--font-body);
+  color: var(--ink);
+}
+
+/* ---------- Header and step navigation ---------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-large);
+  padding: 14px var(--space-page-side);
+  border-bottom: 2px solid var(--ink);
+}
+
+.logo {
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  padding: var(--space-small) 10px;
+  white-space: nowrap;
+}
+
+.step-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-small);
+  flex: 1;
+}
+
+.step-pill {
+  padding: var(--space-small) var(--space-medium);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.step-pill:hover {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.step-number {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+/* The current step is filled. */
+.step-active,
+.step-active:hover {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+/* ---------- Page layout ---------- */
+
+.page {
+  padding: var(--space-large) var(--space-page-side) 40px;
+}
+
+.page-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.page-intro {
+  color: var(--ink-soft);
+  margin: 0 0 20px;
+  max-width: 900px;
+}
+
+.placeholder-note {
+  border: 1.5px dashed var(--line);
+  border-radius: 6px;
+  padding: 16px 18px;
+  color: var(--ink-faint);
+}
+
+/* Back on the left, Next on the right (the Next link alone still sits right). */
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-large);
+  padding-top: var(--space-medium);
+  border-top: 1px solid var(--line-soft);
+}
+
+.footer-link {
+  color: var(--ink);
+  text-decoration: none;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 14px;
+}
+
+.footer-link:hover {
+  background: var(--fill);
+}
+
+.footer-next {
+  margin-left: auto;
+}

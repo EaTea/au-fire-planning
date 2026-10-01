@@ -1,16 +1,42 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { App } from "./App";
 
-// Component tests for the top-level App, using React Testing Library to render
-// it into jsdom. Later steps extend this with routing and navigation checks.
+// Component tests for the top-level App: header, routing and Back/Next. The
+// hash router reads window.location, so each test sets the hash first.
 describe("App", () => {
-  // Smoke test: proves the whole toolchain (Vitest, jsdom, React Testing
-  // Library, jest-dom matchers) works, and that App shows the app title.
-  it("renders the AU FIRE Planner heading", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+  });
+
+  // Smoke test: proves the toolchain works and the header shows the app title.
+  it("shows the AU FIRE Planner logo in the header", () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "AU FIRE Planner" })).toBeInTheDocument();
+    expect(screen.getByText("AU FIRE Planner")).toBeInTheDocument();
+  });
+
+  // Unknown routes redirect to the first step.
+  it("lands on the Household placeholder for an unknown route", () => {
+    window.location.hash = "#/no-such-page";
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Household" })).toBeInTheDocument();
+    expect(screen.getByText("Arrives in milestone M2")).toBeInTheDocument();
+  });
+
+  // Next moves along the journey.
+  it("moves to Income & expenses when Next is clicked", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("link", { name: "Next: Income & expenses →" }));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Income & expenses" }),
+    ).toBeInTheDocument();
   });
 });

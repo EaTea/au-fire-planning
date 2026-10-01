@@ -1257,7 +1257,7 @@ makes it fail (then restore it).
 
 #### Step 4 · App shell, step navigation and placeholder pages
 
-- [ ] Done
+- [x] Done
 
 1. Install `react-router` at the pinned version.
 2. Add `src/ui/navigation/steps.ts`: the step list from the table above, as
@@ -1273,7 +1273,7 @@ makes it fail (then restore it).
    - `StepNav`: one `NavLink` per step, showing its number and label. The
      current step gets `aria-current="page"` (`NavLink` does this) and the
      filled style.
-   - `StepPage`: the page title (`<h1>`), an intro paragraph, the content,
+   - `StepPage`: the page title (`<h1>`, the step's label), an intro paragraph, the content,
      and a footer with "← {previous label}" and "Next: {next label} →"
      links, each hidden when there's no previous or next step.
 4. Add `src/ui/screens/PlaceholderScreen.tsx`, a `StepPage` that says what
@@ -1287,7 +1287,9 @@ makes it fail (then restore it).
    from `requirements/mockups/src/wireframe.css`: the greyscale ink, line and
    fill values, plus the paper background) and `src/ui/styles/app.css`
    (header, step pills, page and footer layout), imported from `main.tsx`.
-   Keep it plain CSS. No CSS framework.
+   Keep it plain CSS. No CSS framework. Add `src/vite-env.d.ts` containing
+   `/// <reference types="vite/client" />`, so TypeScript accepts the CSS
+   imports.
 7. Tests (Vitest + React Testing Library):
    - `steps.test.ts`: there are 7 steps, numbered 1–7 in order, with unique
      ids and paths. `getNeighbouringSteps` returns nothing before step 1 or
@@ -1296,6 +1298,9 @@ makes it fail (then restore it).
      with `aria-current="page"`.
    - `StepPage.test.tsx`: the first step has no Back link, the last has no
      Next link, and a middle step links to both neighbours.
+   - In `tests/setup/vitest.setup.ts`, call React Testing Library's
+     `cleanup()` in an `afterEach`. Without Vitest globals, its automatic
+     cleanup isn't registered, and renders leak between tests.
    - Update `App.test.tsx`: an unknown route lands on the Household
      placeholder, and clicking "Next" moves to Income & expenses (use
      `@testing-library/user-event`).
