@@ -1568,7 +1568,7 @@ how to run or test the app, it updates the README in that step.
 ### Colour scheme: Australian flag
 
 **Status:** plan agreed in chat with the owner (navy pages chosen over
-light pages). Awaiting approval of this PR before implementation.
+light pages). Being implemented.
 
 **Kind:** behavior change. Only the app's appearance changes. The layout,
 navigation and content stay the same.
@@ -1618,13 +1618,13 @@ white text and a near-black header.
 - **The mockups stay greyscale.** `requirements/mockups/` are wireframes
   showing layout, not visual design.
 
-#### Step 1 · Palette and role variables, with a contrast test
+#### Step 1 · Palette and role variables, with a contrast test: done
 
 - Add the palette and role variables to `tokens.css`, next to the existing
   greyscale ones. Nothing uses the new variables yet, so the app looks the
   same after this step.
-- Add `src/ui/styles/tokens.test.ts`. It reads `tokens.css` as text (Vite's
-  `?raw` import), resolves each role variable to a hex colour, and checks
+- Add `src/ui/styles/tokens.test.ts`. It reads `tokens.css` from disk as
+  text, resolves each role variable to a hex colour, and checks
   that every text and background pair the app uses has a contrast ratio of
   at least 4.5:1. If a later palette edit makes text unreadable, this test
   fails.
