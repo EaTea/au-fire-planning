@@ -1,0 +1,22 @@
+/*
+ * Design tokens: colour, spacing and font variables, taken from the mockups'
+ * requirements/mockups/src/wireframe.css (greyscale ink, line and fill values
+ * plus the paper background). Imported from src/main.tsx before app.css.
+ */
+:root {
+  --ink: #222;
+  --ink-soft: #666;
+  --ink-faint: #999;
+  --line: #bbb;
+  --line-soft: #ddd;
+  --fill: #f2f2f2;
+  --fill-dark: #d9d9d9;
+  --paper: #fff;
+
+  --font-body: "Helvetica Neue", Arial, sans-serif;
+
+  --space-small: 6px;
+  --space-medium: 12px;
+  --space-large: 24px;
+  --space-page-side: 32px;
+}

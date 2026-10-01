@@ -1,0 +1,70 @@
+# Deployment: publishes the production build to GitHub Pages.
+#
+#   push to main --> build  : same checks as CI, then build and upload dist/
+#                      |
+#                      v
+#                    deploy : publish the uploaded artifact to GitHub Pages
+#
+# The build job runs the full check and end-to-end suites first, so a broken
+# commit on main is never published.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# contents: read lets the build job check out the code. pages: write and
+# id-token: write let the deploy job publish to Pages and prove its identity.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time. A deployment already in progress is allowed
+# to finish rather than being cancelled half way through publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Verify the code, build it, and package dist/ as the Pages artifact.
+  build:
+    name: Check, build and package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+      # Downloads Chromium plus the system libraries it needs on the runner.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  # Publish the artifact produced by the build job.
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

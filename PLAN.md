@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 plan drafted, awaiting approval. No implementation has started.
+**Current status:** M0 implemented, awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan approved |
 
 ## 1. Requirement ordering
 
@@ -1089,7 +1089,7 @@ code are repeated here.
 
 ### M0 · Walking skeleton: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** implemented, all seven steps done. Awaiting the owner's verification in the M0 PR.
 
 **Goal:** an app that builds, runs, tests and deploys, with no planning
 features yet. It shows the header and seven-step navigation from the
@@ -1124,6 +1124,7 @@ Install exactly these versions (`npm install --save-exact`):
 | `@vitejs/plugin-react` | 6.1.1 | dev |
 | `typescript` | 6.0.3 | dev (not 7.x: see part 2) |
 | `@types/react`, `@types/react-dom` | 19.3.0 | dev |
+| `@types/node` | 22.20.4 | dev (matches Node 22) |
 | `eslint` | 10.11.0 | dev |
 | `@eslint/js` | 10.0.1 | dev |
 | `typescript-eslint` | 8.71.0 | dev |
@@ -1165,21 +1166,27 @@ unknown route redirect to `#/household`.
 
 #### Step 1 · Minimal app that builds and runs
 
-- [ ] Done
+- [x] Done
 
 1. Create `package.json` by hand (not with an interactive generator):
    `"name": "au-fire-planner"`, `"private": true`, `"type": "module"`,
    `"engines": { "node": ">=22" }`, and scripts `dev` (`vite`), `build`
    (`vite build`), `preview` (`vite preview`) and `typecheck`
    (`tsc --noEmit`). Install `react`, `react-dom`, `vite`,
-   `@vitejs/plugin-react`, `typescript`, `@types/react` and
-   `@types/react-dom` at the pinned versions.
+   `@vitejs/plugin-react`, `typescript`, `@types/react`,
+   `@types/react-dom` and `@types/node` at the pinned versions. `@types/node`
+   types the config files (`vite.config.ts`, and `playwright.config.ts`'s use
+   of `process.env` in step 5).
 2. Add `.nvmrc` containing `22`.
 3. Add `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`,
    `noImplicitOverride`, `verbatimModuleSyntax`, `"jsx": "react-jsx"`,
    `"module": "ESNext"`, `"moduleResolution": "bundler"`,
    `"target": "ES2022"`, `"lib": ["ES2022", "DOM", "DOM.Iterable"]`,
-   `"noEmit": true`, and `"include": ["src", "tests", "*.config.ts"]`.
+   `"noEmit": true`, `"skipLibCheck": true`, and
+   `"include": ["src", "tests", "*.config.ts"]`. `skipLibCheck` skips
+   type-checking libraries' own declaration files: Vite 8's declarations
+   need Node types and newer `lib` settings that don't apply to this app.
+   Our own code is still fully checked.
 4. Add `vite.config.ts` with the React plugin and `base: "/au-fire-planning/"`
    (needed for GitHub Pages).
 5. Add `index.html` (title "AU FIRE Planner", a `#root` element) and
@@ -1198,15 +1205,16 @@ serves the heading at the URL above.
 
 #### Step 2 · Static checks: ESLint and Prettier
 
-- [ ] Done
+- [x] Done
 
 1. Install `eslint`, `@eslint/js`, `typescript-eslint`,
    `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals` and
    `prettier` at the pinned versions.
-2. Add `eslint.config.js` (flat config) combining `@eslint/js` recommended,
+2. Add `eslint.config.js` (flat config, built with `defineConfig` from
+   `eslint/config`; `tseslint.config()` is deprecated) combining `@eslint/js` recommended,
    `typescript-eslint` recommended, the React Hooks recommended rules, and
-   `eslint-config-prettier` last. Set browser globals for `src/` and Node
-   globals for config files. Ignore `dist/`, `playwright-report/`,
+   `eslint-config-prettier` last. Scope browser globals and the React Hooks
+   rules to `src/**/*.{ts,tsx}`, and Node globals to `*.config.{js,ts}`. Ignore `dist/`, `playwright-report/`,
    `test-results/` and `requirements/` (the mockup sources aren't app code).
 3. Add `.prettierrc.json` (defaults, plus `"printWidth": 100`) and a
    `.prettierignore` listing `dist/`, `playwright-report/`, `test-results/`,
@@ -1223,7 +1231,7 @@ all pass.
 
 #### Step 3 · Unit and component tests: Vitest
 
-- [ ] Done
+- [x] Done
 
 1. Install `vitest`, `jsdom`, `@testing-library/react`,
    `@testing-library/dom`, `@testing-library/jest-dom` and
@@ -1233,12 +1241,14 @@ all pass.
    `include: ["src/**/*.test.{ts,tsx}", "tests/unit/**/*.test.{ts,tsx}"]`,
    `setupFiles: ["tests/setup/vitest.setup.ts"]`. The setup file imports
    `@testing-library/jest-dom/vitest`.
-3. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
+3. In `eslint.config.js`, widen the browser-globals block to also cover
+   `tests/unit/**` and `tests/setup/**`.
+4. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
    the "AU FIRE Planner" heading. Import `describe`/`it`/`expect`
    explicitly from `vitest` rather than relying on globals.
-4. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
+5. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
    (`npm run typecheck && npm run lint && npm run format:check && npm test`).
-5. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
+6. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
    `npm run check`, noting that `npm run check` must pass before every
    commit.
 
@@ -1247,7 +1257,7 @@ makes it fail (then restore it).
 
 #### Step 4 · App shell, step navigation and placeholder pages
 
-- [ ] Done
+- [x] Done
 
 1. Install `react-router` at the pinned version.
 2. Add `src/ui/navigation/steps.ts`: the step list from the table above, as
@@ -1263,7 +1273,7 @@ makes it fail (then restore it).
    - `StepNav`: one `NavLink` per step, showing its number and label. The
      current step gets `aria-current="page"` (`NavLink` does this) and the
      filled style.
-   - `StepPage`: the page title (`<h1>`), an intro paragraph, the content,
+   - `StepPage`: the page title (`<h1>`, the step's label), an intro paragraph, the content,
      and a footer with "← {previous label}" and "Next: {next label} →"
      links, each hidden when there's no previous or next step.
 4. Add `src/ui/screens/PlaceholderScreen.tsx`, a `StepPage` that says what
@@ -1277,7 +1287,9 @@ makes it fail (then restore it).
    from `requirements/mockups/src/wireframe.css`: the greyscale ink, line and
    fill values, plus the paper background) and `src/ui/styles/app.css`
    (header, step pills, page and footer layout), imported from `main.tsx`.
-   Keep it plain CSS. No CSS framework.
+   Keep it plain CSS. No CSS framework. Add `src/vite-env.d.ts` containing
+   `/// <reference types="vite/client" />`, so TypeScript accepts the CSS
+   imports.
 7. Tests (Vitest + React Testing Library):
    - `steps.test.ts`: there are 7 steps, numbered 1–7 in order, with unique
      ids and paths. `getNeighbouringSteps` returns nothing before step 1 or
@@ -1286,6 +1298,9 @@ makes it fail (then restore it).
      with `aria-current="page"`.
    - `StepPage.test.tsx`: the first step has no Back link, the last has no
      Next link, and a middle step links to both neighbours.
+   - In `tests/setup/vitest.setup.ts`, call React Testing Library's
+     `cleanup()` in an `afterEach`. Without Vitest globals, its automatic
+     cleanup isn't registered, and renders leak between tests.
    - Update `App.test.tsx`: an unknown route lands on the Household
      placeholder, and clicking "Next" moves to Income & expenses (use
      `@testing-library/user-event`).
@@ -1296,7 +1311,7 @@ on it.
 
 #### Step 5 · End-to-end tests: Playwright
 
-- [ ] Done
+- [x] Done
 
 1. Install `@playwright/test` at the pinned version.
 2. Add `playwright.config.ts`:
@@ -1318,7 +1333,9 @@ on it.
    - opening `#/results` directly shows Results as the current step;
    - no errors are logged to the browser console on any page.
 4. Exclude `tests/e2e/` from Vitest (it's already outside Vitest's
-   `include`), and make sure ESLint and TypeScript cover it.
+   `include`), and make sure ESLint and TypeScript cover it: add
+   `tests/e2e/**` to the Node-globals block in `eslint.config.js` (the
+   Playwright tests run in Node, and drive the browser through `page`).
 5. Add script `test:e2e` (`playwright test`). In the README, document it,
    including installing the browser once with
    `npx playwright install chromium`, and the
@@ -1330,7 +1347,7 @@ all E2E tests pass, and `npm run check` still passes.
 
 #### Step 6 · Continuous integration on every PR
 
-- [ ] Done
+- [x] Done
 
 1. Add `.github/workflows/ci.yml`:
    - runs on `pull_request` and `workflow_dispatch`, and cancels in-progress
@@ -1350,7 +1367,7 @@ locally. The real run happens when the lead opens the milestone PR.
 
 #### Step 7 · Deploy to GitHub Pages
 
-- [ ] Done
+- [x] Done
 
 1. Add `.github/workflows/deploy.yml`:
    - runs on `push` to `main` and `workflow_dispatch`;
@@ -1381,6 +1398,7 @@ owner sets the Pages source (step 7) and checks the live site.
 
 - [x] Part 1: agree the requirement ordering.
 - [x] Part 2: agree the tech stack, architecture and testing approach.
-- [ ] Part 3: approve the M0 step-by-step plan (this PR).
-- [ ] Implement M0 (subagent, step by step), then open the M0 PR for verification.
+- [x] Part 3: approve the M0 step-by-step plan.
+- [x] Implement M0 (subagent, step by step).
+- [ ] Owner verifies the M0 PR, then sets Settings → Pages → Source to "GitHub Actions".
 - [ ] Plan M1 in its own PR.
