@@ -1349,7 +1349,7 @@ nothing uses this code yet.
 
 #### Step 3 · Shared input and output components
 
-- [ ] Done
+- [x] Done
 
 Add the first shared components from part 2's component map, in
 `src/ui/components/`, with styles in `app.css` following
@@ -1374,6 +1374,11 @@ Add the first shared components from part 2's component map, in
      nothing.
    - The input has an accessible label, so tests can find it with
      `getByLabelText`.
+   As built: both are thin wrappers around a shared `NumberField`, which holds
+   the draft, commit and validation logic. Leaving a field without changing
+   its text commits nothing, so tabbing through a default doesn't set it.
+   Negative numbers are rejected. Later milestones that need negatives
+   (e.g. losses) must extend the parsers explicitly.
 4. `TextField`: a labelled text input that commits on blur or Enter (used for
    the portfolio name).
 5. `SegmentedToggle`: two or three exclusive options shown as the mockups'

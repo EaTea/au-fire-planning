@@ -115,3 +115,188 @@ body {
 .footer-next {
   margin-left: auto;
 }
+
+/* ---------- Shared components: card, banner, fields, toggle, metric ---------- */
+
+.card {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 16px 18px;
+  background: var(--paper);
+}
+
+.card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--space-medium);
+  font-size: 16px;
+}
+
+.banner {
+  border: 1.5px dashed var(--ink-soft);
+  background: var(--fill);
+  padding: 8px var(--space-medium);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* A warning is a solid, darker box so it stands out from an info notice. */
+.banner-warning {
+  border-style: solid;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.field {
+  margin-bottom: var(--space-medium);
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+/* The box is a div so the "default" tag can be drawn after the real input. */
+.input {
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 10px;
+  min-height: 34px;
+  background: var(--paper);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-small);
+}
+
+.input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+.input:focus-within {
+  border-color: var(--ink);
+}
+
+.input.default {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+
+.input.default::after {
+  content: "default";
+  font-size: 10px;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-soft);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.input.invalid {
+  border-color: var(--ink);
+}
+
+.field-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 3px;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toggle button {
+  padding: 6px 14px;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle button.on {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.metric {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.metric .label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.metric .value {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 4px 0 2px;
+}
+
+.metric .sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* A text-style button: the explanation toggle should read as a link. */
+.explain-toggle {
+  margin-top: var(--space-small);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The breakdown table: label left, value right, rows separated by thin lines. */
+.explain-panel {
+  width: 100%;
+  margin-top: var(--space-small);
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.explain-panel td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 7px 8px;
+  text-align: right;
+}
+
+.explain-panel td:first-child {
+  text-align: left;
+}
