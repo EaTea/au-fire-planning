@@ -1474,7 +1474,7 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 6 · Wire format and mappers
 
-- [ ] Done
+- [x] Done
 
 1. Install `zod`. Add `src/persistence/planDocument.ts`: the
    `PlanDocumentV1` Zod schema (as in part 2, with optional `valueDollars`),
@@ -1484,6 +1484,10 @@ input, and values survive moving between steps (but not a reload yet).
      set and converts fractions to percent;
    - `planFromWire(document): Plan`, the inverse, which leaves unset values
      `undefined`.
+   As built: percent ↔ fraction conversion rounds to 12 significant digits,
+   so a stored 4.1% becomes exactly 0.041, without floating-point noise. A
+   person stored without a label is labelled "Person N". Unset values are
+   omitted from the wire document, not written as `undefined`.
 3. Add `src/persistence/migrations.ts`: `parsePlanDocument(unknownJson)`.
    It reads `schemaVersion`, applies migrations up to the current version
    (none yet, but the loop and a version-to-migration map exist),
