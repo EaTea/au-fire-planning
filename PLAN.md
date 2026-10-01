@@ -1205,15 +1205,16 @@ serves the heading at the URL above.
 
 #### Step 2 · Static checks: ESLint and Prettier
 
-- [ ] Done
+- [x] Done
 
 1. Install `eslint`, `@eslint/js`, `typescript-eslint`,
    `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals` and
    `prettier` at the pinned versions.
-2. Add `eslint.config.js` (flat config) combining `@eslint/js` recommended,
+2. Add `eslint.config.js` (flat config, built with `defineConfig` from
+   `eslint/config`; `tseslint.config()` is deprecated) combining `@eslint/js` recommended,
    `typescript-eslint` recommended, the React Hooks recommended rules, and
-   `eslint-config-prettier` last. Set browser globals for `src/` and Node
-   globals for config files. Ignore `dist/`, `playwright-report/`,
+   `eslint-config-prettier` last. Scope browser globals and the React Hooks
+   rules to `src/**/*.{ts,tsx}`, and Node globals to `*.config.{js,ts}`. Ignore `dist/`, `playwright-report/`,
    `test-results/` and `requirements/` (the mockup sources aren't app code).
 3. Add `.prettierrc.json` (defaults, plus `"printWidth": 100`) and a
    `.prettierignore` listing `dist/`, `playwright-report/`, `test-results/`,
@@ -1240,12 +1241,14 @@ all pass.
    `include: ["src/**/*.test.{ts,tsx}", "tests/unit/**/*.test.{ts,tsx}"]`,
    `setupFiles: ["tests/setup/vitest.setup.ts"]`. The setup file imports
    `@testing-library/jest-dom/vitest`.
-3. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
+3. In `eslint.config.js`, widen the browser-globals block to also cover
+   `tests/unit/**` and `tests/setup/**`.
+4. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
    the "AU FIRE Planner" heading. Import `describe`/`it`/`expect`
    explicitly from `vitest` rather than relying on globals.
-4. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
+5. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
    (`npm run typecheck && npm run lint && npm run format:check && npm test`).
-5. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
+6. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
    `npm run check`, noting that `npm run check` must pass before every
    commit.
 
@@ -1325,7 +1328,9 @@ on it.
    - opening `#/results` directly shows Results as the current step;
    - no errors are logged to the browser console on any page.
 4. Exclude `tests/e2e/` from Vitest (it's already outside Vitest's
-   `include`), and make sure ESLint and TypeScript cover it.
+   `include`), and make sure ESLint and TypeScript cover it: add
+   `tests/e2e/**` to the Node-globals block in `eslint.config.js` (the
+   Playwright tests run in Node, and drive the browser through `page`).
 5. Add script `test:e2e` (`playwright test`). In the README, document it,
    including installing the browser once with
    `npx playwright install chromium`, and the

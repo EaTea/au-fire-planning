@@ -29,3 +29,12 @@ Then open <http://localhost:5173/au-fire-planning/>.
 npm run build     # production build into dist/
 npm run preview   # serve the production build locally
 ```
+
+## Checks
+
+```sh
+npm run typecheck      # TypeScript type-check
+npm run lint           # ESLint
+npm run format         # rewrite files with Prettier
+npm run format:check   # verify formatting without changing files
+```
