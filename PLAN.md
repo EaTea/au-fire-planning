@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** drafting the plan. No implementation has started.
+**Current status:** M0 plan drafted, awaiting approval. No implementation has started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Step-by-step plan for the first milestone (M0) | Not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan in review |
 
 ## 1. Requirement ordering
 
@@ -620,7 +620,10 @@ These come straight from the requirements and mockups:
 | Tooling | **Node 22 LTS**, npm, ESLint, Prettier, TypeScript type-checking | Standard, and already available in this environment. | pnpm/yarn: no need yet. |
 
 Library versions are pinned in M0. Current majors at the time of writing:
-React 19, Vite 8, Recharts 3, Zod 4, TypeScript 7, Vitest 5, Playwright 1.63.
+React 19, Vite 8, Recharts 3, Zod 4, TypeScript 6.0, Vitest 5, Playwright 1.63.
+TypeScript stays on 6.0 rather than the newer 7.x: typescript-eslint, which
+gives ESLint its type-aware rules, supports TypeScript below 6.1 only.
+Move to 7.x once typescript-eslint supports it.
 
 ### Architecture
 
@@ -1027,9 +1030,357 @@ Agreed in review:
    custom subdomain for now. Revisit if Pages sites that aren't the
    owner's are ever published from this account.
 
+## 3. Milestone plans
+
+### How each milestone is delivered
+
+Agreed with the repository owner. Every milestone goes through the same
+four stages:
+
+1. **Plan.** The lead agent writes a step-by-step plan for the milestone in
+   this section of `PLAN.md` and opens a PR containing **only that plan**.
+2. **Approve.** The owner reviews the plan PR. Implementation does not start
+   until the owner **explicitly approves** it. Feedback is worked into the
+   plan until then.
+3. **Implement.** A lower-cost implementer subagent (e.g. Sonnet or Haiku)
+   is given **only this file** and instructions to implement the approved
+   milestone, one step at a time. When anything is unclear, it stops and asks
+   instead of guessing. The lead answers, and any change of approach is
+   written into the plan explicitly, so the plan stays the source of truth.
+4. **Verify.** The lead reviews each step's work, runs the checks, and
+   commits it, one commit per step with a message explaining why. When the
+   milestone is complete, the lead opens a PR for the owner to verify.
+
+### Rules for the implementer
+
+The implementer sees only this file, so the rules that matter for writing
+code are repeated here.
+
+- **Work one step at a time, in order.** Do only what the current step
+  says. When it's done and its checks pass, stop and report back: the files
+  changed, the commands run and their results, and anything that surprised
+  you.
+- **Don't commit, push or open PRs.** The lead reviews and commits each
+  step.
+- **Ask, don't guess.** If a step is ambiguous, a command fails in a way the
+  step doesn't explain, or doing it properly seems to need something the
+  step doesn't mention (a new dependency, a different file layout, a skipped
+  check), stop and ask. Don't work around it.
+- **Use exactly the versions pinned in the milestone plan**, installed with
+  `--save-exact`. Don't add dependencies the plan doesn't list.
+- **Document every function.** Each function, component and module gets a
+  short comment saying what it is for and how it connects to the rest of
+  the app (its callers, its role in a larger flow, any side effects), not a
+  restatement of its signature.
+- **Write for the reader.** Use descriptive names (no abbreviations or
+  single letters outside trivial loops), leave blank lines between logical
+  steps, and add comments wherever intent isn't obvious.
+- **Tests come with the code.** Any step that adds behaviour adds tests for
+  it in the same step. Never skip or disable a test to get a pass.
+- **Keep the README accurate.** If a step changes how to install, build,
+  run or test the app, update `README.md` in the same step.
+- **Keep wire and internal types separate.** Never store or serialise an
+  in-memory type directly. Always go through explicit mapping functions.
+  (This matters from M1, when data is first saved.)
+- **In the lead's development environment**, Chromium is preinstalled at
+  `/opt/pw-browsers/chromium`. Don't run `npx playwright install` there. Set
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` when
+  running E2E tests instead (see M0 step 5).
+
+### M0 · Walking skeleton: step-by-step plan
+
+**Status:** draft, awaiting the owner's approval. Do not implement yet.
+
+**Goal:** an app that builds, runs, tests and deploys, with no planning
+features yet. It shows the header and seven-step navigation from the
+mockups (`requirements/mockups/`, screens 01–07), with a placeholder page
+for each step. Every later milestone adds real behaviour on top of it.
+
+**Definition of done:**
+
+- `npm ci && npm run dev` serves the app at
+  `http://localhost:5173/au-fire-planning/`. The header shows "AU FIRE
+  Planner" and the seven numbered steps. Each step opens its placeholder
+  page, and Back/Next move between steps.
+- `npm run check` (type-check, lint, format check, unit and component tests)
+  and `npm run test:e2e` (Playwright) both pass.
+- A PR runs both in GitHub Actions. A merge to `main` deploys to
+  `https://eatea.github.io/au-fire-planning/`.
+- `README.md` explains how to install, run, build, test and deploy.
+
+**Out of scope for M0:** any inputs, calculations, storage (IndexedDB
+arrives in M1), the disclaimer (M1), and the header's "Edit inputs", plan
+picker and export buttons (later milestones).
+
+#### Pinned versions
+
+Install exactly these versions (`npm install --save-exact`):
+
+| Package | Version | Kind |
+| --- | --- | --- |
+| `react`, `react-dom` | 19.3.0 | dependency |
+| `react-router` | 8.4.0 | dependency |
+| `vite` | 8.3.1 | dev |
+| `@vitejs/plugin-react` | 6.1.1 | dev |
+| `typescript` | 6.0.3 | dev (not 7.x: see part 2) |
+| `@types/react`, `@types/react-dom` | 19.3.0 | dev |
+| `eslint` | 10.11.0 | dev |
+| `@eslint/js` | 10.0.1 | dev |
+| `typescript-eslint` | 8.71.0 | dev |
+| `eslint-plugin-react-hooks` | 7.1.1 | dev |
+| `eslint-config-prettier` | 10.1.8 | dev |
+| `globals` | 17.13.0 | dev |
+| `prettier` | 3.9.9 | dev |
+| `vitest` | 5.0.3 | dev |
+| `jsdom` | 30.1.1 | dev |
+| `@testing-library/react` | 16.3.3 | dev |
+| `@testing-library/dom` | 10.4.2 | dev |
+| `@testing-library/jest-dom` | 7.0.1 | dev |
+| `@testing-library/user-event` | 14.6.7 | dev |
+| `@playwright/test` | 1.63.0 | dev |
+
+GitHub Actions versions: `actions/checkout@v7`, `actions/setup-node@v7`,
+`actions/upload-artifact@v7`, `actions/configure-pages@v6`,
+`actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`.
+
+#### The steps, in one place
+
+The seven steps of the app, used by the router, the navigation, the
+Back/Next footer and the tests. Define this list once (step 4) and derive
+everything else from it:
+
+| # | `id` | Label | Route | Placeholder says it arrives in |
+| --- | --- | --- | --- | --- |
+| 1 | `household` | Household | `#/household` | M2 |
+| 2 | `income-expenses` | Income & expenses | `#/income-expenses` | M1 |
+| 3 | `assets` | Assets | `#/assets` | M1 |
+| 4 | `assumptions` | Assumptions | `#/assumptions` | M1 |
+| 5 | `results` | Results | `#/results` | M1 |
+| 6 | `year-by-year` | Year by year | `#/year-by-year` | M2 |
+| 7 | `scenarios` | Scenarios | `#/scenarios` | M16 |
+
+Routing uses **hash URLs** (`HashRouter` from `react-router`) because
+GitHub Pages can't route other paths back to `index.html`. `#/` and any
+unknown route redirect to `#/household`.
+
+#### Step 1 · Minimal app that builds and runs
+
+- [ ] Done
+
+1. Create `package.json` by hand (not with an interactive generator):
+   `"name": "au-fire-planner"`, `"private": true`, `"type": "module"`,
+   `"engines": { "node": ">=22" }`, and scripts `dev` (`vite`), `build`
+   (`vite build`), `preview` (`vite preview`) and `typecheck`
+   (`tsc --noEmit`). Install `react`, `react-dom`, `vite`,
+   `@vitejs/plugin-react`, `typescript`, `@types/react` and
+   `@types/react-dom` at the pinned versions.
+2. Add `.nvmrc` containing `22`.
+3. Add `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`,
+   `noImplicitOverride`, `verbatimModuleSyntax`, `"jsx": "react-jsx"`,
+   `"module": "ESNext"`, `"moduleResolution": "bundler"`,
+   `"target": "ES2022"`, `"lib": ["ES2022", "DOM", "DOM.Iterable"]`,
+   `"noEmit": true`, and `"include": ["src", "tests", "*.config.ts"]`.
+4. Add `vite.config.ts` with the React plugin and `base: "/au-fire-planning/"`
+   (needed for GitHub Pages).
+5. Add `index.html` (title "AU FIRE Planner", a `#root` element) and
+   `src/main.tsx`, which renders `src/ui/App.tsx`. For now, `App` renders an
+   `<h1>` reading "AU FIRE Planner".
+6. Extend `.gitignore` with `dist/`, `test-results/`, `playwright-report/`
+   and `blob-report/` (`node_modules/` is already there).
+7. Add `README.md` with: what the app is (one paragraph, linking to
+   `requirements/REQUIREMENTS.md` and `PLAN.md`), prerequisites (Node 22,
+   npm), install (`npm ci`), run (`npm run dev`, then open
+   `http://localhost:5173/au-fire-planning/`), and build and preview
+   (`npm run build`, `npm run preview`).
+
+**Check:** `npm run typecheck` and `npm run build` succeed. `npm run dev`
+serves the heading at the URL above.
+
+#### Step 2 · Static checks: ESLint and Prettier
+
+- [ ] Done
+
+1. Install `eslint`, `@eslint/js`, `typescript-eslint`,
+   `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals` and
+   `prettier` at the pinned versions.
+2. Add `eslint.config.js` (flat config) combining `@eslint/js` recommended,
+   `typescript-eslint` recommended, the React Hooks recommended rules, and
+   `eslint-config-prettier` last. Set browser globals for `src/` and Node
+   globals for config files. Ignore `dist/`, `playwright-report/`,
+   `test-results/` and `requirements/` (the mockup sources aren't app code).
+3. Add `.prettierrc.json` (defaults, plus `"printWidth": 100`) and a
+   `.prettierignore` listing `dist/`, `playwright-report/`, `test-results/`,
+   `requirements/`, `package-lock.json` and `*.md`. Markdown is ignored so
+   the hand-wrapped documents (`PLAN.md`, `CLAUDE.md`, requirements) aren't
+   reflowed.
+4. Add scripts `lint` (`eslint .`), `format` (`prettier --write .`) and
+   `format:check` (`prettier --check .`). Run `npm run format` once.
+5. Add a "Checks" section to the README listing `typecheck`, `lint`,
+   `format` and `format:check`.
+
+**Check:** `npm run typecheck`, `npm run lint` and `npm run format:check`
+all pass.
+
+#### Step 3 · Unit and component tests: Vitest
+
+- [ ] Done
+
+1. Install `vitest`, `jsdom`, `@testing-library/react`,
+   `@testing-library/dom`, `@testing-library/jest-dom` and
+   `@testing-library/user-event` at the pinned versions.
+2. Configure Vitest in `vite.config.ts` (import `defineConfig` from
+   `vitest/config`): `environment: "jsdom"`,
+   `include: ["src/**/*.test.{ts,tsx}", "tests/unit/**/*.test.{ts,tsx}"]`,
+   `setupFiles: ["tests/setup/vitest.setup.ts"]`. The setup file imports
+   `@testing-library/jest-dom/vitest`.
+3. Add the first test, `src/ui/App.test.tsx`, checking that `App` renders
+   the "AU FIRE Planner" heading. Import `describe`/`it`/`expect`
+   explicitly from `vitest` rather than relying on globals.
+4. Add scripts `test` (`vitest run`), `test:watch` (`vitest`) and `check`
+   (`npm run typecheck && npm run lint && npm run format:check && npm test`).
+5. Add a "Tests" section to the README: `npm test`, `npm run test:watch` and
+   `npm run check`, noting that `npm run check` must pass before every
+   commit.
+
+**Check:** `npm run check` passes, and making the test's expected text wrong
+makes it fail (then restore it).
+
+#### Step 4 · App shell, step navigation and placeholder pages
+
+- [ ] Done
+
+1. Install `react-router` at the pinned version.
+2. Add `src/ui/navigation/steps.ts`: the step list from the table above, as
+   a typed, read-only array of `{ number, id, label, path, arrivesIn }`.
+   Also add helpers `findStepByPath(path)` and
+   `getNeighbouringSteps(stepId)` (returning the previous and next step,
+   either of which may be absent).
+3. Add components in `src/ui/components/`, following the mockups' layout
+   (header with a logo box, then pill-shaped numbered steps, with the
+   current step filled):
+   - `AppShell`: the header (the "AU FIRE Planner" logo and `StepNav`), with
+     the page content below it.
+   - `StepNav`: one `NavLink` per step, showing its number and label. The
+     current step gets `aria-current="page"` (`NavLink` does this) and the
+     filled style.
+   - `StepPage`: the page title (`<h1>`), an intro paragraph, the content,
+     and a footer with "← {previous label}" and "Next: {next label} →"
+     links, each hidden when there's no previous or next step.
+4. Add `src/ui/screens/PlaceholderScreen.tsx`, a `StepPage` that says what
+   the step will do and "Arrives in milestone {arrivesIn}". Use one-sentence
+   purposes taken from the mockups, e.g. Household: "Who the plan is for:
+   ages, retirement ages and when super becomes accessible."
+5. Update `App` to render `AppShell` inside a `HashRouter`, with one route
+   per step rendering its placeholder, and a catch-all redirect to
+   `#/household`.
+6. Add `src/ui/styles/tokens.css` (colour, spacing and font variables taken
+   from `requirements/mockups/src/wireframe.css`: the greyscale ink, line and
+   fill values, plus the paper background) and `src/ui/styles/app.css`
+   (header, step pills, page and footer layout), imported from `main.tsx`.
+   Keep it plain CSS. No CSS framework.
+7. Tests (Vitest + React Testing Library):
+   - `steps.test.ts`: there are 7 steps, numbered 1–7 in order, with unique
+     ids and paths. `getNeighbouringSteps` returns nothing before step 1 or
+     after step 7.
+   - `StepNav.test.tsx`: renders 7 links, and marks only the current one
+     with `aria-current="page"`.
+   - `StepPage.test.tsx`: the first step has no Back link, the last has no
+     Next link, and a middle step links to both neighbours.
+   - Update `App.test.tsx`: an unknown route lands on the Household
+     placeholder, and clicking "Next" moves to Income & expenses (use
+     `@testing-library/user-event`).
+
+**Check:** `npm run check` passes. In `npm run dev`, every step is reachable
+from the header and through Back/Next, and reloading on any step keeps you
+on it.
+
+#### Step 5 · End-to-end tests: Playwright
+
+- [ ] Done
+
+1. Install `@playwright/test` at the pinned version.
+2. Add `playwright.config.ts`:
+   - `testDir: "tests/e2e"`, one `chromium` project, and
+     `use.baseURL: "http://localhost:4173/au-fire-planning/"`;
+   - `webServer`: command `npm run build && npm run preview -- --port 4173 --strictPort`,
+     url the same as `baseURL`, `reuseExistingServer: !process.env.CI`;
+   - `use.launchOptions.executablePath` set from the environment variable
+     `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when present, otherwise left
+     unset. This lets environments with a preinstalled Chromium use it,
+     while CI uses Playwright's own;
+   - `retries: process.env.CI ? 1 : 0`, `trace: "on-first-retry"`,
+     `reporter`: `"list"` locally, `"html"` plus `"list"` in CI.
+3. Add `tests/e2e/navigation.spec.ts`:
+   - opening the app shows the "AU FIRE Planner" header, all seven steps,
+     and the Household page;
+   - pressing "Next" six times visits every step in order, ending on
+     Scenarios with no Next link;
+   - opening `#/results` directly shows Results as the current step;
+   - no errors are logged to the browser console on any page.
+4. Exclude `tests/e2e/` from Vitest (it's already outside Vitest's
+   `include`), and make sure ESLint and TypeScript cover it.
+5. Add script `test:e2e` (`playwright test`). In the README, document it,
+   including installing the browser once with
+   `npx playwright install chromium`, and the
+   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` option for a preinstalled Chromium.
+
+**Check:** with
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium npm run test:e2e`,
+all E2E tests pass, and `npm run check` still passes.
+
+#### Step 6 · Continuous integration on every PR
+
+- [ ] Done
+
+1. Add `.github/workflows/ci.yml`:
+   - runs on `pull_request` and `workflow_dispatch`, and cancels in-progress
+     runs for the same branch (`concurrency` with `cancel-in-progress`);
+   - job `check`: checkout, `setup-node` (using `.nvmrc`, npm cache),
+     `npm ci`, `npm run check`;
+   - job `e2e`: checkout, `setup-node`, `npm ci`,
+     `npx playwright install --with-deps chromium`, `npm run test:e2e`.
+     On failure, upload `playwright-report/` and `test-results/` as an
+     artifact;
+   - `permissions: contents: read`.
+2. Add a "Continuous integration" section to the README describing the two
+   jobs.
+
+**Check:** the workflow file is valid YAML and every command it runs passes
+locally. The real run happens when the lead opens the milestone PR.
+
+#### Step 7 · Deploy to GitHub Pages
+
+- [ ] Done
+
+1. Add `.github/workflows/deploy.yml`:
+   - runs on `push` to `main` and `workflow_dispatch`;
+   - `permissions`: `contents: read`, `pages: write`, `id-token: write`;
+     and `concurrency: { group: "pages", cancel-in-progress: false }`;
+   - job `build`: checkout, `setup-node`, `npm ci`, `npm run check`,
+     `npx playwright install --with-deps chromium`, `npm run test:e2e`,
+     `npm run build`, `actions/configure-pages`, then
+     `actions/upload-pages-artifact` with `path: dist`;
+   - job `deploy`: needs `build`, environment `github-pages` with the
+     deployed URL, runs `actions/deploy-pages`.
+2. Add a "Deployment" section to the README:
+   - merges to `main` deploy to `https://eatea.github.io/au-fire-planning/`,
+     after the same checks as CI;
+   - one-off setup: repository Settings → Pages → Source: "GitHub Actions";
+   - everything runs in the browser, and no data is sent anywhere.
+
+**Check:** the workflow file is valid YAML, and `npm run build` produces
+`dist/index.html` with asset paths under `/au-fire-planning/`.
+
+#### After the last step
+
+The lead ticks each step above as it's committed, marks M0 done in the
+Next steps list below, and opens the milestone PR. Once it's merged, the
+owner sets the Pages source (step 7) and checks the live site.
+
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
 - [x] Part 2: agree the tech stack, architecture and testing approach.
-- [ ] Part 3: step-by-step plan for M0 (separate PR).
-- [ ] Start implementation with M0, once parts 1–3 are agreed.
+- [ ] Part 3: approve the M0 step-by-step plan (this PR).
+- [ ] Implement M0 (subagent, step by step), then open the M0 PR for verification.
+- [ ] Plan M1 in its own PR.
