@@ -1199,8 +1199,8 @@ OUT-4 FI number and FI year.
 
 - Household (step 1) is a real screen: current age and target retirement
   age. The welcome page leads there.
-- Assets adds expected return (default 7%), contributions per year in today's
-  dollars (default $0), and the age contributions stop (default: the target
+- Assets adds expected return (default 7%), contributions per year (the
+  same dollar amount every year, default $0), and the age contributions stop (default: the target
   retirement age). Assumptions adds inflation (default 2.5%).
 - With the worked example below, Results shows an FI number of $1,600,000 in
   today's dollars, $2,375,209 nominal at age 50, and **FI reached in 2038, at
@@ -1219,14 +1219,19 @@ Row 0 is today. Row *k* is the end of the *k*-th year from now.
   row 0 (today)         row 1                  row 2
   age a, balance B0 ──► age a+1                age a+2 ...
                         growth   = B0 × r
-                        contrib  = C × (1+i)^1   (if a+1 ≤ stop age)
+                        contrib  = C             (if a+1 ≤ stop age)
                         B1 = B0 + growth + contrib
                         FI number = FI_today × (1+i)^1
 ```
 
 - `r` is the expected nominal return and `i` is inflation.
-- `C` is the yearly contribution in **today's dollars**. It's indexed to
-  inflation, so every contribution is worth `C` in today's dollars.
+- `C` is the yearly contribution, **the same dollar amount every year**.
+  It isn't indexed to inflation: entering $10,000 means $10,000 goes in each
+  year, which is what people expect when they type a number. In today's
+  dollars, later contributions are therefore worth a little less, which
+  errs on the conservative side. Contributions that grow (e.g. with salary)
+  can come later as a "grows at" option, using the `GrowthRateField`
+  planned for salary in M5.
 - `FI_today` is M1's FI number.
 - **Every value in row *k* uses the same inflation index, `(1+i)^k`.**
   Converting any value in the row to today's dollars divides by that one
@@ -1246,7 +1251,7 @@ Row 0 is today. Row *k* is the end of the *k*-th year from now.
 ```ts
 interface Person    { id; label; currentAge?: number; targetRetirementAge?: number }  // whole years
 interface Portfolio { id; name; value?; expectedReturn?: number;      // fraction, e.g. 0.07
-                      annualContribution?: number;                    // today's dollars per year
+                      annualContribution?: number;                    // dollars per year, not indexed
                       contributionsStopAge?: number }                 // whole years
 assumptions: { safeWithdrawalRate?; inflationRate?: number }          // fraction, e.g. 0.025
 ```
@@ -1325,9 +1330,9 @@ becomes a fixture in `tests/worked-examples/m2-growth.json`.
 | Current age / retirement / stop age | 34 / 50 / 50 | 40 / 41 / 41 | 60 / 60 / 60 |
 | Portfolio, return, contribution | $720,000, 7%, $30,000 | $100,000, 10%, $10,000 | $0, 0%, $0 |
 | Inflation, living, rate | 2.5%, $64,000, 4% | 0%, $20,000, 5% | 2%, $50,000, 4% |
-| Row 1 | growth $50,400.00, contribution $30,750.00, balance $801,150.00 | growth $10,000, contribution $10,000, balance $120,000 | — |
-| Row 2 | balance $888,749.25 | growth $12,000, contribution $0, balance $132,000 | — |
-| FI reached | row 12: **2038, age 46**, balance $2,241,568.17 vs FI number $2,151,822.12 | not checked | **not reached** |
+| Row 1 | growth $50,400.00, contribution $30,000.00, balance $800,400.00 | growth $10,000, contribution $10,000, balance $120,000 | — |
+| Row 2 | balance $886,428.00 | growth $12,000, contribution $0, balance $132,000 | — |
+| FI reached | row 12: **2038, age 46**, balance $2,158,231.48 vs FI number $2,151,822.12 | not checked | **not reached** |
 | FI number at retirement (nominal) | $2,375,208.99 (age 50) | — | — |
 
 The start year is 2026. Example B's row 2 has no contribution, because age 42
@@ -1445,14 +1450,14 @@ app still works.
 3. Extend `PortfolioSection` (Assets):
    - `PercentField` "Expected return per year" (default 7%, min 0%, max 15%).
      Hint: "Total return before inflation: growth plus dividends."
-   - `MoneyField` "Contributions per year" (default $0, min $0). Hint: "In
-     today's dollars. Rises with inflation each year."
+   - `MoneyField` "Contributions per year" (default $0, min $0). Hint: "The
+     same dollar amount every year, until the age below."
    - `AgeField` "Contributions stop at age" (min 15, max 100). It defaults to
      the target retirement age, shown dashed. If that isn't set, it shows no
      default.
 4. Extend `DrawdownSection`, or add `InflationSection` (Assumptions):
    `PercentField` "Inflation per year" (default 2.5%, min 0%, max 15%).
-   Hint: "Grows your spending and contributions, and converts results to
+   Hint: "Grows your spending and FI number, and converts results to
    today's dollars."
 5. `missingInputSteps.ts`: map `currentAge` and `targetRetirementAge` to
    `household`.
@@ -1501,8 +1506,9 @@ app still works.
    - if the projection is incomplete, the same "Enter these" banner as
      Results.
 3. Tests:
-   - the table's rows match worked example A in nominal mode, and in today's
-     mode the contributions all read $30,000;
+   - the table's rows match worked example A in nominal mode, where the
+     contributions all read $30,000, and in today's mode, where row 1's
+     contribution reads $29,268 ($30,000 ÷ 1.025);
    - the FI row is highlighted.
 4. E2E (`tests/e2e/growth.spec.ts`):
    - enter worked example A through the screens;
