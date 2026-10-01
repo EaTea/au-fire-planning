@@ -8,6 +8,9 @@
 //               │          loaded ──────► dispatch replacePlan(saved plan)
 //               │          unreadable ──► keep blank plan + banner (record left untouched)
 //               ▼
+//        read meta `disclaimerAcceptedAt`; if never set, rewrite the URL to #/welcome
+//               │   (done BEFORE children mount, so the requested page never flashes)
+//               ▼
 //        phase "ready": children are shown
 //
 //   edit ─► plan changes ─► wait 500 ms of quiet ─► savePlan ─► saved:    remember new updatedAt
@@ -19,16 +22,28 @@
 // reducer returns the very object we dispatch for `replacePlan`, so loading
 // never looks like an edit.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { usePlan, usePlanDispatch } from "../plan/PlanProvider";
 import type { Plan } from "../plan/types";
 import { Banner } from "../ui/components/Banner";
 import { openPlannerDatabase } from "./database";
-import { IndexedDbPlanStore, InMemoryPlanStore, type PlanStore } from "./planStore";
+import {
+  IndexedDbPlanStore,
+  InMemoryPlanStore,
+  systemClock,
+  type Clock,
+  type PlanStore,
+} from "./planStore";
 
 /** How long the plan must stay unchanged before it is saved. */
 export const AUTOSAVE_DELAY_MILLISECONDS = 500;
+
+/** The `meta` key holding the ISO time the user accepted the disclaimer (NFR-5). */
+export const DISCLAIMER_ACCEPTED_AT_KEY = "disclaimerAcceptedAt";
+
+/** The route of the first-run welcome page (see src/ui/screens/WelcomeScreen.tsx). */
+export const WELCOME_HASH = "#/welcome";
 
 const STORAGE_UNAVAILABLE_MESSAGE =
   "Your browser isn't letting this app store data, so your plan won't be kept after you close this tab.";
@@ -52,11 +67,39 @@ interface SavedVersion {
   readonly updatedAt?: string;
 }
 
+/** What screens can read and do about the disclaimer, provided by PersistenceProvider. */
+interface DisclaimerState {
+  /** True once the user has pressed "Start planning" on this device (now or on an earlier visit). */
+  readonly hasAcceptedDisclaimer: boolean;
+  /**
+   * Records acceptance (ISO time from the clock) in `meta`. Does nothing if
+   * already accepted, so the original time is kept. Never rejects: if the
+   * write fails the user can still carry on this session and is warned.
+   */
+  readonly acceptDisclaimer: () => Promise<void>;
+}
+
+const DisclaimerContext = createContext<DisclaimerState | null>(null);
+
+/**
+ * Reads the disclaimer state. Used by WelcomeScreen. Throws if used outside
+ * PersistenceProvider, which would be a wiring mistake in App.
+ */
+export function useDisclaimer(): DisclaimerState {
+  const state = useContext(DisclaimerContext);
+  if (state === null) {
+    throw new Error("useDisclaimer must be used inside PersistenceProvider");
+  }
+  return state;
+}
+
 interface PersistenceProviderProps {
   /** How to get a store. Tests pass an in-memory one; the app uses the browser's IndexedDB. */
   readonly openStore?: () => Promise<PlanStore>;
   /** Quiet time before saving. Overridable for tests only. */
   readonly autosaveDelayMilliseconds?: number;
+  /** Source of the acceptance time. Overridable for tests only. */
+  readonly clock?: Clock;
   readonly children: ReactNode;
 }
 
@@ -68,6 +111,7 @@ interface PersistenceProviderProps {
 export function PersistenceProvider({
   openStore = openBrowserStore,
   autosaveDelayMilliseconds = AUTOSAVE_DELAY_MILLISECONDS,
+  clock = systemClock,
   children,
 }: PersistenceProviderProps) {
   const plan = usePlan();
@@ -78,6 +122,7 @@ export function PersistenceProvider({
   const [isSavedPlanUnreadable, setIsSavedPlanUnreadable] = useState(false);
   const [hasConflict, setHasConflict] = useState(false);
   const [hasSaveFailed, setHasSaveFailed] = useState(false);
+  const [disclaimerAcceptedAt, setDisclaimerAcceptedAt] = useState<string | undefined>(undefined);
 
   // The store is created during loading and used by every later save.
   const storeRef = useRef<PlanStore | null>(null);
@@ -130,6 +175,19 @@ export function PersistenceProvider({
         setIsSavedPlanUnreadable(true);
       }
 
+      // First run: send the user to the welcome page whatever URL they opened.
+      // replaceState swaps the URL without adding a history entry (so Back
+      // doesn't return to a page they were never allowed to see) and without
+      // a visible flash, because the router is created only once isLoaded is
+      // true and reads the URL then.
+      const acceptedAt = await store.getMeta(DISCLAIMER_ACCEPTED_AT_KEY).catch(() => undefined);
+      if (isCancelled) return;
+
+      if (acceptedAt === undefined) {
+        window.history.replaceState(null, "", WELCOME_HASH);
+      }
+      setDisclaimerAcceptedAt(acceptedAt);
+
       setIsLoaded(true);
     }
 
@@ -173,6 +231,24 @@ export function PersistenceProvider({
     }
   }
 
+  /**
+   * Stores the acceptance time. Called by WelcomeScreen's "Start planning"
+   * button, through the disclaimer context. Updates state even if the write
+   * fails (shows the save-failed banner), so a broken store can't lock the
+   * user out of the app.
+   */
+  async function acceptDisclaimer(): Promise<void> {
+    if (disclaimerAcceptedAt !== undefined) return;
+
+    const acceptedAt = clock().toISOString();
+    try {
+      await storeRef.current?.setMeta(DISCLAIMER_ACCEPTED_AT_KEY, acceptedAt);
+    } catch {
+      setHasSaveFailed(true);
+    }
+    setDisclaimerAcceptedAt(acceptedAt);
+  }
+
   // Step 2: after each edit, save once the plan has been quiet for the delay.
   useEffect(() => {
     const store = storeRef.current;
@@ -193,13 +269,18 @@ export function PersistenceProvider({
     return <p>Loading your plan…</p>;
   }
 
+  const disclaimerState: DisclaimerState = {
+    hasAcceptedDisclaimer: disclaimerAcceptedAt !== undefined,
+    acceptDisclaimer,
+  };
+
   return (
-    <>
+    <DisclaimerContext.Provider value={disclaimerState}>
       {isStorageUnavailable && <Banner tone="warning">{STORAGE_UNAVAILABLE_MESSAGE}</Banner>}
       {isSavedPlanUnreadable && <Banner tone="warning">{UNREADABLE_PLAN_MESSAGE}</Banner>}
       {hasConflict && <Banner tone="warning">{CONFLICT_MESSAGE}</Banner>}
       {hasSaveFailed && <Banner tone="warning">{SAVE_FAILED_MESSAGE}</Banner>}
       {children}
-    </>
+    </DisclaimerContext.Provider>
   );
 }

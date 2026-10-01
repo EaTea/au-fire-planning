@@ -11,6 +11,7 @@ import { AssumptionsScreen } from "./screens/AssumptionsScreen";
 import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
+import { WelcomeScreen } from "./screens/WelcomeScreen";
 
 /** The steps that have a real screen; every other step still shows a placeholder. */
 const realScreens: Partial<Record<StepId, ReactElement>> = {
@@ -29,7 +30,8 @@ interface AppProps {
 /**
  * Top-level component, rendered by src/main.tsx. Wraps the app in a hash
  * router (GitHub Pages can't route other paths back to index.html), with one
- * route per step in the step list and a catch-all that redirects `#/` and
+ * route per step in the step list, the first-run `/welcome` route (not a step)
+ * and a catch-all that redirects `#/` and
  * unknown routes to the first step. The plan provider sits outside the router
  * so every screen can read and edit the plan, and the persistence provider
  * (inside it) loads the saved plan and autosaves edits.
@@ -48,6 +50,8 @@ export function App({ openStore }: AppProps) {
                   element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
                 />
               ))}
+
+              <Route path="/welcome" element={<WelcomeScreen />} />
 
               <Route path="*" element={<Navigate to={firstStep.path} replace />} />
             </Routes>

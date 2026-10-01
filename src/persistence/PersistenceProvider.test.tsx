@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanProvider, usePlan, usePlanDispatch } from "../plan/PlanProvider";
 import type { Plan } from "../plan/types";
 import type { PlanRecord } from "./database";
-import { PersistenceProvider } from "./PersistenceProvider";
+import { PersistenceProvider, useDisclaimer } from "./PersistenceProvider";
 import { planToWire } from "./planMapping";
 import { InMemoryPlanStore, type PlanStore } from "./planStore";
 
@@ -286,5 +286,59 @@ describe("PersistenceProvider", () => {
     clickEdit();
     await advanceTime(500);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // First run: the URL is rewritten before the children appear.
+  it("redirects to #/welcome when the disclaimer has not been accepted", async () => {
+    window.location.hash = "#/results";
+
+    await renderProvider(async () => new InMemoryPlanStore());
+
+    expect(window.location.hash).toBe("#/welcome");
+  });
+
+  // Returning visitor: the URL is left alone.
+  it("leaves the URL alone when the disclaimer was already accepted", async () => {
+    window.location.hash = "#/results";
+    const store = new InMemoryPlanStore();
+    await store.setMeta("disclaimerAcceptedAt", "2026-01-01T00:00:00.000Z");
+
+    await renderProvider(async () => store);
+
+    expect(window.location.hash).toBe("#/results");
+  });
+
+  // The acceptance time comes from the injected clock and is stored once.
+  it("stores disclaimerAcceptedAt from the clock and keeps the first time", async () => {
+    const store = new InMemoryPlanStore();
+    const times = [new Date("2026-03-04T05:06:07.000Z"), new Date("2027-01-01T00:00:00.000Z")];
+
+    function AcceptButton() {
+      const { acceptDisclaimer, hasAcceptedDisclaimer } = useDisclaimer();
+      return (
+        <button onClick={() => void acceptDisclaimer()}>
+          {hasAcceptedDisclaimer ? "accepted" : "accept"}
+        </button>
+      );
+    }
+
+    render(
+      <PlanProvider initialPlan={blankPlan}>
+        <PersistenceProvider openStore={async () => store} clock={() => times.shift() as Date}>
+          <AcceptButton />
+        </PersistenceProvider>
+      </PlanProvider>,
+    );
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole("button", { name: "accept" }));
+    await act(async () => {});
+    expect(screen.getByRole("button", { name: "accepted" })).toBeInTheDocument();
+
+    // A second press must not overwrite the stored time.
+    fireEvent.click(screen.getByRole("button", { name: "accepted" }));
+    await act(async () => {});
+
+    expect(await store.getMeta("disclaimerAcceptedAt")).toBe("2026-03-04T05:06:07.000Z");
   });
 });

@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 done and deployed. M1 plan approved, being implemented.
+**Current status:** M0 done and deployed. M1 implemented, awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 plan approved |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 implemented, in review |
 
 ## 1. Requirement ordering
 
@@ -1113,7 +1113,7 @@ Conventions settled while building M0, which later milestones rely on:
 
 ### M1 · FI number: step-by-step plan
 
-**Status:** approved by the owner (PR #8). Being implemented step by step.
+**Status:** implemented, all eight steps done. Awaiting the owner's verification in the M1 PR.
 
 **Goal:** the first real feature. One person enters their living expenses,
 their retirement spending, one share portfolio's value and a safe
@@ -1565,7 +1565,7 @@ values survive a reload.
 
 #### Step 8 · Welcome page and disclaimer
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/ui/screens/WelcomeScreen.tsx` at route `#/welcome`. It's not in
    the step list or the header navigation. It shows:
@@ -1579,7 +1579,9 @@ values survive a reload.
      from the `Clock`) in `meta`, then goes to `#/income-expenses`, the first
      step with inputs in M1.
 2. On start, if `disclaimerAcceptedAt` isn't set, `PersistenceProvider`
-   redirects to `#/welcome`, whatever the URL.
+   redirects to `#/welcome`, whatever the URL. The header hides the step
+   navigation on `#/welcome`, so a first-time visitor can't skip past the
+   disclaimer. "Start planning" is the way in.
 3. Add a one-line footer to `AppShell` on every page: "General information
    only, not financial advice. Your data stays on this device."
 4. Update the E2E tests. Add a helper, `startFresh(page)`, that opens the
@@ -1616,4 +1618,6 @@ how to run or test the app, it updates the README in that step.
 - [x] Implement M0 (subagent, step by step).
 - [x] Owner verifies and merges the M0 PR.
 - [x] Approve the M1 step-by-step plan.
-- [ ] Implement M1 (subagent, step by step), then open the M1 PR for verification.
+- [x] Implement M1 (subagent, step by step).
+- [ ] Owner verifies the M1 PR.
+- [ ] Plan M2 in its own PR.

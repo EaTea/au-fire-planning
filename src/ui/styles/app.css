@@ -317,3 +317,30 @@ body {
   margin: 0;
   padding-left: 18px;
 }
+
+/* ---------- Welcome page and site footer ---------- */
+
+/* The first-run page is narrower than a step page so the text reads comfortably. */
+.welcome {
+  max-width: 640px;
+}
+
+.welcome .card {
+  margin-bottom: var(--space-medium);
+}
+
+.welcome p {
+  margin: 0;
+}
+
+/* One quiet line at the bottom of every page (NFR-5 / NFR-4 reminder). */
+.app-footer {
+  padding: var(--space-medium) var(--space-page-side);
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.welcome .page-intro {
+  margin-bottom: var(--space-medium);
+}

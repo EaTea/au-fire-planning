@@ -4,7 +4,7 @@
 //
 //   spec file ──imports──► test (this file) ──► records page requests ──► asserts after the test
 
-import { expect, test as base } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
 
 export const test = base.extend<{ sameOriginRequestsOnly: void }>({
   // `auto: true` runs this fixture in every test without the test asking for it.
@@ -31,5 +31,22 @@ export const test = base.extend<{ sameOriginRequestsOnly: void }>({
     { auto: true },
   ],
 });
+
+/**
+ * Opens the app as a first-time visitor (each Playwright test gets a fresh
+ * browser context, so storage is empty), accepts the welcome page, then goes
+ * to `hash` (default: the app's start page). Existing specs call this instead
+ * of `page.goto` so the first-run redirect to #/welcome doesn't get in their
+ * way; only welcome.spec.ts opens the app without it.
+ *
+ *   goto("./") ─► redirected to #/welcome ─► "Start planning" ─► goto(hash)
+ */
+export async function startFresh(page: Page, hash = "./"): Promise<void> {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Start planning" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Income & expenses" })).toBeVisible();
+
+  await page.goto(hash);
+}
 
 export { expect };

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useLocation } from "react-router";
+
 import { StepNav } from "./StepNav";
 
 /**
@@ -13,16 +15,26 @@ import { StepNav } from "./StepNav";
  *   +--------------------------------------------+
  *   | page content (a StepPage)                  |  main
  *   +--------------------------------------------+
+ *   | General information only, not advice...    |  footer
+ *   +--------------------------------------------+
  */
 export function AppShell({ children }: { readonly children: ReactNode }) {
+  // The welcome page hides the step navigation so a first-time visitor can't
+  // click past the disclaimer. The logo and footer stay.
+  const isWelcomePage = useLocation().pathname === "/welcome";
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <span className="logo">AU FIRE Planner</span>
-        <StepNav />
+        {!isWelcomePage && <StepNav />}
       </header>
 
       <main>{children}</main>
+
+      <footer className="app-footer">
+        General information only, not financial advice. Your data stays on this device.
+      </footer>
     </div>
   );
 }

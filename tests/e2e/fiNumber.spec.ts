@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, startFresh, test } from "./fixtures";
 
 // End-to-end test for M1's headline flow (FIRE-1, FIRE-2): enter the worked
 // example's values through the real input screens, then read the FI number and
@@ -8,7 +8,7 @@ import { expect, test } from "./fixtures";
 test("entering the worked values shows an FI number of $1,600,000 and 45% progress", async ({
   page,
 }) => {
-  await page.goto("./#/income-expenses");
+  await startFresh(page, "./#/income-expenses");
 
   // Type each value and press Tab to commit it, as a user would.
   await page.getByLabel("Per year, after tax").fill("64000");
@@ -39,7 +39,7 @@ test("entering the worked values shows an FI number of $1,600,000 and 45% progre
 });
 
 test("Results asks for living expenses until they are entered", async ({ page }) => {
-  await page.goto("./#/results");
+  await startFresh(page, "./#/results");
 
   await expect(page.getByRole("alert")).toContainText("Living expenses");
 

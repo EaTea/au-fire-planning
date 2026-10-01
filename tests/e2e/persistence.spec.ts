@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, startFresh, test } from "./fixtures";
 
 // End-to-end test for saving (M1 step 7): values entered through the real
 // screens are autosaved to IndexedDB and are still there after a reload.
@@ -50,7 +50,7 @@ async function readStoredPlan(page: Page): Promise<StoredPlanSummary | undefined
 }
 
 test("values entered are autosaved and still there after a reload", async ({ page }) => {
-  await page.goto("./#/income-expenses");
+  await startFresh(page, "./#/income-expenses");
 
   await page.getByLabel("Per year, after tax").fill("64000");
   await page.getByLabel("Per year, after tax").press("Tab");
