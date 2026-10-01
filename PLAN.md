@@ -1231,7 +1231,7 @@ all pass.
 
 #### Step 3 · Unit and component tests: Vitest
 
-- [ ] Done
+- [x] Done
 
 1. Install `vitest`, `jsdom`, `@testing-library/react`,
    `@testing-library/dom`, `@testing-library/jest-dom` and

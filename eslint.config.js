@@ -17,9 +17,10 @@ export default defineConfig(
   js.configs.recommended,
   tseslint.configs.recommended,
 
-  // App code runs in the browser and uses React hooks.
+  // App code and its unit/component tests run in the browser (jsdom) and use
+  // React hooks.
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "tests/unit/**", "tests/setup/**"],
     languageOptions: { globals: globals.browser },
     extends: [reactHooks.configs.flat.recommended],
   },

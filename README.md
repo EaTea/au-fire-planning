@@ -38,3 +38,13 @@ npm run lint           # ESLint
 npm run format         # rewrite files with Prettier
 npm run format:check   # verify formatting without changing files
 ```
+
+## Tests
+
+```sh
+npm test               # run unit and component tests once (Vitest)
+npm run test:watch     # re-run tests on every change
+npm run check          # type-check, lint, format check and tests
+```
+
+`npm run check` must pass before every commit.
