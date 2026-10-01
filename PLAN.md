@@ -1706,7 +1706,7 @@ comes from.
   `tokens.test.ts`.
 - **Check:** `npm run check` passes.
 
-#### Step 2 · Swap the palette to green and gold
+#### Step 2 · Swap the palette to green and gold: done
 
 - Replace the navy palette in `tokens.css` with the green-and-gold palette
   above, and re-map the roles. Update the comments that mention navy and

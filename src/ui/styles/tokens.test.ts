@@ -4,8 +4,8 @@ import { cwd } from "node:process";
 
 import { describe, expect, it } from "vitest";
 
-// Guards the readability of the colour scheme (see "Colour scheme: Australian
-// flag" in PLAN.md). The test reads tokens.css from disk as text, so it checks
+// Guards the readability of the colour scheme (see "Colour scheme: green and
+// gold" in PLAN.md). The test reads tokens.css from disk as text, so it checks
 // the same values the browser gets, and fails if a palette edit drops any text colour
 // below the WCAG AA contrast minimum against a background it is shown on.
 
@@ -28,7 +28,6 @@ const textOnBackgroundPairs: ReadonlyArray<readonly [text: string, background: s
   ["--colour-text-muted", "--colour-page-background"],
   ["--colour-text-faint", "--colour-page-background"],
   ["--colour-text", "--colour-header-background"],
-  ["--colour-text-muted", "--colour-header-background"],
   ["--colour-text", "--colour-surface-raised"],
   ["--colour-on-accent", "--colour-accent"],
   ["--colour-text-error", "--colour-page-background"],
@@ -110,10 +109,10 @@ describe("contrastRatio", () => {
 describe("colour tokens", () => {
   const properties = readCustomProperties(tokensCss);
 
-  // The scheme is built on the flag's official colours.
-  it("uses the Australian flag's navy and red", () => {
-    expect(resolveVariable(properties, "--colour-page-background")).toBe("#012169");
-    expect(resolveVariable(properties, "--colour-accent")).toBe("#e4002b");
+  // The scheme is built on Australia's official national green and gold.
+  it("uses the national green for the header and gold for the accent", () => {
+    expect(resolveVariable(properties, "--colour-header-background")).toBe("#00843d");
+    expect(resolveVariable(properties, "--colour-accent")).toBe("#ffcd00");
   });
 
   it.each(textOnBackgroundPairs)(
@@ -128,12 +127,13 @@ describe("colour tokens", () => {
     },
   );
 
-  // Red text on navy would be unreadable (3.1:1), which is why red is kept to
-  // fills and borders. This pins down that reasoning.
-  it("would fail contrast if red were used as text on the navy page", () => {
+  // Gold text on the header green would be unreadable (3.2:1), which is why
+  // the header uses white text and gold only as a fill or underline there.
+  // This pins down that reasoning.
+  it("would fail contrast if gold were used as text on the header", () => {
     const ratio = contrastRatio(
       resolveVariable(properties, "--colour-accent"),
-      resolveVariable(properties, "--colour-page-background"),
+      resolveVariable(properties, "--colour-header-background"),
     );
 
     expect(ratio).toBeLessThan(minimumTextContrast);

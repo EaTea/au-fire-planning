@@ -1,7 +1,7 @@
 /*
  * Layout styles for the app shell: header, step pills, page and footer.
  * Sizes follow the mockups (requirements/mockups/src/wireframe.css). Colours
- * are the Australian-flag scheme's role variables and spacing comes from
+ * are the green and gold scheme's role variables and spacing comes from
  * tokens.css; only role variables are used here, never palette ones.
  */
 
@@ -24,7 +24,7 @@ body {
   gap: var(--space-large);
   padding: 14px var(--space-page-side);
   background: var(--colour-header-background);
-  /* The red stripe separates the near-black header from the navy page. */
+  /* The gold stripe separates the green header from the deep green page. */
   border-bottom: 3px solid var(--colour-accent);
 }
 
@@ -62,7 +62,7 @@ body {
   margin-right: 4px;
 }
 
-/* The current step is filled red, the flag's accent colour. */
+/* The current step is filled gold, the accent colour. */
 .step-active,
 .step-active:hover {
   background: var(--colour-accent);
@@ -361,7 +361,7 @@ body {
 /* ---------- Keyboard focus ---------- */
 
 /*
- * The browser's default focus ring is dark blue, which disappears on navy.
+ * The browser's default focus ring is dark blue, which disappears on deep green.
  * Buttons (toggles, "How is this calculated?", "Start planning") need it too.
  * Inputs show focus on their .input wrapper instead.
  */

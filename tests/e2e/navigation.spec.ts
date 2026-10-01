@@ -97,19 +97,17 @@ test("no errors are logged to the browser console on any page", async ({ page })
   expect(browserErrors).toEqual([]);
 });
 
-// The colour scheme (see "Colour scheme: Australian flag" in PLAN.md). Checks
-// the stylesheets are loaded in the production build and the flag colours
+// The colour scheme (see "Colour scheme: green and gold" in PLAN.md). Checks
+// the stylesheets are loaded in the production build and the national colours
 // reach the page, which unit tests of tokens.css alone can't show.
-test("the app uses the Australian flag colours: navy page and red current step", async ({
-  page,
-}) => {
+test("the app uses green and gold: deep green page and gold current step", async ({ page }) => {
   // Accept the welcome page first: it hides the step navigation until then.
   await startFresh(page);
 
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(1, 33, 105)");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(0, 77, 37)");
   await expect(page.locator("body")).toHaveCSS("color", "rgb(255, 255, 255)");
   await expect(page.getByRole("navigation", { name: "Steps" }).locator("[aria-current]")).toHaveCSS(
     "background-color",
-    "rgb(228, 0, 43)",
+    "rgb(255, 205, 0)",
   );
 });
