@@ -1321,7 +1321,7 @@ nothing uses this code yet.
 
 #### Step 2 · Plan state: reducer and provider
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/plan/planReducer.ts`: a pure `planReducer(plan, action)` with
    these actions:
