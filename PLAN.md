@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 done and deployed. M1 implemented, awaiting the owner's verification.
+**Current status:** M0, M1 and the colour scheme are done and deployed. M2 plan drafted, awaiting approval.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 implemented, in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 and M1 done. M2 plan in review |
 
 ## 1. Requirement ordering
 
@@ -1086,7 +1086,7 @@ code are repeated here.
 - **In the lead's development environment**, Chromium is preinstalled at
   `/opt/pw-browsers/chromium`. Don't run `npx playwright install` there. Set
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` when
-  running E2E tests instead (see M0 step 5).
+  running E2E tests instead (`playwright.config.ts` reads it).
 
 ### M0 · Walking skeleton: done
 
@@ -1111,595 +1111,420 @@ Conventions settled while building M0, which later milestones rely on:
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` points them at a preinstalled
   Chromium.
 
-### M1 · FI number: step-by-step plan
+### M1 · FI number: done
 
-**Status:** implemented, all eight steps done. Awaiting the owner's verification in the M1 PR.
+Delivered in PR #11: the FI number and progress to FI with breakdowns, the
+input screens, IndexedDB autosave, and the welcome page. The full
+step-by-step plan is in git history.
 
-**Goal:** the first real feature. One person enters their living expenses,
-their retirement spending, one share portfolio's value and a safe
-withdrawal rate. The Results page then shows their **FI number** and
-**progress to FI**, each with a "how was this calculated?" breakdown. The
-plan is saved in the browser (IndexedDB) and survives a reload. A first-run
-welcome page shows the disclaimer.
+Conventions settled while building M1, which later milestones rely on:
 
-**Requirements delivered** (from part 1): NFR-5 disclaimer, NFR-4 data saved
-only on this device, EXP-1 living expenses (single total), EXP-2 retirement
-spending (amount or % of today), IN-10 safe withdrawal rate, IN-14 one
-portfolio's value, FIRE-1 FI number in today's dollars, FIRE-2 progress to
-FI, NFR-1 breakdown of the FI number and progress, NFR-2 determinism, NFR-6
-worked examples.
+- **Plan, engine and storage are separate layers.**
+  - `src/plan/` holds the in-memory `Plan`, which contains **only
+    user-entered values** (unset values are `undefined`), plus `defaults.ts`,
+    `resolvePlanInputs`, `planReducer` and `PlanProvider`.
+  - `src/engine/` holds the pure calculations. Every figure is an `Explained`
+    with lines of working (NFR-1), and resolved values carry
+    `Sourced<T> = { value, source: "input" | "default" }`.
+  - The engine never throws on user data: impossible inputs come back as
+    `incomplete` with a `MissingInput` (a field name and a label). The UI maps
+    each field to a step in `src/ui/screens/missingInputSteps.ts`.
+- **Storage:**
+  - `src/persistence/` stores only `PlanDocumentV1`, the Zod wire format,
+    through `planToWire`/`planFromWire`.
+  - Adding **optional** fields doesn't need a new `schemaVersion`. The
+    `v1-basic.json` fixture must keep loading.
+  - Percent ↔ fraction conversion rounds to 12 significant digits.
+  - `PlanStore` has `getMeta`/`setMeta` for small settings.
+- **Screens are built from self-contained form sections** in
+  `src/ui/sections/`, which read with `usePlan()` and edit with
+  `usePlanDispatch()`.
+- **Fields:**
+  - Number fields are `MoneyField`/`PercentField` on a shared `NumberField`.
+    They commit on blur or Enter, select their text on focus, show dashed
+    defaults when unset, and reject negatives.
+  - Every field on a page has a unique label.
+- **E2E tests:**
+  - Specs import `test`, `expect` and `startFresh` from
+    `tests/e2e/fixtures.ts`.
+  - `startFresh(page)` accepts the welcome page.
+  - Every test also asserts no requests to other origins.
+- **Styles use colour role variables only** (see the colour scheme below).
+  New text/background pairs go in the contrast test.
 
-**Out of scope for M1:** anything over time (ages, inflation, growth,
-contributions and nominal dollars all arrive in M2), several portfolios or
-people, super, tax, property, the asset sidebar (M5), the inputs panel
-(M16), scenarios (M16), and listing several plans (M16).
+### Colour scheme: Australian flag: done
+
+Delivered in PRs #9 and #10, and merged into M1. Rules every later
+stylesheet must follow:
+
+- **Use only the role variables** (`--colour-…`) from
+  `src/ui/styles/tokens.css`. Palette variables (`--flag-…`, `--navy-…`) are
+  referenced only inside `tokens.css`.
+- **Add any new role to `tokens.css`,** and add every new text-on-background
+  pair to `src/ui/styles/tokens.test.ts`, which requires at least 4.5:1
+  contrast (WCAG AA).
+- **Red (`--colour-accent`) is for fills and borders only, never text on
+  navy.** Error text uses `--colour-text-error`.
+- **The mockups stay greyscale.** They show layout, not visual design.
+
+### M2 · Growth over time: step-by-step plan
+
+**Status:** draft, awaiting the owner's approval. Do not implement yet.
+
+**Goal:** the plan gains time. The user enters their age, a target
+retirement age, inflation, the portfolio's expected return and regular
+contributions. The app projects the portfolio year by year, and shows:
+
+- the **year they reach FI**;
+- the FI number in nominal dollars at their target retirement age;
+- a **year-by-year table**, viewable in today's or nominal dollars.
+
+**Requirements delivered** (from part 1): IN-2 current age, IN-3 target
+retirement age (one person), IN-11 inflation, EXP-3 expenses grow with
+inflation, IN-15 expected return (total return only), IN-18 regular
+contributions, FIRE-1 FI number in nominal dollars at retirement, OUT-1
+year-by-year projection (first columns), OUT-2 today's or nominal dollars,
+OUT-4 FI number and FI year.
+
+**Out of scope for M2:**
+- withdrawals in retirement and running out of money (M3);
+- the projection end age, IN-4 (M3). M2 projects to age 100;
+- the earliest feasible retirement age (M3) and Coast FIRE (M4);
+- charts (M3);
+- splitting return into growth and yield (M9);
+- remembering the today's/nominal choice between visits. It's a follow-up,
+  kept in memory for now.
 
 **Definition of done:**
 
-- A first-time visitor sees a welcome page with the disclaimer. After
-  accepting, they don't see it again on this device.
-- On Income & expenses, Assets and Assumptions, the user can enter living
-  expenses, retirement spending (as a % of today or a dollar amount), a
-  portfolio's value, and a safe withdrawal rate. Unset values with a default
-  (retirement spending 100%, rate 4%, portfolio $0) show as dashed "default"
-  fields.
-- With living expenses of $64,000, retirement spending at the default 100%,
-  a portfolio of $720,000 and the default 4%, Results shows an FI number of
-  **$1,600,000** and progress of **45%**. Each figure can show its
-  breakdown. If living expenses aren't entered, Results says so and links to
-  Income & expenses instead of showing a number.
-- Reloading the page keeps every input.
-- Results states what isn't modelled yet.
+- Household (step 1) is a real screen: current age and target retirement
+  age. The welcome page leads there.
+- Assets adds expected return (default 7%), contributions per year in today's
+  dollars (default $0), and the age contributions stop (default: the target
+  retirement age). Assumptions adds inflation (default 2.5%).
+- With the worked example below, Results shows an FI number of $1,600,000 in
+  today's dollars, $2,375,209 nominal at age 50, and **FI reached in 2038, at
+  age 46**.
+- Year by year shows a row per year, with a working today's/nominal toggle.
+- Everything is saved and survives a reload.
 - `npm run check` and `npm run test:e2e` pass, and CI is green.
 
-#### Design decisions for M1
+#### Design decisions for M2
 
-These refine part 2 now that the first data is stored.
+**Projection timing**
 
-**Defaults stay unset in the in-memory plan.** Part 2 said defaults are
-applied when a saved plan is loaded. To show dashed default fields, the
-in-memory `Plan` must know which values the user hasn't set, so instead:
+Row 0 is today. Row *k* is the end of the *k*-th year from now.
 
-- `Plan` holds **only what the user entered**. Unset values are `undefined`.
-- `resolvePlanInputs(plan)` (in `src/plan/`) applies the defaults from
-  `src/plan/defaults.ts` and returns the complete inputs the engine needs,
-  or a list of what's missing. The engine never sees `undefined` values.
-- The UI shows a field as "default" when the plan's value is `undefined`,
-  displaying the default value.
-
-This keeps part 2's intent: an improved default still reaches plans that
-never overrode it.
-
-**The in-memory plan (internal types)**, `src/plan/types.ts`:
-
-```ts
-interface Plan {
-  readonly household: { readonly people: readonly Person[] }; // M1: exactly one person
-  readonly expenses: {
-    readonly livingAnnual?: number;                           // dollars per year, after tax
-    readonly retirementSpending?: RetirementSpending;
-  };
-  readonly assumptions: { readonly safeWithdrawalRate?: number }; // fraction, e.g. 0.04
-  readonly portfolios: readonly Portfolio[];                    // M1: exactly one portfolio
-}
-interface Person { readonly id: string; readonly label: string }  // label e.g. "Person 1"
-interface Portfolio { readonly id: string; readonly name: string; readonly value?: number }
-type RetirementSpending =
-  | { readonly kind: "amount"; readonly annual: number }            // dollars per year
-  | { readonly kind: "percentOfToday"; readonly fraction: number }; // e.g. 0.9
+```
+  row 0 (today)         row 1                  row 2
+  age a, balance B0 ──► age a+1                age a+2 ...
+                        growth   = B0 × r
+                        contrib  = C × (1+i)^1   (if a+1 ≤ stop age)
+                        B1 = B0 + growth + contrib
+                        FI number = FI_today × (1+i)^1
 ```
 
-Defaults (`src/plan/defaults.ts`): safe withdrawal rate 0.04; retirement
-spending 100% of today (`{ kind: "percentOfToday", fraction: 1 }`); portfolio
-value 0. Living expenses have **no default**: without them there's nothing
-to calculate.
+- `r` is the expected nominal return and `i` is inflation.
+- `C` is the yearly contribution in **today's dollars**. It's indexed to
+  inflation, so every contribution is worth `C` in today's dollars.
+- `FI_today` is M1's FI number.
+- **Every value in row *k* uses the same inflation index, `(1+i)^k`.**
+  Converting any value in the row to today's dollars divides by that one
+  number.
+- **Living expenses** in row *k* are `living × (1+i)^k` (EXP-3).
+- **Contributions** are added in row *k* only while `a + k ≤ stop age`, so
+  the year you turn the stop age is the last one with a contribution.
+- **FI is reached** in the first row where the balance is at least that
+  row's FI number, which may be row 0. If no row up to age 100 reaches it,
+  FI isn't reached.
+- **No withdrawals in M2.** Contributions stop, and growth continues to age
+  100. Year by year notes that withdrawals arrive in M3.
 
-**Engine output carries its explanation** (NFR-1), in `src/engine/`:
+**New plan fields (internal types).** All are optional, keeping
+"only what the user entered":
 
 ```ts
-interface Explained {
-  readonly value: number;
-  readonly unit: "dollars" | "fraction";
-  readonly lines: readonly ExplanationLine[]; // the breakdown shown by ExplainPanel
-}
-interface ExplanationLine {
-  readonly label: string;   // e.g. "Retirement spending (90% of $60,000)"
-  readonly value: number;
-  readonly unit: "dollars" | "fraction";
-  readonly operator?: "+" | "−" | "×" | "÷" | "="; // how this line combines with the ones above
-  readonly source: "input" | "default" | "calculated";
-}
-type PlanSummary =
-  | { readonly status: "complete"; readonly fiNumber: Explained; readonly progressToFi: Explained;
-      readonly investable: Explained; readonly retirementSpending: Explained;
-      readonly safeWithdrawalRate: number }  // the last two feed the FI number's sub-line
-  | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
-interface MissingInput { readonly field: "livingExpenses" | "retirementSpending"; readonly label: string }
-// The engine names the missing field. The UI maps each field to the step where it is entered.
+interface Person    { id; label; currentAge?: number; targetRetirementAge?: number }  // whole years
+interface Portfolio { id; name; value?; expectedReturn?: number;      // fraction, e.g. 0.07
+                      annualContribution?: number;                    // today's dollars per year
+                      contributionsStopAge?: number }                 // whole years
+assumptions: { safeWithdrawalRate?; inflationRate?: number }          // fraction, e.g. 0.025
 ```
 
-`summarisePlan(plan): PlanSummary` is M1's engine entry point. It calls
-`resolvePlanInputs`, then the pure functions `retirementSpendingAnnual`,
-`calculateFiNumber` and `calculateProgressToFi`. Part 2's `project()`
-arrives in M2, when there's a projection over time. The engine imports
-nothing from `src/ui/` or `src/persistence/`, and never reads the clock.
+New defaults (`src/plan/defaults.ts`):
+- inflation 0.025;
+- expected return 0.07;
+- annual contribution 0;
+- contributions stop at **the target retirement age**. It's a default that
+  depends on another input, and is resolved in `resolvePlanInputs`.
 
-**The stored plan (wire types)**, `src/persistence/`. `PlanDocumentV1` is
-exactly the Zod schema shown in part 2, with one change: `valueDollars` on
-portfolios is optional, matching "store only what the user set". Units are in
-the field names: `livingAnnualDollars`, `annualDollars`,
-`percent` (e.g. `90`), `safeWithdrawalRatePercent` (e.g. `4`). The mappers
-convert percent ↔ fraction. `PlanRecord` and the database schema (`plans` and
-`meta` stores, database version 1) are as in part 2. `PlanStore` in M1 has
-`loadActivePlan` and `savePlan`, plus `getMeta`/`setMeta` for the disclaimer.
-`listPlans` waits for M16.
+Current age and target retirement age have **no default**.
 
-**IDs and time are injected.** IDs come from an `IdGenerator` (default
-`() => crypto.randomUUID()`), and timestamps from a `Clock` (default
-`() => new Date()`). Both are passed in rather than called directly, so tests
-are deterministic.
+**Two levels of "complete".** M1's figures (FI number and progress in
+today's dollars) need only living expenses. The projection also needs the
+two ages. So:
+- `summarisePlan(plan, startYear)` keeps M1's `complete`/`incomplete`
+  result.
+- The `complete` variant gains `projection: ProjectionSummary`, which is
+  itself `complete` or `incomplete`:
 
-**Money display in M1:** `formatDollars(value)` uses
-`Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })`,
-and `formatPercent(fraction)` shows one decimal place at most (e.g. "45%",
-"4.5%"). The today's/nominal-aware `formatMoney` replaces `formatDollars`
-in M2.
+```ts
+type ProjectionSummary =
+  | { status: "complete"; rows: readonly ProjectionRow[];
+      fiReached?: FiMilestone;          // undefined if not reached by age 100
+      fiNumberAtRetirement: Explained } // nominal, at the target retirement age (FIRE-1)
+  | { status: "incomplete"; missing: readonly MissingInput[] };
 
-#### Pinned versions (new in M1)
+interface ProjectionRow {
+  yearIndex: number; calendarYear: number; age: number;
+  inflationIndex: number;            // (1+i)^yearIndex; today's dollars = value ÷ this
+  openingBalance: number; growth: number; contribution: number; closingBalance: number;
+  livingExpenses: number; fiNumber: number;                 // all nominal
+}
+interface FiMilestone { yearIndex: number; calendarYear: number; age: number;
+                        explanation: Explained }          // balance vs FI number that year
+```
 
-| Package | Version | Kind |
-| --- | --- | --- |
-| `zod` | 4.6.5 | dependency |
-| `idb` | 8.0.3 | dependency |
-| `fake-indexeddb` | 6.2.5 | dev |
-| `fast-check` | 4.10.2 | dev |
-| `@fast-check/vitest` | 0.5.0 | dev |
+- `MissingInput.field` gains `"currentAge"` and `"targetRetirementAge"`, both
+  mapped to step `household`.
+- A target retirement age below the current age is reported as missing:
+  "Target retirement age must be at or after your current age".
+- `startYear` is passed in. The UI gets it from a `Clock` (the current
+  calendar year), and the engine still never reads the clock.
 
-#### Step 1 · Plan types and the FI calculations
+**The engine's projection** is a pure function in `src/engine/projection.ts`:
+`projectPortfolio(inputs, startYear): ProjectionRow[]`. `summarisePlan`
+calls it. `MAX_PROJECTION_AGE = 100` lives in `src/engine/projection.ts`
+until IN-4 replaces it in M3.
 
-- [x] Done
+**Wire format.** Optional fields are added to `PlanDocumentV1`, with no new
+`schemaVersion`:
+- `people[].currentAgeYears`, `people[].targetRetirementAgeYears`;
+- `assumptions.inflationPercent`;
+- `portfolios[].expectedReturnPercent`, `annualContributionDollars`,
+  `contributionsStopAgeYears`.
 
-1. Add `src/plan/types.ts` (types above), `src/plan/defaults.ts`, and
-   `src/plan/resolvePlanInputs.ts`. `resolvePlanInputs` returns either
-   `{ status: "complete", inputs }` with every value filled in, or
-   `{ status: "incomplete", missing }`. Living expenses are the only input
-   that can be missing in M1. They're missing when `undefined`, reported as
-   `{ field: "livingExpenses", label: "Living expenses" }`. Resolved values
-   carry their source as `Sourced<T> = { value, source: "input" | "default" }`
-   (in `src/plan/types.ts`), so explanation lines can say where each value
-   came from.
-2. Add `src/plan/createNewPlan.ts`: `createNewPlan(generateId)` returns a plan
-   with one person labelled "Person 1", one portfolio named "Share
-   portfolio", and nothing else set.
-3. Add `src/engine/explained.ts` (the `Explained` and `ExplanationLine`
-   types) and `src/engine/fiNumber.ts` with:
-   - `retirementSpendingAnnual(livingAnnual, retirementSpending): Explained`.
-     For an amount, it's the amount. For a percentage, it's
-     `livingAnnual × fraction`, with a line showing the multiplication.
-   - `calculateFiNumber(retirementSpending: Explained, safeWithdrawalRate, rateSource): Explained`,
-     equal to `retirementSpending ÷ safeWithdrawalRate`. It throws a
-     `RangeError` if the rate isn't greater than 0 (the UI prevents this).
-   - `calculateProgressToFi(investable: Explained, fiNumber: Explained): Explained`,
-     equal to `investable ÷ fiNumber` as a fraction. It isn't capped at 100%,
-     so 1.25 means 125%.
-   - `summarisePlan(plan): PlanSummary`. The investable amount is the
-     portfolio's value (the sum over portfolios, ready for M9). If retirement
-     spending works out to $0 or less (so the FI number would be $0), it
-     returns `incomplete` with
-     `{ field: "retirementSpending", label: "Retirement spending must be more than $0" }`
-     instead of calculating. The engine never crashes on odd stored data.
-   Each explanation line records whether the value came from an input, a
-   default or a calculation.
-4. Tests (Vitest, next to the code):
-   - Worked values: $64,000 ÷ 4% = $1,600,000. 90% of $60,000 = $54,000, so
-     an FI number of $1,350,000 at 4%. $720,000 of $1,600,000 = 45%. A
-     $0 portfolio gives 0%. $2,000,000 of $1,600,000 = 125%.
-   - Living expenses missing → `incomplete`, with the `livingExpenses` field.
-   - Defaults used when unset (4%, 100% of today, $0), and their explanation
-     lines say `"default"`.
-   - A rate ≤ 0 throws.
-   - Retirement spending of $0 (living expenses $0 at a percentage, or a $0
-     amount) → `incomplete`, with the `retirementSpending` field.
-5. Add `tests/worked-examples/`:
-   - `README.md` explaining the fixture format: inputs, expected figures to
-     the cent, and how each was independently checked;
-   - `m1-fi-number.json` with three scenarios: $64,000 with defaults and
-     $720,000 invested; 90% of $60,000 with $0 invested; and a $64,000
-     amount with $2,000,000 invested. Each has
-     `"checkedBy": "hand calculation"` and the arithmetic written out;
-   - `tests/unit/workedExamples.test.ts`, which loads every fixture file and
-     checks `summarisePlan` against it to the cent.
-6. Property-based tests with `@fast-check/vitest` (install `fast-check` and
-   `@fast-check/vitest` now):
-   - **determinism**: summarising the same plan twice gives deep-equal
-     results;
-   - doubling retirement spending doubles the FI number;
-   - a higher withdrawal rate never gives a higher FI number;
-   - progress × FI number equals the investable amount, to the cent.
+Ages are whole numbers between 0 and 120.
 
-**Check:** `npm run check` passes. The app is unchanged in the browser, since
-nothing uses this code yet.
+**Today's or nominal dollars (OUT-2):**
+- A `DollarsModeProvider` in `src/ui/dollarsMode.tsx` holds the mode:
+  `"today"` (the default) or `"nominal"`.
+- `useMoneyFormatter()` returns `formatMoney(nominalValue, inflationIndex)`.
+  It divides by the index in today's mode, then calls `formatDollars`.
+- `DollarsModeToggle` is a `SegmentedToggle` labelled "Show values in", with
+  the options "Today's dollars" and "Nominal".
+- The mode lives in memory only in M2. It's a follow-up to save it in `meta`.
 
-#### Step 2 · Plan state: reducer and provider
+#### Worked examples
 
-- [x] Done
+These were checked with an independent script, not the app's code. Each
+becomes a fixture in `tests/worked-examples/m2-growth.json`.
 
-1. Add `src/plan/planReducer.ts`: a pure `planReducer(plan, action)` with
-   these actions:
-   - `setLivingExpenses { annual?: number }`
-   - `setRetirementSpending { spending?: RetirementSpending }`
-   - `setSafeWithdrawalRate { rate?: number }`
-   - `setPortfolioValue { portfolioId, value?: number }`
-   - `renamePortfolio { portfolioId, name }`
-   - `replacePlan { plan }` (used when a saved plan loads)
+| | A: headline | B: by hand | C: never FI |
+| --- | --- | --- | --- |
+| Current age / retirement / stop age | 34 / 50 / 50 | 40 / 41 / 41 | 60 / 60 / 60 |
+| Portfolio, return, contribution | $720,000, 7%, $30,000 | $100,000, 10%, $10,000 | $0, 0%, $0 |
+| Inflation, living, rate | 2.5%, $64,000, 4% | 0%, $20,000, 5% | 2%, $50,000, 4% |
+| Row 1 | growth $50,400.00, contribution $30,750.00, balance $801,150.00 | growth $10,000, contribution $10,000, balance $120,000 | — |
+| Row 2 | balance $888,749.25 | growth $12,000, contribution $0, balance $132,000 | — |
+| FI reached | row 12: **2038, age 46**, balance $2,241,568.17 vs FI number $2,151,822.12 | not checked | **not reached** |
+| FI number at retirement (nominal) | $2,375,208.99 (age 50) | — | — |
 
-   Passing `undefined` clears a value back to its default. It returns a new
-   plan object and never mutates the old one.
-2. Add `src/plan/PlanProvider.tsx`: a React context holding the plan (via
-   `useReducer`) and its derived `PlanSummary` (memoised with `useMemo`).
-   Hooks: `usePlan()`, `usePlanSummary()`, `usePlanDispatch()`.
-   `PlanProvider` takes an optional `initialPlan` prop. It defaults to
-   `createNewPlan`.
-3. Wrap the app in `PlanProvider` in `App.tsx`. The plan is kept in memory
-   only for now. Saving arrives in step 7.
-4. Tests: each reducer action, including clearing to default and not mutating
-   the input. The provider's hooks give the summary for a dispatched change
-   (render a tiny test component).
+The start year is 2026. Example B's row 2 has no contribution, because age 42
+is past the stop age of 41.
 
-**Check:** `npm run check` passes. The app still works as in M0.
+#### Pinned versions
 
-#### Step 3 · Shared input and output components
+No new dependencies.
 
-- [x] Done
+#### Step 1 · Projection engine
 
-Add the first shared components from part 2's component map, in
-`src/ui/components/`, with styles in `app.css` following
-`requirements/mockups/src/wireframe.css` (`.card`, `.field`, `.input`,
-`.input.default`, `.toggle`, `.metric`, `.banner`):
+- [ ] Done
 
-1. `Card` (a titled box) and `Banner` (a notice, with a `tone` of `"info"` or
-   `"warning"`).
-2. `src/ui/format.ts`: `formatDollars(value)` and `formatPercent(fraction)`
-   as described above, plus `parseDollars(text)` (accepts `60000`,
-   `60,000`, `$60,000` and `60000.50`, and returns `undefined` for empty
-   text and `NaN` for anything else) and `parsePercent(text)` (accepts `4`,
-   `4.5` and `4.5%`, and returns a fraction).
-3. `MoneyField` and `PercentField`: a labelled text input. Props: `label`,
-   `value?: number` (the plan's value; `undefined` means "not set"),
-   `defaultValue?: number`, `onChange(value?: number)`, optional `hint`, and
-   optional `min`/`max` (in the field's own unit: dollars, or a fraction for percentages). Behaviour:
-   - While typing, keep a local text draft. Commit on blur or Enter.
-   - Empty text commits `undefined`. If there's a `defaultValue`, the field
-     then shows it in the dashed "default" style, labelled "default".
-   - Invalid text, or out-of-range numbers, show an inline error and commit
-     nothing.
-   - The input has an accessible label, so tests can find it with
-     `getByLabelText`.
-   As built: both are thin wrappers around a shared `NumberField`, which holds
-   the draft, commit and validation logic. Leaving a field without changing
-   its text commits nothing, so tabbing through a default doesn't set it.
-   Negative numbers are rejected. Later milestones that need negatives
-   (e.g. losses) must extend the parsers explicitly.
-4. `TextField`: a labelled text input that commits on blur or Enter (used for
-   the portfolio name).
-5. `SegmentedToggle`: two or three exclusive options shown as the mockups'
-   toggle, built with buttons that have `aria-pressed`.
-6. `MetricTile`: a label, a large value, a sub-line, and an optional
-   "How is this calculated?" button that reveals an `ExplainPanel` beneath it.
-7. `ExplainPanel`: renders an `Explained` as the mockups' breakdown table.
-   One row per line, with its operator, label and formatted value. Default
-   values are marked "(default)", and the result line is bold.
-8. Component tests (React Testing Library and user-event) for every
-   component: drafts commit on blur and Enter; empty → default style;
-   invalid input shows an error and doesn't commit; the toggle's
-   `aria-pressed`; the metric tile reveals its explanation; and the parse
-   and format functions, including the edge cases above.
+1. Add the new optional fields to `src/plan/types.ts`, and the new defaults
+   to `src/plan/defaults.ts`.
+2. Extend `resolvePlanInputs` so it also resolves the projection inputs:
+   - current age and target retirement age;
+   - inflation, expected return, contribution and stop age, with defaults
+     and sources. The stop age defaults to the target retirement age.
 
-**Check:** `npm run check` passes.
-
-#### Step 4 · Input screens: income & expenses, assets, assumptions
-
-- [x] Done
-
-Replace three placeholders with real screens, each built from
-**self-contained form sections** (part 2: the M16 inputs panel will reuse
-them). A section reads the plan with `usePlan()`, dispatches with
-`usePlanDispatch()`, and has no page layout of its own.
-
-1. `src/ui/sections/LivingExpensesSection.tsx` (EXP-1): a card "Living
-   expenses today" with a `MoneyField` "Per year, after tax" (minimum $1). Hint: "What
-   your household spends in a year, after tax. Leave out mortgage repayments
-   and rent: they come later."
-2. `src/ui/sections/RetirementSpendingSection.tsx` (EXP-2): a card "Spending
-   in retirement" with a `SegmentedToggle` "% of today" / "$ amount", and
-   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`
-   (minimum $1) labelled "Retirement spending per year". Every field on a
-   page needs a unique label, so screen readers and tests can tell them apart.
-   Switching the toggle keeps the equivalent value where possible (e.g. 90%
-   of $60,000 becomes $54,000), or clears it if living expenses aren't set.
-3. `src/ui/sections/PortfolioSection.tsx` (IN-14, one portfolio): a card
-   with a `TextField` "Name" and a `MoneyField` "Current value" (default $0).
-4. `src/ui/sections/DrawdownSection.tsx` (IN-10): a card "Drawdown" with a
-   `PercentField` "Safe withdrawal rate" (default 4%, min 0.5%, max 10%).
-   Hint: "FI number = retirement spending ÷ this rate".
-5. Screens in `src/ui/screens/`: `IncomeExpensesScreen` (living expenses and
-   retirement spending), `AssetsScreen` (portfolio) and `AssumptionsScreen`
-   (drawdown). Each is a `StepPage` with an intro sentence. Route them in
-   `App.tsx` in place of their placeholders. The other steps keep their
-   placeholders, and "arrives in" for Results stays until step 5.
-6. **Fix in `NumberField` (step 3), found while building this step:**
-   select the field's text when it gets focus, so typing replaces the shown
-   value (including a dashed default) rather than appending to it, e.g.
-   "4%3.5". Add a test: focus a field showing its default, type a value, and
-   the new value is committed. Also leave a small gap between a
-   `SegmentedToggle` and the field below it.
-7. Tests: for each section, entering a value dispatches the right action and
-   the field shows it; clearing restores the dashed default; the toggle
-   conversion works.
-
-**Check:** `npm run check` passes. In `npm run dev`, all three screens take
-input, and values survive moving between steps (but not a reload yet).
-
-#### Step 5 · Results: FI number and progress
-
-- [x] Done
-
-1. `src/ui/screens/ResultsScreen.tsx`, using `usePlanSummary()`:
-   - **complete:** two `MetricTile`s. "FI number" (FIRE-1): value, then a
-     sub-line "{retirement spending}/yr ÷ {rate}", read from the summary's
-     `retirementSpending` and `safeWithdrawalRate` (not from explanation line
-     positions, which may change). "Progress to FI"
-     (FIRE-2): value, then a sub-line "{investable} invested of
-     {FI number}". Each has its `ExplainPanel`.
-   - **incomplete:** a `Banner` listing what's missing, each item a link to
-     the step where it's entered (e.g. "Living expenses → Income & expenses").
-     The field-to-step map (`livingExpenses` → `income-expenses`) lives in the
-     UI, in `src/ui/screens/missingInputSteps.ts`, so the engine never
-     imports UI code. Both `livingExpenses` and `retirementSpending` map to
-     `income-expenses`.
-   - Always: a `Banner` "Not yet modelled: growth over time and retirement
-     age (M2), super (M5), tax (M8), property (M12) and more. These figures
-     use today's spending and today's portfolio only." The milestone
-     numbers come from `PLAN.md` part 1.
-2. Route it in place of the Results placeholder.
-3. Tests: complete and incomplete states. The worked values ($1,600,000 and
-   45%) appear and the explanation shows its lines. Missing-input links go to
-   the right step.
-4. Add `tests/e2e/fiNumber.spec.ts`: enter living expenses $64,000,
-   retirement spending 100%, portfolio $720,000 and rate 4% (by typing
-   into the fields and pressing Tab). Results then shows $1,600,000 and 45%,
-   and the FI number's breakdown can be opened.
-
-**Check:** `npm run check` and `npm run test:e2e` pass.
-
-#### Step 6 · Wire format and mappers
-
-- [x] Done
-
-1. Install `zod`. Add `src/persistence/planDocument.ts`: the
-   `PlanDocumentV1` Zod schema (as in part 2, with optional `valueDollars`),
-   its inferred type, and `CURRENT_SCHEMA_VERSION = 1`.
-2. Add `src/persistence/planMapping.ts`:
-   - `planToWire(plan): PlanDocumentV1`, which writes only values that are
-     set and converts fractions to percent;
-   - `planFromWire(document): Plan`, the inverse, which leaves unset values
-     `undefined`.
-   As built: percent ↔ fraction conversion rounds to 12 significant digits,
-   so a stored 4.1% becomes exactly 0.041, without floating-point noise. A
-   person stored without a label is labelled "Person N". Unset values are
-   omitted from the wire document, not written as `undefined`.
-3. Add `src/persistence/migrations.ts`: `parsePlanDocument(unknownJson)`.
-   It reads `schemaVersion`, applies migrations up to the current version
-   (none yet, but the loop and a version-to-migration map exist),
-   validates with Zod, and returns `{ ok: true, document }` or
-   `{ ok: false, error }`. It never throws for bad input.
-4. Add `tests/fixtures/plan-documents/v1-basic.json`, a complete v1
-   document. Keep it forever. Future versions add their own fixture.
+   Missing ages are reported as above.
+3. Add `src/engine/projection.ts` with `projectPortfolio`, following the
+   timing rules above exactly. Also add `findFiReached(rows)`, which returns
+   the first row whose closing balance (row 0: the opening balance) is at
+   least that row's FI number, with an explanation:
+   - "Balance at end of {year} (age {age})";
+   - "FI number in {year}";
+   - "= FI reached".
+4. Extend `summarisePlan(plan, startYear)` with `projection`, as above,
+   including `fiNumberAtRetirement`: FI_today × (1+i)^(retirement age −
+   current age). Its explanation lines are the FI number today, × the
+   inflation growth over those years, and = the FI number at that age.
 5. Tests:
-   - round trip `Plan → wire → Plan` gives a deep-equal plan, including
-     unset values (property-based, with arbitrary plans from fast-check);
-   - percent ↔ fraction conversion (4% ↔ 0.04);
-   - the fixture parses;
-   - malformed documents are rejected with an error, not a throw: wrong
-     types, a missing `schemaVersion`, an unknown future `schemaVersion`.
+   - unit tests for each function;
+   - fixture `tests/worked-examples/m2-growth.json` with examples A, B and C.
+     Extend `tests/unit/workedExamples.test.ts` to check the projection
+     figures: rows 1 and 2, the FI row and the FI number at retirement, to
+     the cent;
+   - property tests:
+     - determinism;
+     - with zero inflation, today's and nominal values are equal;
+     - a higher return never makes FI later;
+     - larger contributions never make FI later;
+     - every row's balance equals the previous row's balance plus growth
+       plus contribution.
+
+**Check:** `npm run check` passes. Existing callers of `summarisePlan` now
+pass a start year. Update `PlanProvider` to pass one (see step 2), so the
+app still works.
+
+#### Step 2 · Plan state
+
+- [ ] Done
+
+1. Add reducer actions, each with an `undefined` payload clearing the value
+   back to its default:
+   - `setCurrentAge { personId, age? }`
+   - `setTargetRetirementAge { personId, age? }`
+   - `setInflationRate { rate? }`
+   - `setExpectedReturn { portfolioId, rate? }`
+   - `setAnnualContribution { portfolioId, annual? }`
+   - `setContributionsStopAge { portfolioId, age? }`
+2. `PlanProvider` takes a `startYear` prop, defaulting to the current
+   calendar year from a `Clock`, and passes it to `summarisePlan`. `App`
+   passes it through, so tests can fix it at 2026.
+3. Tests for each action and for the provider's projection summary.
+
+**Check:** `npm run check` passes. The app works as in M1.
+
+#### Step 3 · Wire format
+
+- [ ] Done
+
+1. Add the optional wire fields above to `planDocumentV1Schema`. Ages are
+   integers from 0 to 120, and percents are non-negative.
+2. Extend `planToWire`/`planFromWire`, converting percent ↔ fraction.
+3. Tests:
+   - extend the round-trip property test to the new fields;
+   - `v1-basic.json` still loads, with the new fields unset;
+   - a document with the new fields round-trips;
+   - out-of-range ages are rejected.
 
 **Check:** `npm run check` passes.
 
-#### Step 7 · Saving to IndexedDB
+#### Step 4 · Shared pieces: age field and dollars mode
 
-- [x] Done
+- [ ] Done
 
-1. Install `idb` and `fake-indexeddb`. Add `src/persistence/database.ts`:
-   `openPlannerDatabase()` using `idb`'s `openDB` with a typed `DBSchema`.
-   It sets up database `au-fire-planner` version 1, with the `plans` store
-   (key `id`, indexes `byUpdatedAt` and `byBaseId`) and the `meta` store
-   (key `key`). It handles `versionchange` by closing the connection.
-2. Add `src/persistence/planStore.ts`: the `PlanStore` interface and
-   `IndexedDbPlanStore` (taking the database, `Clock` and `IdGenerator`):
-   - `loadActivePlan()` → `{ status: "none" }` |
-     `{ status: "loaded", plan, recordId, updatedAt }` |
-     `{ status: "unreadable", recordId, error }`. The active plan's ID is in
-     `meta` under `activePlanId`;
-   - `savePlan(plan, { recordId?, expectedUpdatedAt? })`. On first save it
-     creates a `PlanRecord` (`kind: "base"`, name "My plan") and sets
-     `activePlanId`. If the stored `updatedAt` differs from
-     `expectedUpdatedAt`, it returns `{ status: "conflict" }` and writes
-     nothing. Otherwise it writes in one transaction and returns
-     `{ status: "saved", recordId, updatedAt }`;
-   - `getMeta(key)` and `setMeta(key, value)`;
-   - **never overwrites an unreadable record**: when one is found, the app
-     saves new work under a new record ID.
-   Also add `InMemoryPlanStore`, which has the same interface. It's used
-   when IndexedDB can't be opened, and in component tests.
-3. Add `src/persistence/PersistenceProvider.tsx`, inside `PlanProvider`:
-   - On start, it opens the store. If that fails, it uses
-     `InMemoryPlanStore` and shows a warning `Banner`: "Your browser isn't
-     letting this app store data, so your plan won't be kept after you close
-     this tab."
-   - It loads the active plan. While loading, it shows "Loading your plan…".
-     If the plan is loaded, it dispatches `replacePlan`. If it's
-     unreadable, it shows a warning `Banner`: "Your saved plan couldn't be
-     read. It has been kept unchanged, and your new changes will be saved
-     separately."
-   - It **autosaves** 500 ms after the last change, through `planToWire`. On
-     the first successful save, it calls `navigator.storage.persist?.()`
-     once.
-   - On `conflict`, it shows a `Banner`: "This plan was changed in another
-     tab. Reload to see the latest version." Then it stops autosaving.
-4. Tests:
-   - `IndexedDbPlanStore` with `fake-indexeddb` (`import "fake-indexeddb/auto"`
-     in that test file): save then load gives an equal plan; `none` on an
-     empty database; an unreadable record is reported and kept untouched
-     after a later save; a conflict is detected when `expectedUpdatedAt` is
-     stale;
-   - `PersistenceProvider` with `InMemoryPlanStore` and fake timers: one
-     save after a burst of edits.
-5. E2E (`tests/e2e/persistence.spec.ts`): enter values, wait for the save,
-   reload, and the values and FI number are still there. Also add a check to
-   every E2E test that the page makes **no requests to any other origin**
-   (NFR-4): record `page.on("request")` and assert every URL starts with the
-   base URL's origin.
+1. `AgeField` in `src/ui/components/`: a `NumberField` for whole years. It
+   accepts `34`, rejects `34.5` and text, takes `min`/`max`, and supports the
+   dashed default. It needs `parseAge` and `formatAge` in `format.ts`.
+2. `src/ui/dollarsMode.tsx`: `DollarsModeProvider`, `useDollarsMode()`,
+   `useMoneyFormatter()` and `DollarsModeToggle`, as described above. Wrap
+   the app in the provider.
+3. Tests:
+   - `AgeField` parsing and limits;
+   - `formatMoney` in both modes (e.g. $1,640,000 with index 1.025 shows as
+     $1,600,000 in today's mode);
+   - the toggle switches the mode.
 
-**Check:** `npm run check` and `npm run test:e2e` pass. In `npm run dev`,
-values survive a reload.
+**Check:** `npm run check` passes.
 
-#### Step 8 · Welcome page and disclaimer
+#### Step 5 · Inputs: household, assets, assumptions
 
-- [x] Done
+- [ ] Done
 
-1. Add `src/ui/screens/WelcomeScreen.tsx` at route `#/welcome`. It's not in
-   the step list or the header navigation. It shows:
-   - what the app does (two sentences);
-   - the disclaimer (NFR-5): "This app gives general information and
-     modelling only. It isn't personal financial, tax or legal advice.
-     Consider getting advice for your situation.";
-   - the privacy note (NFR-4): "Your plan is stored only in this browser on
-     this device. Nothing is sent anywhere.";
-   - a "Start planning" button. It stores `disclaimerAcceptedAt` (ISO time
-     from the `Clock`) in `meta`, then goes to `#/income-expenses`, the first
-     step with inputs in M1.
-2. On start, if `disclaimerAcceptedAt` isn't set, `PersistenceProvider`
-   redirects to `#/welcome`, whatever the URL. The header hides the step
-   navigation on `#/welcome`, so a first-time visitor can't skip past the
-   disclaimer. "Start planning" is the way in.
-3. Add a one-line footer to `AppShell` on every page: "General information
-   only, not financial advice. Your data stays on this device."
-4. Update the E2E tests. Add a helper, `startFresh(page)`, that opens the
-   app, accepts the welcome page and returns. Use it in the existing specs
-   so they don't hit the redirect. Add `tests/e2e/welcome.spec.ts`: a first
-   visit shows the welcome page and disclaimer; after accepting and
-   reloading, it isn't shown again.
-5. Unit tests for the redirect, and for `disclaimerAcceptedAt` being stored.
+1. `src/ui/sections/PersonAgesSection.tsx`, a card "About you":
+   - `AgeField` "Current age" (min 15, max 99, no default);
+   - `AgeField` "Target retirement age" (min 18, max 100, no default).
+
+   Hint: "Only your age is stored, not your date of birth."
+2. `HouseholdScreen` replaces the Household placeholder, using that section.
+   The welcome page's "Start planning" now goes to `#/household`, the first
+   step. Update its tests and `startFresh`.
+3. Extend `PortfolioSection` (Assets):
+   - `PercentField` "Expected return per year" (default 7%, min 0%, max 15%).
+     Hint: "Total return before inflation: growth plus dividends."
+   - `MoneyField` "Contributions per year" (default $0, min $0). Hint: "In
+     today's dollars. Rises with inflation each year."
+   - `AgeField` "Contributions stop at age" (min 15, max 100). It defaults to
+     the target retirement age, shown dashed. If that isn't set, it shows no
+     default.
+4. Extend `DrawdownSection`, or add `InflationSection` (Assumptions):
+   `PercentField` "Inflation per year" (default 2.5%, min 0%, max 15%).
+   Hint: "Grows your spending and contributions, and converts results to
+   today's dollars."
+5. `missingInputSteps.ts`: map `currentAge` and `targetRetirementAge` to
+   `household`.
+6. Tests for each new field: entering, clearing to default, and limits.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Follow-ups found while building M1
+#### Step 6 · Results: nominal FI number and FI year
 
-- **Flush on close:** an edit made less than 500 ms before the tab closes
-  isn't saved. Add a save on `pagehide`/`visibilitychange` (small; any
-  milestone).
-- **Write back migrated records:** when the first migration is added
-  (`schemaVersion` 2), the load path must write the upgraded record back,
-  as part 2 describes.
-- **Two tabs on an empty database** can each create a record on first save.
-  Resolve alongside multi-plan support and `BroadcastChannel` in M16.
+- [ ] Done
 
-#### After the last step
+1. On Results, when the projection is complete:
+   - **FI number tile:** add a second sub-line, "{nominal} at age {retirement
+     age} ({year})". Its explanation adds the `fiNumberAtRetirement` lines
+     (FIRE-1).
+   - **New "FI reached" tile** (OUT-4):
+     - value "{year}", sub-line "Age {age}", with the `FiMilestone`
+       explanation;
+     - if FI isn't reached, the value "Not by age 100" and the sub-line "With
+       today's inputs and no withdrawals".
+2. When the projection is incomplete, add the missing ages to the existing
+   "Enter these" banner. The M1 tiles still show.
+3. Update the "Not yet modelled" banner to "withdrawals in retirement and
+   when money runs out (M3), super (M5), tax (M8), property (M12) and more."
+4. Tests for the complete, not-reached and incomplete-projection cases,
+   using worked example A for the values.
 
-The lead ticks each step as it's committed, marks M1 done, and opens the
-milestone PR. The README needs no new commands in M1. If any step changes
-how to run or test the app, it updates the README in that step.
+**Check:** `npm run check` and `npm run test:e2e` pass.
 
-### Colour scheme: Australian flag
+#### Step 7 · Year by year
 
-**Status:** plan agreed in chat with the owner (navy pages chosen over
-light pages). Implemented; awaiting the owner's verification.
+- [ ] Done
 
-**Kind:** behavior change. Only the app's appearance changes. The layout,
-navigation and content stay the same.
+1. `ProjectionTable` in `src/ui/components/` (part 2's component map),
+   generic over column definitions `{ header, cell(row) }`. It renders one row
+   per projection row, with a header row and a highlighted FI row.
+2. `YearByYearScreen` replaces the placeholder:
+   - a `DollarsModeToggle`;
+   - a `ProjectionTable` with columns Year, Age, Contributions, Growth,
+     Portfolio balance, Living expenses, FI number and Progress, all money
+     through `useMoneyFormatter`;
+   - rows from today to the later of the target retirement age and the FI
+     row (or to the retirement age if FI isn't reached);
+   - a `Banner`: "Withdrawals in retirement aren't modelled yet (M3).
+     Balances after you stop contributing assume nothing is spent."
+   - if the projection is incomplete, the same "Enter these" banner as
+     Results.
+3. Tests:
+   - the table's rows match worked example A in nominal mode, and in today's
+     mode the contributions all read $30,000;
+   - the FI row is highlighted.
+4. E2E (`tests/e2e/growth.spec.ts`):
+   - enter worked example A through the screens;
+   - Results shows FI reached in 2038 at age 46;
+   - Year by year shows the 2038 row highlighted;
+   - switching to today's dollars changes the balances;
+   - after a reload, the values are still there.
 
-**Goal:** replace M0's greyscale wireframe look with a scheme based on the
-Australian flag. The app is predominantly dark blue, with red highlights,
-white text and a near-black header.
+   The test fixes the start year at 2026. The app reads it from a `Clock`,
+   so the E2E test needs a way to set it, e.g. Playwright's `page.clock`
+   API. It must not depend on the real date.
 
-#### Design decisions
-
-- **Two layers of colour variables, both in `src/ui/styles/tokens.css`.**
-  - *Palette* variables name the four flag colours and are used nowhere
-    else: `--flag-navy` `#012169`, `--flag-red` `#E4002B`, `--flag-white`
-    `#FFFFFF` and `--flag-black` `#0B0F1A`. The navy and red are the
-    flag's official colours (Pantone 280 and 185 C).
-  - *Role* variables say what a colour is for, such as
-    `--colour-page-background`, `--colour-text`, `--colour-text-muted`,
-    `--colour-border`, `--colour-header-background`, `--colour-accent` and
-    `--colour-on-accent`. They are defined in terms of the palette.
-    `app.css` and every later stylesheet use **only role variables**, so a
-    future change to the scheme touches one file.
-  - The greyscale variables from M0 (`--ink`, `--paper`, `--fill` and the
-    rest) are removed once nothing uses them.
-- **Where each colour goes.**
-
-  ```
-  +---------------------------------------------------------+
-  | [AU FIRE Planner]  (1 red pill)(2)(3)(4)(5)(6)(7)       |  near-black header
-  +=========================================================+  red underline
-  |  Page title (white)                                     |
-  |  Intro text (muted blue-white)                          |  navy page
-  |  [ content, light-blue dashed borders ]                 |
-  |                                  [ Next: ... -> ]       |  white outline button
-  +---------------------------------------------------------+
-  ```
-
-  - The current step pill is filled red with white text. The other pills
-    have light-blue outlines and muted text, and turn a lighter navy on
-    hover.
-  - Back and Next are white-outlined buttons that fill with a lighter navy
-    on hover.
-- **Contrast meets WCAG AA (at least 4.5:1) for every text and background
-  pair.** White on navy is 14.8:1, muted text `#C9D4F2` on navy is 10.0:1,
-  faint text `#8FA3D9` on navy is 5.9:1, white on red is 4.9:1, and white on
-  near-black is 19.1:1. **Red is never used for text on navy**, because that
-  is only 3.1:1. It is used only for fills and borders.
-- **The mockups stay greyscale.** `requirements/mockups/` are wireframes
-  showing layout, not visual design.
-
-#### Step 1 · Palette and role variables, with a contrast test: done
-
-- Add the palette and role variables to `tokens.css`, next to the existing
-  greyscale ones. Nothing uses the new variables yet, so the app looks the
-  same after this step.
-- Add `src/ui/styles/tokens.test.ts`. It reads `tokens.css` from disk as
-  text, resolves each role variable to a hex colour, and checks
-  that every text and background pair the app uses has a contrast ratio of
-  at least 4.5:1. If a later palette edit makes text unreadable, this test
-  fails.
-- **Check:** `npm run check` passes.
-
-#### Step 2 · Apply the scheme to the app shell: done
-
-- Change `app.css` to use the role variables: the near-black header with a
-  red underline, red for the current step, the navy page and white text.
-  Remove the greyscale variables from `tokens.css`. Links get a white
-  keyboard-focus outline, since the browser's default blue ring disappears
-  on navy.
-- Add an E2E test that checks the page background is navy and the current
-  step pill is red. This makes sure the stylesheet is actually loaded and
-  applied in the production build.
-- **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
-  every page looks right.
+**Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
+table is readable on navy.
 
 #### Follow-ups
 
-- **Done when M1 was merged with the colour scheme:** M1's input fields,
-  results and validation messages use role variables only. New roles in
-  `tokens.css`:
-  - `--colour-text-error` (`#FF5A6E`, 4.9:1 on navy);
-  - `--colour-input-background` (white) and `--colour-input-text` (navy),
-    14.8:1. Fields on their default are drawn as a dashed outline on the
-    page background instead.
-
-  Both pairs are in the contrast test. Keyboard focus outlines now cover
-  buttons as well as links.
+- **Remember the today's/nominal choice** in `meta` between visits.
+- **Carried from M1:**
+  - flush unsaved edits when the tab closes;
+  - write back migrated records once the first migration exists;
+  - two tabs on an empty database (M16).
 
 ## Next steps
 
@@ -1710,7 +1535,8 @@ white text and a near-black header.
 - [x] Owner verifies and merges the M0 PR.
 - [x] Approve the M1 step-by-step plan.
 - [x] Implement M1 (subagent, step by step).
-- [ ] Owner verifies the M1 PR.
+- [x] Owner verifies and merges the M1 PR.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
-- [ ] Plan M2 in its own PR.
+- [ ] Approve the M2 step-by-step plan (this PR).
+- [ ] Implement M2 (subagent, step by step), then open the M2 PR for verification.
