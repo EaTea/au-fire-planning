@@ -1,0 +1,69 @@
+{
+  "milestone": "M1",
+  "description": "FI number and progress to FI for one person with one share portfolio, in today's dollars.",
+  "scenarios": [
+    {
+      "name": "Headline example: defaults for spending and rate",
+      "checkedBy": "hand calculation",
+      "inputs": {
+        "livingExpensesAnnual": 64000,
+        "retirementSpending": null,
+        "safeWithdrawalRate": null,
+        "portfolioValue": 720000
+      },
+      "arithmetic": [
+        "Retirement spending = 100% (default) of $64,000 = $64,000",
+        "FI number = $64,000 / 0.04 (default) = $1,600,000",
+        "Progress = $720,000 / $1,600,000 = 0.45 (45%)"
+      ],
+      "expected": {
+        "retirementSpendingAnnual": 64000.0,
+        "fiNumber": 1600000.0,
+        "investable": 720000.0,
+        "progressToFi": 0.45
+      }
+    },
+    {
+      "name": "Retirement spending at 90% of today, nothing invested yet",
+      "checkedBy": "hand calculation",
+      "inputs": {
+        "livingExpensesAnnual": 60000,
+        "retirementSpending": { "kind": "percentOfToday", "fraction": 0.9 },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 0
+      },
+      "arithmetic": [
+        "Retirement spending = 90% of $60,000 = $54,000",
+        "FI number = $54,000 / 0.04 = $1,350,000",
+        "Progress = $0 / $1,350,000 = 0 (0%)"
+      ],
+      "expected": {
+        "retirementSpendingAnnual": 54000.0,
+        "fiNumber": 1350000.0,
+        "investable": 0.0,
+        "progressToFi": 0.0
+      }
+    },
+    {
+      "name": "Dollar-amount spending with progress past 100%",
+      "checkedBy": "hand calculation",
+      "inputs": {
+        "livingExpensesAnnual": 80000,
+        "retirementSpending": { "kind": "amount", "annual": 64000 },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 2000000
+      },
+      "arithmetic": [
+        "Retirement spending = $64,000 (a dollar amount; living expenses are not used)",
+        "FI number = $64,000 / 0.04 = $1,600,000",
+        "Progress = $2,000,000 / $1,600,000 = 1.25 (125%, not capped)"
+      ],
+      "expected": {
+        "retirementSpendingAnnual": 64000.0,
+        "fiNumber": 1600000.0,
+        "investable": 2000000.0,
+        "progressToFi": 1.25
+      }
+    }
+  ]
+}

@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 done and deployed. M1 plan drafted, awaiting approval.
+**Current status:** M0 done and deployed. M1 plan approved, being implemented.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 plan approved |
 
 ## 1. Requirement ordering
 
@@ -1113,7 +1113,7 @@ Conventions settled while building M0, which later milestones rely on:
 
 ### M1 · FI number: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved by the owner (PR #8). Being implemented step by step.
 
 **Goal:** the first real feature. One person enters their living expenses,
 their retirement spending, one share portfolio's value and a safe
@@ -1213,7 +1213,7 @@ type PlanSummary =
   | { readonly status: "complete"; readonly fiNumber: Explained; readonly progressToFi: Explained;
       readonly investable: Explained }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
-interface MissingInput { readonly field: "livingExpenses"; readonly label: string }
+interface MissingInput { readonly field: "livingExpenses" | "retirementSpending"; readonly label: string }
 // The engine names the missing field. The UI maps each field to the step where it is entered.
 ```
 
@@ -1256,14 +1256,17 @@ in M2.
 
 #### Step 1 · Plan types and the FI calculations
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/plan/types.ts` (types above), `src/plan/defaults.ts`, and
    `src/plan/resolvePlanInputs.ts`. `resolvePlanInputs` returns either
    `{ status: "complete", inputs }` with every value filled in, or
    `{ status: "incomplete", missing }`. Living expenses are the only input
    that can be missing in M1. They're missing when `undefined`, reported as
-   `{ field: "livingExpenses", label: "Living expenses" }`.
+   `{ field: "livingExpenses", label: "Living expenses" }`. Resolved values
+   carry their source as `Sourced<T> = { value, source: "input" | "default" }`
+   (in `src/plan/types.ts`), so explanation lines can say where each value
+   came from.
 2. Add `src/plan/createNewPlan.ts`: `createNewPlan(generateId)` returns a plan
    with one person labelled "Person 1", one portfolio named "Share
    portfolio", and nothing else set.
@@ -1279,7 +1282,11 @@ in M2.
      equal to `investable ÷ fiNumber` as a fraction. It isn't capped at 100%,
      so 1.25 means 125%.
    - `summarisePlan(plan): PlanSummary`. The investable amount is the
-     portfolio's value (the sum over portfolios, ready for M9).
+     portfolio's value (the sum over portfolios, ready for M9). If retirement
+     spending works out to $0 or less (so the FI number would be $0), it
+     returns `incomplete` with
+     `{ field: "retirementSpending", label: "Retirement spending must be more than $0" }`
+     instead of calculating. The engine never crashes on odd stored data.
    Each explanation line records whether the value came from an input, a
    default or a calculation.
 4. Tests (Vitest, next to the code):
@@ -1290,10 +1297,14 @@ in M2.
    - Defaults used when unset (4%, 100% of today, $0), and their explanation
      lines say `"default"`.
    - A rate ≤ 0 throws.
+   - Retirement spending of $0 (living expenses $0 at a percentage, or a $0
+     amount) → `incomplete`, with the `retirementSpending` field.
 5. Add `tests/worked-examples/`:
    - `README.md` explaining the fixture format: inputs, expected figures to
      the cent, and how each was independently checked;
-   - `m1-fi-number.json` with the three scenarios above, each with
+   - `m1-fi-number.json` with three scenarios: $64,000 with defaults and
+     $720,000 invested; 90% of $60,000 with $0 invested; and a $64,000
+     amount with $2,000,000 invested. Each has
      `"checkedBy": "hand calculation"` and the arithmetic written out;
    - `tests/unit/workedExamples.test.ts`, which loads every fixture file and
      checks `summarisePlan` against it to the cent.
@@ -1355,7 +1366,7 @@ Add the first shared components from part 2's component map, in
 3. `MoneyField` and `PercentField`: a labelled text input. Props: `label`,
    `value?: number` (the plan's value; `undefined` means "not set"),
    `defaultValue?: number`, `onChange(value?: number)`, optional `hint`, and
-   for percentages `min`/`max`. Behaviour:
+   optional `min`/`max` (in the field's own unit: dollars, or a fraction for percentages). Behaviour:
    - While typing, keep a local text draft. Commit on blur or Enter.
    - Empty text commits `undefined`. If there's a `defaultValue`, the field
      then shows it in the dashed "default" style, labelled "default".
@@ -1390,12 +1401,13 @@ them). A section reads the plan with `usePlan()`, dispatches with
 `usePlanDispatch()`, and has no page layout of its own.
 
 1. `src/ui/sections/LivingExpensesSection.tsx` (EXP-1): a card "Living
-   expenses today" with a `MoneyField` "Per year, after tax". Hint: "What
+   expenses today" with a `MoneyField` "Per year, after tax" (minimum $1). Hint: "What
    your household spends in a year, after tax. Leave out mortgage repayments
    and rent: they come later."
 2. `src/ui/sections/RetirementSpendingSection.tsx` (EXP-2): a card "Spending
    in retirement" with a `SegmentedToggle` "% of today" / "$ amount", and
-   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`.
+   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`
+   (minimum $1).
    Switching the toggle keeps the equivalent value where possible (e.g. 90%
    of $60,000 becomes $54,000), or clears it if living expenses aren't set.
 3. `src/ui/sections/PortfolioSection.tsx` (IN-14, one portfolio): a card
@@ -1428,7 +1440,8 @@ input, and values survive moving between steps (but not a reload yet).
      the step where it's entered (e.g. "Living expenses → Income & expenses").
      The field-to-step map (`livingExpenses` → `income-expenses`) lives in the
      UI, in `src/ui/screens/missingInputSteps.ts`, so the engine never
-     imports UI code.
+     imports UI code. Both `livingExpenses` and `retirementSpending` map to
+     `income-expenses`.
    - Always: a `Banner` "Not yet modelled: growth over time and retirement
      age (M2), super (M5), tax (M8), property (M12) and more. These figures
      use today's spending and today's portfolio only." The milestone
@@ -1572,5 +1585,5 @@ how to run or test the app, it updates the README in that step.
 - [x] Part 3: approve the M0 step-by-step plan.
 - [x] Implement M0 (subagent, step by step).
 - [x] Owner verifies and merges the M0 PR.
-- [ ] Approve the M1 step-by-step plan (this PR).
+- [x] Approve the M1 step-by-step plan.
 - [ ] Implement M1 (subagent, step by step), then open the M1 PR for verification.
