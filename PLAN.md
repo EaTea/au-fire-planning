@@ -1152,20 +1152,133 @@ Conventions settled while building M1, which later milestones rely on:
 - **Styles use colour role variables only** (see the colour scheme below).
   New text/background pairs go in the contrast test.
 
-### Colour scheme: Australian flag: done
+### Colour scheme: green and gold
 
-Delivered in PRs #9 and #10, and merged into M1. Rules every later
-stylesheet must follow:
+**Status:** plan agreed in chat with the owner (deep green pages chosen
+over light cream pages). Implemented; awaiting the owner's verification.
 
-- **Use only the role variables** (`--colour-…`) from
-  `src/ui/styles/tokens.css`. Palette variables (`--flag-…`, `--navy-…`) are
-  referenced only inside `tokens.css`.
-- **Add any new role to `tokens.css`,** and add every new text-on-background
-  pair to `src/ui/styles/tokens.test.ts`, which requires at least 4.5:1
-  contrast (WCAG AA).
-- **Red (`--colour-accent`) is for fills and borders only, never text on
-  navy.** Error text uses `--colour-text-error`.
-- **The mockups stay greyscale.** They show layout, not visual design.
+**Kind:** behavior change. Only the app's appearance changes. The layout,
+navigation and content stay the same.
+
+**Goal:** external user feedback asked for Australia's national colours,
+green and gold, instead of the flag's navy, red and white. This replaces
+the navy scheme (git history has its plan). The owner also reported text
+that renders white on white in Chrome. This plan adds an in-browser
+contrast check so that kind of problem is caught by tests, wherever it
+comes from.
+
+#### Design decisions
+
+- **Same two layers of colour variables in `src/ui/styles/tokens.css`.**
+  *Palette* variables hold raw colours and are only referenced from that
+  file. *Role* variables (`--colour-page-background`, `--colour-text`,
+  `--colour-accent` and so on) say what a colour is for, and are the only
+  colour variables stylesheets use. Mostly, only the palette changes.
+- **Palette.**
+
+  | Variable | Colour | Use |
+  | --- | --- | --- |
+  | `--aus-green` | `#00843D` | Header. The official national green (Pantone 348 C). |
+  | `--aus-gold` | `#FFCD00` | Accent: current step, toggles, header underline, key figures. The official national gold (Pantone 116 C). |
+  | `--green-deep` | `#004D25` | Page background. |
+  | `--green-raised` | `#0A6B37` | Hover fill for pills and buttons. |
+  | `--green-divider` | `#2E7A4F` | Thin dividers. |
+  | `--green-white` | `#CFE8D6` | Muted text. |
+  | `--green-grey` | `#9CC9AA` | Faint text and outlines. |
+  | `--green-black` | `#0B1A10` | Text on gold. |
+  | `--error-pink` | `#FFB3A7` | Error text and invalid-field outlines. |
+  | `--white` | `#FFFFFF` | Text, and input box backgrounds. |
+
+- **Where each colour goes.**
+
+  ```
+  +---------------------------------------------------------+
+  | [AU FIRE Planner]  (2 gold pill)(3)(4)(5)(6)(7)          |  green header, white text
+  +=========================================================+  gold underline
+  |  Page title (white)                                     |
+  |  Intro text (muted green-white)                         |  deep green page
+  |  [ FI number  $1,250,000 (gold) ]                       |
+  |  [ input: white box, deep green text ]                  |
+  |                                  [ Next: ... -> ]       |  white outline button
+  +---------------------------------------------------------+
+  ```
+
+- **New roles.** These are needed because green and gold don't drop into
+  every slot the navy scheme used:
+  - `--colour-header-text` (white). Muted green-white on the official green
+    header is only 3.7:1, so the step pills in the header use white text
+    instead of muted text.
+  - `--colour-text-highlight` (gold) for key figures such as the FI number.
+    Gold on the deep green page is 6.7:1.
+  - `--colour-border-error` (error pink). Invalid fields currently use the
+    accent for their outline. With a gold accent, that would make "invalid"
+    look the same as "selected".
+- **Contrast meets WCAG AA (at least 4.5:1) for every text and background
+  pair.**
+
+  | Text | Background | Ratio |
+  | --- | --- | --- |
+  | White | Deep green page | 10.1:1 |
+  | Muted `#CFE8D6` | Deep green page | 7.7:1 |
+  | Faint `#9CC9AA` | Deep green page | 5.4:1 |
+  | Gold | Deep green page | 6.7:1 |
+  | Error pink | Deep green page | 5.9:1 |
+  | White | Green header | 4.8:1 |
+  | White | Raised green (hover) | 6.6:1 |
+  | Near-black | Gold | 12.0:1 |
+  | Deep green | White input | 10.1:1 |
+
+  **Gold is never used as text on the header green**, because that is only
+  3.2:1. The gold underline is not text, so it only needs WCAG's 3:1 for
+  graphics, and passes.
+- **Rules every later stylesheet must follow** (unchanged from the navy
+  scheme, delivered in PRs #9 and #10):
+  - use only the role variables (`--colour-…`). Palette variables are
+    referenced only inside `tokens.css`;
+  - add any new role to `tokens.css`, and add every new text-on-background
+    pair to `src/ui/styles/tokens.test.ts`;
+  - the mockups stay greyscale. They show layout, not visual design.
+- **Why the token test can't catch white on white by itself.**
+  `tokens.test.ts` only checks the pairs listed in it. It has no way to
+  know which text actually sits on which background in the page. Text that
+  inherits a colour onto a background it wasn't listed against, browser
+  default styles (for example on `<button>` or `<select>`), and Chrome's
+  autofill styling all slip past it. Step 3 closes that gap by measuring
+  contrast in a real browser.
+
+#### Step 1 · Add the new roles, keeping the navy look: done
+
+- Add `--colour-header-text`, `--colour-text-highlight` and
+  `--colour-border-error` to `tokens.css`, mapped to today's navy-scheme
+  colours so nothing changes visibly. Point the header pills, `.metric
+  .value` and `.input.invalid` at them in `app.css`. Add the new pairs to
+  `tokens.test.ts`.
+- **Check:** `npm run check` passes.
+
+#### Step 2 · Swap the palette to green and gold: done
+
+- Replace the navy palette in `tokens.css` with the green-and-gold palette
+  above, and re-map the roles. Update the comments that mention navy and
+  red (`tokens.css`, `app.css`, the focus-outline note).
+- Update the colour E2E test in `tests/e2e/navigation.spec.ts`. The page
+  should be deep green and the current step pill gold.
+- **Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Step 3 · In-browser contrast sweep (E2E): done
+
+- Add `tests/e2e/contrast.spec.ts`. On every page, with fields empty, then
+  filled with valid values, then filled with invalid values, and with each
+  "How is this calculated?" panel open, it finds every element that shows
+  text (and every input). For each one, it computes the WCAG contrast
+  between its rendered text colour and the first opaque background behind
+  it, and fails with a list of offenders below 4.5:1. It also checks every
+  link, button and input while hovered and focused.
+- The sweep reproduced the case the owner saw in Chrome: the welcome page's
+  "Start planning" `<button>` uses `.footer-link`, which never set a
+  background, so it kept Chrome's light grey button background behind
+  white text (1.15:1). `.footer-link` now sets a transparent background
+  and inherits the page font.
+- **Check:** `npm run test:e2e` passes.
 
 ### M2 · Growth over time: step-by-step plan
 
@@ -1546,6 +1659,7 @@ the summary.
    API. It must not depend on the real date.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
+table is readable on the deep green page.
 
 **As built:**
 - `MissingInputsBanner` moved out of `ResultsScreen` into
@@ -1559,7 +1673,6 @@ the summary.
   It doesn't change with the dollars toggle.
 - The E2E spec uses `page.clock.install({ time })` to fix the date in 2026.
 - README gained a "What it does" section.
-table is readable on navy.
 
 #### Follow-ups
 
@@ -1582,5 +1695,7 @@ table is readable on navy.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
 - [x] Approve the M2 step-by-step plan.
+- [x] Approve the green and gold colour scheme plan.
+- [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [ ] Owner verifies and merges the M2 PR.
