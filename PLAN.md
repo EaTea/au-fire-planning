@@ -8,7 +8,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 | Part | Contents | Status |
 | --- | --- | --- |
-| 1 | Order in which the requirements are delivered (this document) | In review |
+| 1 | Order in which the requirements are delivered (this document) | Agreed |
 | 2 | Tech stack, architecture and testing approach | Not started |
 | 3 | Step-by-step plan for the first milestone (M0) | Not started |
 
@@ -575,25 +575,24 @@ is split, it is finished in the last milestone listed.
 | **NFR-5** Disclaimer | Must | M1 |
 | **NFR-6** Accuracy tests with worked examples | Must | M1 → every milestone |
 | **NFR-7** Further reading links | Should | M21 |
+### Decisions
+
+Agreed in review of part 1:
+
+1. **Couples stay at M7.** The first milestones model one person.
+2. **Property stays at M12–M14.** Until then, homeowners include housing
+   costs in their living expenses.
+3. **The MVP line is M14**, the end of Phase 1. Scenarios (M16) stay in
+   Phase 2.
+
 ### Open questions
 
 1. **Tech stack.** M0 depends on it. It will be proposed in part 2 of this
    plan, in its own PR.
-2. **Couples arrive in M7.** The example household in the mockups is a
-   couple. Should couples move earlier, e.g. straight after M2? Doing so
-   would make M3–M6 (drawdown, Coast FIRE, super) per person from the
-   start, at the cost of a slower first usable version.
-3. **Property arrives late (M12–M14)** because its value depends on tax
-   (deductible interest, negative gearing, CGT exemption). Until then,
-   homeowners can include housing costs in their living expenses. Is that
-   acceptable?
-4. **The MVP line.** Phase 1 ends at M14 with every Must. Is that the right
-   point to treat as "usable for real planning", or should some Shoulds
-   (e.g. scenarios, M16) come before it?
 
 ### Next steps
 
-- [ ] Review and agree this ordering (this PR).
+- [x] Review and agree this ordering.
 - [ ] Part 2: tech stack, architecture and testing approach (separate PR).
 - [ ] Part 3: step-by-step plan for M0 (separate PR).
 - [ ] Start implementation with M0, once parts 1–3 are agreed.
