@@ -1398,7 +1398,7 @@ Add the first shared components from part 2's component map, in
 
 #### Step 4 · Input screens: income & expenses, assets, assumptions
 
-- [ ] Done
+- [x] Done
 
 Replace three placeholders with real screens, each built from
 **self-contained form sections** (part 2: the M16 inputs panel will reuse
@@ -1412,7 +1412,8 @@ them). A section reads the plan with `usePlan()`, dispatches with
 2. `src/ui/sections/RetirementSpendingSection.tsx` (EXP-2): a card "Spending
    in retirement" with a `SegmentedToggle` "% of today" / "$ amount", and
    then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`
-   (minimum $1).
+   (minimum $1) labelled "Retirement spending per year". Every field on a
+   page needs a unique label, so screen readers and tests can tell them apart.
    Switching the toggle keeps the equivalent value where possible (e.g. 90%
    of $60,000 becomes $54,000), or clears it if living expenses aren't set.
 3. `src/ui/sections/PortfolioSection.tsx` (IN-14, one portfolio): a card
@@ -1425,7 +1426,13 @@ them). A section reads the plan with `usePlan()`, dispatches with
    (drawdown). Each is a `StepPage` with an intro sentence. Route them in
    `App.tsx` in place of their placeholders. The other steps keep their
    placeholders, and "arrives in" for Results stays until step 5.
-6. Tests: for each section, entering a value dispatches the right action and
+6. **Fix in `NumberField` (step 3), found while building this step:**
+   select the field's text when it gets focus, so typing replaces the shown
+   value (including a dashed default) rather than appending to it, e.g.
+   "4%3.5". Add a test: focus a field showing its default, type a value, and
+   the new value is committed. Also leave a small gap between a
+   `SegmentedToggle` and the field below it.
+7. Tests: for each section, entering a value dispatches the right action and
    the field shows it; clearing restores the dashed default; the toggle
    conversion works.
 

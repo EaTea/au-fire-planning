@@ -39,4 +39,22 @@ describe("App", () => {
       screen.getByRole("heading", { level: 1, name: "Income & expenses" }),
     ).toBeInTheDocument();
   });
+
+  // Values entered on one step are still there after visiting another.
+  it("keeps entered values when moving between steps", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/income-expenses";
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Per year, after tax"), "64000{Enter}");
+    await user.click(screen.getByRole("link", { name: "Next: Assets →" }));
+    await user.type(screen.getByLabelText("Current value"), "720000{Enter}");
+    await user.click(screen.getByRole("link", { name: "Next: Assumptions →" }));
+    await user.type(screen.getByLabelText("Safe withdrawal rate"), "3.5{Enter}");
+
+    await user.click(screen.getByRole("link", { name: "← Assets" }));
+    expect(screen.getByLabelText("Current value")).toHaveValue("$720,000");
+    await user.click(screen.getByRole("link", { name: "← Income & expenses" }));
+    expect(screen.getByLabelText("Per year, after tax")).toHaveValue("$64,000");
+  });
 });

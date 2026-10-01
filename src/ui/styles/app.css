@@ -228,6 +228,7 @@ body {
 
 .toggle {
   display: inline-flex;
+  margin-bottom: 12px; /* keeps the toggle off the field label below it */
   border: 1.5px solid var(--ink);
   border-radius: 4px;
   overflow: hidden;

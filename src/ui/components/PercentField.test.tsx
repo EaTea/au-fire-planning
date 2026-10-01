@@ -59,4 +59,16 @@ describe("PercentField", () => {
     expect(screen.getByText(/Enter a number/)).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("replaces a shown default when the user focuses the field and types, without clearing first", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<PercentField label="Rate" defaultValue={0.04} onChange={onChange} />);
+
+    await user.click(screen.getByLabelText("Rate"));
+    await user.keyboard("3.5");
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(0.035);
+  });
 });

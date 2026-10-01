@@ -1,9 +1,20 @@
+import type { ReactElement } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router";
 
 import { PlanProvider } from "../plan/PlanProvider";
 import { AppShell } from "./components/AppShell";
-import { firstStep, steps } from "./navigation/steps";
+import { firstStep, steps, type StepId } from "./navigation/steps";
+import { AssetsScreen } from "./screens/AssetsScreen";
+import { AssumptionsScreen } from "./screens/AssumptionsScreen";
+import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+
+/** The steps that have a real screen; every other step still shows a placeholder. */
+const realScreens: Partial<Record<StepId, ReactElement>> = {
+  "income-expenses": <IncomeExpensesScreen />,
+  assets: <AssetsScreen />,
+  assumptions: <AssumptionsScreen />,
+};
 
 /**
  * Top-level component, rendered by src/main.tsx. Wraps the app in a hash
@@ -19,7 +30,11 @@ export function App() {
         <AppShell>
           <Routes>
             {steps.map((step) => (
-              <Route key={step.id} path={step.path} element={<PlaceholderScreen step={step} />} />
+              <Route
+                key={step.id}
+                path={step.path}
+                element={realScreens[step.id] ?? <PlaceholderScreen step={step} />}
+              />
             ))}
 
             <Route path="*" element={<Navigate to={firstStep.path} replace />} />

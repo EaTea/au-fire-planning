@@ -113,6 +113,9 @@ export function NumberField({
           value={draftText ?? shownText}
           aria-invalid={errorMessage !== undefined}
           aria-describedby={errorMessage === undefined ? undefined : messageId}
+          // Select everything on focus so typing replaces the shown value or
+          // default instead of being appended to it ("100%" + "90").
+          onFocus={(event) => event.currentTarget.select()}
           onChange={(event) => setDraftText(event.target.value)}
           onBlur={commitDraft}
           onKeyDown={(event) => {
