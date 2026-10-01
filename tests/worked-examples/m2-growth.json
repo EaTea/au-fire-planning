@@ -1,0 +1,102 @@
+{
+  "milestone": "M2",
+  "description": "Year-by-year projection, the year FI is reached, and the FI number in nominal dollars at the target retirement age. The start year is 2026.",
+  "startYear": 2026,
+  "scenarios": [
+    {
+      "name": "A: headline example",
+      "checkedBy": "independent script (not the app's code)",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "contributionsStopAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "FI number today = $64,000 / 0.04 = $1,600,000",
+        "Row 1: growth = $720,000 x 0.07 = $50,400; contribution $30,000; balance = $800,400",
+        "Row 2: growth = $800,400 x 0.07 = $56,028; contribution $30,000; balance = $886,428",
+        "Row 12 (2038, age 46): balance $2,158,231.48 vs FI number = $1,600,000 x 1.025^12 = $2,151,822.12, so FI is reached",
+        "FI number at age 50 = $1,600,000 x 1.025^16 = $2,375,208.99"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 1,
+            "growth": 50400.0,
+            "contribution": 30000.0,
+            "closingBalance": 800400.0
+          },
+          { "yearIndex": 2, "closingBalance": 886428.0 }
+        ],
+        "fiReached": {
+          "yearIndex": 12,
+          "calendarYear": 2038,
+          "age": 46,
+          "closingBalance": 2158231.48,
+          "fiNumber": 2151822.12
+        },
+        "fiNumberAtRetirement": 2375208.99
+      }
+    },
+    {
+      "name": "B: by hand, contributions stop after row 1",
+      "checkedBy": "hand calculation",
+      "inputs": {
+        "currentAge": 40,
+        "targetRetirementAge": 41,
+        "contributionsStopAge": 41,
+        "portfolioValue": 100000,
+        "expectedReturn": 0.1,
+        "annualContribution": 10000,
+        "inflationRate": 0,
+        "livingExpensesAnnual": 20000,
+        "safeWithdrawalRate": 0.05
+      },
+      "arithmetic": [
+        "Row 1 (age 41): growth = $100,000 x 0.10 = $10,000; contribution $10,000; balance = $120,000",
+        "Row 2 (age 42): growth = $120,000 x 0.10 = $12,000; no contribution (42 is past the stop age of 41); balance = $132,000"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 1,
+            "growth": 10000.0,
+            "contribution": 10000.0,
+            "closingBalance": 120000.0
+          },
+          { "yearIndex": 2, "growth": 12000.0, "contribution": 0.0, "closingBalance": 132000.0 }
+        ]
+      }
+    },
+    {
+      "name": "C: FI never reached",
+      "checkedBy": "independent script (not the app's code)",
+      "inputs": {
+        "currentAge": 60,
+        "targetRetirementAge": 60,
+        "contributionsStopAge": 60,
+        "portfolioValue": 0,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "inflationRate": 0.02,
+        "livingExpensesAnnual": 50000,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "FI number today = $50,000 / 0.04 = $1,250,000",
+        "The balance stays at $0 (0% return, no contributions), so no row up to age 100 reaches the FI number",
+        "FI number at age 60 = $1,250,000 x 1.02^0 = $1,250,000"
+      ],
+      "expected": {
+        "fiReached": null,
+        "fiNumberAtRetirement": 1250000.0
+      }
+    }
+  ]
+}

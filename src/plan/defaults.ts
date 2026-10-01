@@ -18,3 +18,16 @@ export const DEFAULT_RETIREMENT_SPENDING: RetirementSpending = {
 
 /** Portfolio value: $0. */
 export const DEFAULT_PORTFOLIO_VALUE = 0;
+
+/** Inflation: 2.5% a year (a fraction). */
+export const DEFAULT_INFLATION_RATE = 0.025;
+
+/** Expected nominal total return on a portfolio: 7% a year (a fraction). */
+export const DEFAULT_EXPECTED_RETURN = 0.07;
+
+/** Regular contribution to a portfolio: $0 a year. */
+export const DEFAULT_ANNUAL_CONTRIBUTION = 0;
+
+// The age contributions stop has no constant here: it defaults to the target
+// retirement age, so it depends on another input and is resolved in
+// resolvePlanInputs.ts.

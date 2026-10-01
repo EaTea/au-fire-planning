@@ -3,7 +3,7 @@ import { expect } from "vitest";
 
 import { createNewPlan } from "../plan/createNewPlan";
 import type { Plan } from "../plan/types";
-import { summarisePlan } from "./fiNumber";
+import { summarisePlan as summarisePlanForYear } from "./fiNumber";
 
 // Property-based tests: rules that must hold for ANY sensible plan, checked
 // against many generated plans rather than a few hand-picked ones.
@@ -26,6 +26,14 @@ const retirementSpendings = fc.oneof(
     .integer({ min: 1, max: 300 })
     .map((percent) => ({ kind: "percentOfToday" as const, fraction: percent / 100 })),
 );
+
+/** The start year used throughout these tests (these properties don't depend on it). */
+const START_YEAR = 2026;
+
+/** Summarises a plan with the fixed start year. */
+function summarisePlan(plan: Plan) {
+  return summarisePlanForYear(plan, START_YEAR);
+}
 
 /** Builds a complete plan from generated values. */
 function buildPlan(
@@ -111,5 +119,157 @@ test.prop([positiveDollars, retirementSpendings, withdrawalRates, portfolioDolla
     const recovered = summary.progressToFi.value * summary.fiNumber.value;
 
     expect(Math.abs(recovered - summary.investable.value)).toBeLessThan(0.005);
+  },
+);
+
+// ---- M2: projection properties ----
+
+/** Ages: current 20-60, then years to retirement 0-30. */
+const currentAges = fc.integer({ min: 20, max: 60 });
+const yearsToRetirement = fc.integer({ min: 0, max: 30 });
+const returns = fc.integer({ min: 0, max: 150 }).map((tenthsOfPercent) => tenthsOfPercent / 1000);
+const inflations = fc.integer({ min: 0, max: 80 }).map((tenthsOfPercent) => tenthsOfPercent / 1000);
+const contributions = fc.integer({ min: 0, max: 200_000 });
+
+/** Builds a plan with the projection inputs set. */
+function projectionPlan(values: {
+  currentAge: number;
+  yearsToRetirement: number;
+  expectedReturn: number;
+  inflationRate: number;
+  annualContribution: number;
+}): Plan {
+  const base = buildPlan(60000, { kind: "percentOfToday", fraction: 1 }, 0.04, 100000);
+  const [person] = base.household.people;
+  const [portfolio] = base.portfolios;
+  if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+  return {
+    ...base,
+    household: {
+      people: [
+        {
+          ...person,
+          currentAge: values.currentAge,
+          targetRetirementAge: values.currentAge + values.yearsToRetirement,
+        },
+      ],
+    },
+    assumptions: { ...base.assumptions, inflationRate: values.inflationRate },
+    portfolios: [
+      {
+        ...portfolio,
+        expectedReturn: values.expectedReturn,
+        annualContribution: values.annualContribution,
+      },
+    ],
+  };
+}
+
+/** The completed projection of a plan, failing the test otherwise. */
+function completeProjection(plan: Plan) {
+  const { projection } = completeSummary(plan);
+  if (projection.status !== "complete") throw new Error("expected a complete projection");
+  return projection;
+}
+
+/** The year index FI is reached, or infinity when it never is (so "later" is "bigger"). */
+function fiYearIndex(plan: Plan): number {
+  return completeProjection(plan).fiReached?.yearIndex ?? Number.POSITIVE_INFINITY;
+}
+
+test.prop([currentAges, yearsToRetirement, returns, inflations, contributions])(
+  "the projection is deterministic",
+  (currentAge, years, expectedReturn, inflationRate, annualContribution) => {
+    const plan = projectionPlan({
+      currentAge,
+      yearsToRetirement: years,
+      expectedReturn,
+      inflationRate,
+      annualContribution,
+    });
+
+    expect(summarisePlan(plan)).toEqual(summarisePlan(plan));
+  },
+);
+
+test.prop([currentAges, yearsToRetirement, returns, contributions])(
+  "with zero inflation, today's and nominal values are equal",
+  (currentAge, years, expectedReturn, annualContribution) => {
+    const plan = projectionPlan({
+      currentAge,
+      yearsToRetirement: years,
+      expectedReturn,
+      inflationRate: 0,
+      annualContribution,
+    });
+
+    for (const row of completeProjection(plan).rows) {
+      expect(row.inflationIndex).toBe(1);
+      expect(row.closingBalance / row.inflationIndex).toBe(row.closingBalance);
+      expect(row.fiNumber).toBe(60000 / 0.04);
+    }
+  },
+);
+
+test.prop([
+  currentAges,
+  yearsToRetirement,
+  returns,
+  inflations,
+  contributions,
+  fc.integer({ min: 0, max: 50 }),
+])(
+  "a higher return never makes FI later",
+  (currentAge, years, expectedReturn, inflationRate, annualContribution, extraTenthsOfPercent) => {
+    const base = { currentAge, yearsToRetirement: years, inflationRate, annualContribution };
+
+    const lower = projectionPlan({ ...base, expectedReturn });
+    const higher = projectionPlan({
+      ...base,
+      expectedReturn: expectedReturn + extraTenthsOfPercent / 1000,
+    });
+
+    expect(fiYearIndex(higher)).toBeLessThanOrEqual(fiYearIndex(lower));
+  },
+);
+
+test.prop([currentAges, yearsToRetirement, returns, inflations, contributions, contributions])(
+  "larger contributions never make FI later",
+  (currentAge, years, expectedReturn, inflationRate, contribution, extraContribution) => {
+    const base = { currentAge, yearsToRetirement: years, expectedReturn, inflationRate };
+
+    const smaller = projectionPlan({ ...base, annualContribution: contribution });
+    const larger = projectionPlan({
+      ...base,
+      annualContribution: contribution + extraContribution,
+    });
+
+    expect(fiYearIndex(larger)).toBeLessThanOrEqual(fiYearIndex(smaller));
+  },
+);
+
+test.prop([currentAges, yearsToRetirement, returns, inflations, contributions])(
+  "every row's balance is the previous balance plus growth plus contribution",
+  (currentAge, years, expectedReturn, inflationRate, annualContribution) => {
+    const plan = projectionPlan({
+      currentAge,
+      yearsToRetirement: years,
+      expectedReturn,
+      inflationRate,
+      annualContribution,
+    });
+    const { rows } = completeProjection(plan);
+
+    for (let index = 1; index < rows.length; index++) {
+      const previous = rows[index - 1];
+      const current = rows[index];
+      if (previous === undefined || current === undefined) throw new Error("missing row");
+
+      expect(current.openingBalance).toBe(previous.closingBalance);
+      expect(current.closingBalance).toBe(
+        previous.closingBalance + current.growth + current.contribution,
+      );
+    }
   },
 );

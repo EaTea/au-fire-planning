@@ -46,7 +46,11 @@ export function PlanProvider({ initialPlan, children }: PlanProviderProps) {
     (startingPlan) => startingPlan ?? createNewPlan(() => crypto.randomUUID()),
   );
 
-  const summary = useMemo(() => summarisePlan(plan), [plan]);
+  const summary = useMemo(
+    // Step 2 replaces this with a Clock-backed startYear prop.
+    () => summarisePlan(plan, new Date().getFullYear()),
+    [plan],
+  );
 
   return (
     <PlanDispatchContext.Provider value={dispatch}>

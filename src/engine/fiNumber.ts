@@ -8,9 +8,34 @@
 // `summarisePlan` is the entry point the UI calls; the other functions are
 // exported so they can be tested one at a time.
 
-import { resolvePlanInputs, type MissingInput } from "../plan/resolvePlanInputs";
+import {
+  resolvePlanInputs,
+  type MissingInput,
+  type ResolvedPlanInputs,
+} from "../plan/resolvePlanInputs";
 import type { Plan, RetirementSpending, Sourced } from "../plan/types";
 import type { Explained, ExplanationLine } from "./explained";
+import {
+  findFiReached,
+  projectPortfolio,
+  type FiMilestone,
+  type ProjectionRow,
+} from "./projection";
+
+/**
+ * The year-by-year part of the summary. It has its own "complete" level
+ * because it also needs the two ages, which M1's figures don't.
+ */
+export type ProjectionSummary =
+  | {
+      readonly status: "complete";
+      readonly rows: readonly ProjectionRow[];
+      /** `undefined` if FI isn't reached by the end of the projection. */
+      readonly fiReached?: FiMilestone;
+      /** The FI number in nominal dollars at the target retirement age (FIRE-1). */
+      readonly fiNumberAtRetirement: Explained;
+    }
+  | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
 /** What `summarisePlan` returns: the figures, or what the user still has to enter. */
 export type PlanSummary =
@@ -21,6 +46,7 @@ export type PlanSummary =
       readonly investable: Explained;
       readonly retirementSpending: Explained;
       readonly safeWithdrawalRate: number;
+      readonly projection: ProjectionSummary;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -157,8 +183,12 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
 }
 
 /**
- * The M1 entry point: resolves the plan's inputs, then calculates the FI
- * number, the investable amount and progress to FI.
+ * The entry point the UI calls: resolves the plan's inputs, then calculates
+ * the FI number, the investable amount, progress to FI and the projection.
+ *
+ * `startYear` is the current calendar year, passed in so the engine never
+ * reads the clock (the UI gets it from the app's clock). It labels row 0 of
+ * the projection.
  *
  * On success it also returns the retirement spending and the resolved safe
  * withdrawal rate, so the UI can show them without digging into breakdown
@@ -168,7 +198,7 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  * required inputs are absent or retirement spending is not above $0. The investable amount is the sum of the
  * portfolios' values, ready for more portfolios in later milestones.
  */
-export function summarisePlan(plan: Plan): PlanSummary {
+export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
   const resolved = resolvePlanInputs(plan);
 
   if (resolved.status === "incomplete") {
@@ -203,6 +233,92 @@ export function summarisePlan(plan: Plan): PlanSummary {
     investable,
     retirementSpending: spending,
     safeWithdrawalRate: inputs.safeWithdrawalRate.value,
+    projection: summariseProjection(inputs, fiNumber, investable.value, startYear),
+  };
+}
+
+/**
+ * Builds the projection part of the summary: the rows, the year FI is
+ * reached, and the FI number at the target retirement age.
+ *
+ * Returns `incomplete` when the ages are missing, so M1's figures still show.
+ * Called by `summarisePlan` once the FI number is known.
+ */
+function summariseProjection(
+  inputs: ResolvedPlanInputs,
+  fiNumberToday: Explained,
+  openingBalance: number,
+  startYear: number,
+): ProjectionSummary {
+  if (inputs.projection.status === "incomplete") {
+    return { status: "incomplete", missing: inputs.projection.missing };
+  }
+
+  const projectionInputs = inputs.projection.inputs;
+
+  const rows = projectPortfolio(
+    {
+      currentAge: projectionInputs.currentAge.value,
+      expectedReturn: projectionInputs.expectedReturn.value,
+      inflationRate: projectionInputs.inflationRate.value,
+      annualContribution: projectionInputs.annualContribution.value,
+      contributionsStopAge: projectionInputs.contributionsStopAge.value,
+      openingBalance,
+      livingAnnual: inputs.livingAnnual.value,
+      fiNumberToday: fiNumberToday.value,
+    },
+    startYear,
+  );
+
+  const fiReached = findFiReached(rows);
+
+  return {
+    status: "complete",
+    rows,
+    ...(fiReached === undefined ? {} : { fiReached }),
+    fiNumberAtRetirement: calculateFiNumberAtRetirement(
+      fiNumberToday,
+      projectionInputs.inflationRate.value,
+      projectionInputs.targetRetirementAge.value - projectionInputs.currentAge.value,
+    ),
+  };
+}
+
+/**
+ * The FI number in nominal dollars at the target retirement age: today's FI
+ * number grown by inflation for the years until then (FIRE-1).
+ *
+ * Called by `summariseProjection`; the Results screen shows it with its
+ * breakdown.
+ */
+export function calculateFiNumberAtRetirement(
+  fiNumberToday: Explained,
+  inflationRate: number,
+  yearsUntilRetirement: number,
+): Explained {
+  const inflationGrowth = Math.pow(1 + inflationRate, yearsUntilRetirement);
+  const fiNumberAtRetirement = fiNumberToday.value * inflationGrowth;
+
+  return {
+    value: fiNumberAtRetirement,
+    unit: "dollars",
+    lines: [
+      summaryLine("FI number today", fiNumberToday),
+      {
+        label: `Inflation growth over ${yearsUntilRetirement} years`,
+        value: inflationGrowth,
+        unit: "fraction",
+        operator: "×",
+        source: "calculated",
+      },
+      {
+        label: "FI number at retirement",
+        value: fiNumberAtRetirement,
+        unit: "dollars",
+        operator: "=",
+        source: "calculated",
+      },
+    ],
   };
 }
 

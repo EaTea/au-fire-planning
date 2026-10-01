@@ -77,3 +77,101 @@ describe("resolvePlanInputs", () => {
     expect(resolved.inputs.portfolios[0]?.value.source).toBe("input");
   });
 });
+
+// Tests for the projection inputs resolved alongside M1's.
+describe("resolvePlanInputs: projection inputs", () => {
+  /** A plan with living expenses and the given ages and overrides. */
+  function planWithAges(
+    currentAge: number | undefined,
+    targetRetirementAge: number | undefined,
+    portfolioOverrides: Partial<Plan["portfolios"][number]> = {},
+    inflationRate?: number,
+  ): Plan {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    const [portfolio] = blank.portfolios;
+    if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+    return {
+      ...blank,
+      household: { people: [{ ...person, currentAge, targetRetirementAge }] },
+      expenses: { livingAnnual: 64000 },
+      assumptions: { inflationRate },
+      portfolios: [{ ...portfolio, ...portfolioOverrides }],
+    };
+  }
+
+  /** The projection part of a resolved plan that is complete overall. */
+  function projectionOf(plan: Plan) {
+    const resolved = resolvePlanInputs(plan);
+    if (resolved.status !== "complete") throw new Error("expected complete");
+    return resolved.inputs.projection;
+  }
+
+  // Ages have no default, so they are reported rather than guessed, without blocking M1's figures.
+  it("reports missing ages on the projection only", () => {
+    const resolved = resolvePlanInputs(planWithAges(undefined, undefined));
+
+    expect(resolved.status).toBe("complete");
+    expect(projectionOf(planWithAges(undefined, undefined))).toEqual({
+      status: "incomplete",
+      missing: [
+        { field: "currentAge", label: "Current age" },
+        { field: "targetRetirementAge", label: "Target retirement age" },
+      ],
+    });
+  });
+
+  // A retirement age before today's age makes no sense.
+  it("reports a target retirement age below the current age", () => {
+    expect(projectionOf(planWithAges(50, 45))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "targetRetirementAge",
+          label: "Target retirement age must be at or after your current age",
+        },
+      ],
+    });
+  });
+
+  // Retiring this year is allowed.
+  it("accepts a target retirement age equal to the current age", () => {
+    expect(projectionOf(planWithAges(50, 50)).status).toBe("complete");
+  });
+
+  // Defaults: 2.5% inflation, 7% return, $0 contribution, stop age = retirement age.
+  it("fills in defaults, with the stop age defaulting to the retirement age", () => {
+    const projection = projectionOf(planWithAges(34, 50));
+
+    expect(projection.status).toBe("complete");
+    if (projection.status !== "complete") return;
+    expect(projection.inputs).toEqual({
+      currentAge: { value: 34, source: "input" },
+      targetRetirementAge: { value: 50, source: "input" },
+      inflationRate: { value: 0.025, source: "default" },
+      expectedReturn: { value: 0.07, source: "default" },
+      annualContribution: { value: 0, source: "default" },
+      contributionsStopAge: { value: 50, source: "default" },
+    });
+  });
+
+  // Entered values win and are marked as input.
+  it("keeps entered values", () => {
+    const projection = projectionOf(
+      planWithAges(
+        34,
+        50,
+        { expectedReturn: 0.05, annualContribution: 12000, contributionsStopAge: 45 },
+        0.03,
+      ),
+    );
+
+    expect(projection.status).toBe("complete");
+    if (projection.status !== "complete") return;
+    expect(projection.inputs.inflationRate).toEqual({ value: 0.03, source: "input" });
+    expect(projection.inputs.expectedReturn).toEqual({ value: 0.05, source: "input" });
+    expect(projection.inputs.annualContribution).toEqual({ value: 12000, source: "input" });
+    expect(projection.inputs.contributionsStopAge).toEqual({ value: 45, source: "input" });
+  });
+});

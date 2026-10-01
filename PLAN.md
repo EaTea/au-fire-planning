@@ -1169,7 +1169,7 @@ stylesheet must follow:
 
 ### M2 · Growth over time: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved. Implementation in progress, one step at a time.
 
 **Goal:** the plan gains time. The user enters their age, a target
 retirement age, inflation, the portfolio's expected return and regular
@@ -1344,7 +1344,7 @@ No new dependencies.
 
 #### Step 1 · Projection engine
 
-- [ ] Done
+- [x] Done
 
 1. Add the new optional fields to `src/plan/types.ts`, and the new defaults
    to `src/plan/defaults.ts`.
@@ -1378,6 +1378,18 @@ No new dependencies.
      - larger contributions never make FI later;
      - every row's balance equals the previous row's balance plus growth
        plus contribution.
+
+**As built:**
+- `findFiReached`'s last line is "FI reached" with operator `=` and the
+  margin (balance − FI number) as its value, because explanation lines need
+  a number. The FI number line uses `−`.
+- A target retirement age below the current age makes the projection
+  incomplete, with the `MissingInput` label "Target retirement age must be
+  at or after your current age".
+- The opening balance is the total of all portfolios; return, contribution
+  and stop age come from the first portfolio.
+- "Inflation growth over N years" is a `fraction` line, so it would display
+  as a percentage (132.13%). Step 4 adds a `factor` unit for it (below).
 
 **Check:** `npm run check` passes. Existing callers of `summarisePlan` now
 pass a start year. Update `PlanProvider` to pass one (see step 2), so the
@@ -1427,8 +1439,13 @@ app still works.
 2. `src/ui/dollarsMode.tsx`: `DollarsModeProvider`, `useDollarsMode()`,
    `useMoneyFormatter()` and `DollarsModeToggle`, as described above. Wrap
    the app in the provider.
-3. Tests:
+3. Add a `factor` unit to `ExplainedUnit` (src/engine/explained.ts),
+   displayed as "× 1.3213" (four decimal places) wherever explanations are
+   formatted. Use it for the "Inflation growth over N years" line in
+   `calculateFiNumberAtRetirement`.
+4. Tests:
    - `AgeField` parsing and limits;
+   - the `factor` unit's formatting;
    - `formatMoney` in both modes (e.g. $1,640,000 with index 1.025 shows as
      $1,600,000 in today's mode);
    - the toggle switches the mode.
@@ -1544,5 +1561,5 @@ table is readable on navy.
 - [x] Owner verifies and merges the M1 PR.
 - [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
-- [ ] Approve the M2 step-by-step plan (this PR).
+- [x] Approve the M2 step-by-step plan.
 - [ ] Implement M2 (subagent, step by step), then open the M2 PR for verification.

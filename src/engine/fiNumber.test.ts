@@ -4,11 +4,20 @@ import { createNewPlan } from "../plan/createNewPlan";
 import type { Plan } from "../plan/types";
 import {
   calculateFiNumber,
+  calculateFiNumberAtRetirement,
   calculateProgressToFi,
   retirementSpendingAnnual,
-  summarisePlan,
+  summarisePlan as summarisePlanForYear,
 } from "./fiNumber";
 import type { Explained } from "./explained";
+
+/** The start year used throughout these tests (M1's figures don't depend on it). */
+const START_YEAR = 2026;
+
+/** Summarises a plan with the fixed start year. */
+function summarisePlan(plan: Plan) {
+  return summarisePlanForYear(plan, START_YEAR);
+}
 
 /** A plan with predictable IDs, given living expenses and a portfolio value, plus any overrides. */
 function planWith(overrides: {
@@ -237,5 +246,63 @@ describe("summarisePlan", () => {
     expect(() =>
       summarisePlan(planWith({ livingAnnual: 64000, safeWithdrawalRate: -0.04 })),
     ).toThrow(RangeError);
+  });
+});
+
+// Tests for the projection part of the summary, using the plan's example A.
+describe("summarisePlan: projection", () => {
+  /** Example A: 34 now, retiring at 50, $720,000 at 7%, $30,000 a year, 2.5% inflation. */
+  function exampleAPlan(ages: { currentAge?: number; targetRetirementAge?: number }): Plan {
+    const blank = planWith({ livingAnnual: 64000, portfolioValue: 720000 });
+    const [person] = blank.household.people;
+    const [portfolio] = blank.portfolios;
+    if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+    return {
+      ...blank,
+      household: { people: [{ ...person, ...ages }] },
+      portfolios: [{ ...portfolio, annualContribution: 30000 }],
+    };
+  }
+
+  // Missing ages must not hide the FI number.
+  it("is incomplete on the projection only when ages are missing", () => {
+    const summary = summarisePlan(exampleAPlan({}));
+
+    expect(summary.status).toBe("complete");
+    if (summary.status !== "complete") return;
+    expect(summary.fiNumber.value).toBe(1600000);
+    expect(summary.projection.status).toBe("incomplete");
+  });
+
+  // The headline: FI in 2038 at age 46, and $2,375,209 nominal at 50.
+  it("reaches FI in 2038 at age 46 and gives the nominal FI number at 50", () => {
+    const summary = summarisePlan(exampleAPlan({ currentAge: 34, targetRetirementAge: 50 }));
+
+    expect(summary.status).toBe("complete");
+    if (summary.status !== "complete" || summary.projection.status !== "complete") return;
+    expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, age: 46 });
+    expect(summary.projection.fiNumberAtRetirement.value).toBeCloseTo(2375208.99, 2);
+    expect(summary.projection.fiNumberAtRetirement.lines.map((line) => line.operator)).toEqual([
+      undefined,
+      "×",
+      "=",
+    ]);
+  });
+});
+
+// Tests for the nominal FI number at the target retirement age.
+describe("calculateFiNumberAtRetirement", () => {
+  // No years to wait means no inflation growth.
+  it("equals today's FI number when retiring now", () => {
+    expect(calculateFiNumberAtRetirement(dollars(1600000), 0.025, 0).value).toBe(1600000);
+  });
+
+  // $1,600,000 × 1.025^16.
+  it("grows today's FI number by inflation over the years", () => {
+    expect(calculateFiNumberAtRetirement(dollars(1600000), 0.025, 16).value).toBeCloseTo(
+      2375208.99,
+      2,
+    );
   });
 });

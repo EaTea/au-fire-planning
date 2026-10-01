@@ -6,6 +6,9 @@
 // The engine never sees `undefined`; this is where defaults are applied.
 
 import {
+  DEFAULT_ANNUAL_CONTRIBUTION,
+  DEFAULT_EXPECTED_RETURN,
+  DEFAULT_INFLATION_RATE,
   DEFAULT_PORTFOLIO_VALUE,
   DEFAULT_RETIREMENT_SPENDING,
   DEFAULT_SAFE_WITHDRAWAL_RATE,
@@ -14,7 +17,7 @@ import type { Plan, RetirementSpending, Sourced } from "./types";
 
 /** An input the user still has to provide. The UI maps `field` to the step where it is entered. */
 export interface MissingInput {
-  readonly field: "livingExpenses" | "retirementSpending";
+  readonly field: "livingExpenses" | "retirementSpending" | "currentAge" | "targetRetirementAge";
   readonly label: string;
 }
 
@@ -25,12 +28,36 @@ export interface ResolvedPortfolio {
   readonly value: Sourced<number>;
 }
 
+/**
+ * The inputs the year-by-year projection needs, all resolved. M2 has one
+ * person and one portfolio, so these come from the first of each.
+ */
+export interface ResolvedProjectionInputs {
+  readonly currentAge: Sourced<number>;
+  readonly targetRetirementAge: Sourced<number>;
+  readonly inflationRate: Sourced<number>;
+  readonly expectedReturn: Sourced<number>;
+  /** Dollars per year, the same every year. */
+  readonly annualContribution: Sourced<number>;
+  /** The last age in which a contribution is made; defaults to the target retirement age. */
+  readonly contributionsStopAge: Sourced<number>;
+}
+
+/**
+ * The projection has its own "complete" level, separate from M1's: the FI
+ * number needs only living expenses, but the projection also needs both ages.
+ */
+export type ResolvedProjection =
+  | { readonly status: "complete"; readonly inputs: ResolvedProjectionInputs }
+  | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
+
 /** Complete inputs for the engine: every value filled in, each tagged with its source. */
 export interface ResolvedPlanInputs {
   readonly livingAnnual: Sourced<number>;
   readonly retirementSpending: Sourced<RetirementSpending>;
   readonly safeWithdrawalRate: Sourced<number>;
   readonly portfolios: readonly ResolvedPortfolio[];
+  readonly projection: ResolvedProjection;
 }
 
 /** The result of resolving: either everything needed, or what is missing. */
@@ -42,7 +69,8 @@ export type ResolvedPlan =
  * Applies the defaults to a plan, or reports which required inputs are missing.
  *
  * Called by `summarisePlan` (src/engine/fiNumber.ts) at the start of every
- * calculation. In M1 living expenses are the only input that can be missing.
+ * calculation. Living expenses are the only input whose absence makes the
+ * whole result incomplete; missing ages only make `projection` incomplete.
  */
 export function resolvePlanInputs(plan: Plan): ResolvedPlan {
   const { livingAnnual, retirementSpending } = plan.expenses;
@@ -69,6 +97,64 @@ export function resolvePlanInputs(plan: Plan): ResolvedPlan {
       retirementSpending: sourceOrDefault(retirementSpending, DEFAULT_RETIREMENT_SPENDING),
       safeWithdrawalRate: sourceOrDefault(safeWithdrawalRate, DEFAULT_SAFE_WITHDRAWAL_RATE),
       portfolios,
+      projection: resolveProjectionInputs(plan),
+    },
+  };
+}
+
+/**
+ * Resolves the projection inputs: the two ages (no defaults, so they can be
+ * reported missing) plus inflation, return, contribution and stop age, which
+ * have defaults.
+ *
+ * Called by `resolvePlanInputs`. Uses the first person and first portfolio,
+ * because M2 supports exactly one of each.
+ */
+function resolveProjectionInputs(plan: Plan): ResolvedProjection {
+  const person = plan.household.people[0];
+  const portfolio = plan.portfolios[0];
+
+  const currentAge = person?.currentAge;
+  const targetRetirementAge = person?.targetRetirementAge;
+
+  const missing: MissingInput[] = [];
+
+  if (currentAge === undefined) {
+    missing.push({ field: "currentAge", label: "Current age" });
+  }
+  if (targetRetirementAge === undefined) {
+    missing.push({ field: "targetRetirementAge", label: "Target retirement age" });
+  }
+
+  // Only compare the ages once both are known.
+  if (
+    currentAge !== undefined &&
+    targetRetirementAge !== undefined &&
+    targetRetirementAge < currentAge
+  ) {
+    missing.push({
+      field: "targetRetirementAge",
+      label: "Target retirement age must be at or after your current age",
+    });
+  }
+
+  if (currentAge === undefined || targetRetirementAge === undefined || missing.length > 0) {
+    return { status: "incomplete", missing };
+  }
+
+  return {
+    status: "complete",
+    inputs: {
+      currentAge: { value: currentAge, source: "input" },
+      targetRetirementAge: { value: targetRetirementAge, source: "input" },
+      inflationRate: sourceOrDefault(plan.assumptions.inflationRate, DEFAULT_INFLATION_RATE),
+      expectedReturn: sourceOrDefault(portfolio?.expectedReturn, DEFAULT_EXPECTED_RETURN),
+      annualContribution: sourceOrDefault(
+        portfolio?.annualContribution,
+        DEFAULT_ANNUAL_CONTRIBUTION,
+      ),
+      // Depends on another input, so it can't be a constant in defaults.ts.
+      contributionsStopAge: sourceOrDefault(portfolio?.contributionsStopAge, targetRetirementAge),
     },
   };
 }
