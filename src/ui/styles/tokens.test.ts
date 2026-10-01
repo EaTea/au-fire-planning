@@ -33,6 +33,8 @@ const textOnBackgroundPairs: ReadonlyArray<readonly [text: string, background: s
   ["--colour-on-accent", "--colour-accent"],
   ["--colour-text-error", "--colour-page-background"],
   ["--colour-input-text", "--colour-input-background"],
+  ["--colour-header-text", "--colour-header-background"],
+  ["--colour-text-highlight", "--colour-page-background"],
 ];
 
 /**

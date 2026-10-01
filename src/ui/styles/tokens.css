@@ -63,6 +63,13 @@
   --colour-on-accent: var(--flag-white);
   /* Validation messages on the navy page (4.9:1). */
   --colour-text-error: var(--red-light);
+  /* Outline of a field holding an invalid value. */
+  --colour-border-error: var(--flag-red);
+
+  /* Inactive step pills in the header. */
+  --colour-header-text: var(--blue-white);
+  /* Key figures, such as the FI number on the Results page. */
+  --colour-text-highlight: var(--flag-white);
 
   /* Input boxes holding a value: white with navy text, so entries stand out.
      A field still on its default is drawn on the page background instead. */

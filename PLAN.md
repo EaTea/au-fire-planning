@@ -1613,7 +1613,7 @@ how to run or test the app, it updates the README in that step.
 ### Colour scheme: green and gold
 
 **Status:** plan agreed in chat with the owner (deep green pages chosen
-over light cream pages). Awaiting approval of this PR before implementation.
+over light cream pages). Being implemented.
 
 **Kind:** behavior change. Only the app's appearance changes. The layout,
 navigation and content stay the same.
@@ -1697,7 +1697,7 @@ comes from.
   autofill styling all slip past it. Step 3 closes that gap by measuring
   contrast in a real browser.
 
-#### Step 1 · Add the new roles, keeping the navy look
+#### Step 1 · Add the new roles, keeping the navy look: done
 
 - Add `--colour-header-text`, `--colour-text-highlight` and
   `--colour-border-error` to `tokens.css`, mapped to today's navy-scheme

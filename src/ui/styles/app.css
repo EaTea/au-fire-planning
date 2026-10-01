@@ -46,7 +46,7 @@ body {
   padding: var(--space-small) var(--space-medium);
   border: 1px solid var(--colour-border);
   border-radius: 16px;
-  color: var(--colour-text-muted);
+  color: var(--colour-header-text);
   font-size: 13px;
   text-decoration: none;
   white-space: nowrap;
@@ -213,8 +213,8 @@ body {
 }
 
 .input.invalid {
-  border-color: var(--colour-accent);
-  box-shadow: 0 0 0 1px var(--colour-accent);
+  border-color: var(--colour-border-error);
+  box-shadow: 0 0 0 1px var(--colour-border-error);
 }
 
 .field-error {
@@ -271,6 +271,7 @@ body {
 .metric .value {
   font-size: 26px;
   font-weight: 700;
+  color: var(--colour-text-highlight);
   margin: 4px 0 2px;
 }
 
