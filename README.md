@@ -78,3 +78,15 @@ Every pull request (and any manual run from the Actions tab) runs
   `playwright-report` artifact.
 
 A new push to the same branch cancels the run still in progress for it.
+
+## Deployment
+
+Every merge to `main` runs `.github/workflows/deploy.yml`, which performs the
+same checks as CI (`npm run check` and `npm run test:e2e`), builds the app and
+publishes it to <https://eatea.github.io/au-fire-planning/>. You can also run
+it by hand from the Actions tab.
+
+One-off setup: in the repository, go to Settings → Pages and set Source to
+"GitHub Actions".
+
+Everything runs in the browser, and no data is sent anywhere.

@@ -4,7 +4,7 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 plan approved. M0 is being implemented.
+**Current status:** M0 implemented, awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
@@ -1089,7 +1089,7 @@ code are repeated here.
 
 ### M0 · Walking skeleton: step-by-step plan
 
-**Status:** approved by the owner (PR #6). Being implemented step by step.
+**Status:** implemented, all seven steps done. Awaiting the owner's verification in the M0 PR.
 
 **Goal:** an app that builds, runs, tests and deploys, with no planning
 features yet. It shows the header and seven-step navigation from the
@@ -1367,7 +1367,7 @@ locally. The real run happens when the lead opens the milestone PR.
 
 #### Step 7 · Deploy to GitHub Pages
 
-- [ ] Done
+- [x] Done
 
 1. Add `.github/workflows/deploy.yml`:
    - runs on `push` to `main` and `workflow_dispatch`;
@@ -1399,5 +1399,6 @@ owner sets the Pages source (step 7) and checks the live site.
 - [x] Part 1: agree the requirement ordering.
 - [x] Part 2: agree the tech stack, architecture and testing approach.
 - [x] Part 3: approve the M0 step-by-step plan.
-- [ ] Implement M0 (subagent, step by step), then open the M0 PR for verification.
+- [x] Implement M0 (subagent, step by step).
+- [ ] Owner verifies the M0 PR, then sets Settings → Pages → Source to "GitHub Actions".
 - [ ] Plan M1 in its own PR.
