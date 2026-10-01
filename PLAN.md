@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 plan drafted, awaiting approval. No implementation has started.
+**Current status:** M0 plan approved. M0 is being implemented.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 plan approved |
 
 ## 1. Requirement ordering
 
@@ -1089,7 +1089,7 @@ code are repeated here.
 
 ### M0 · Walking skeleton: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved by the owner (PR #6). Being implemented step by step.
 
 **Goal:** an app that builds, runs, tests and deploys, with no planning
 features yet. It shows the header and seven-step navigation from the
@@ -1124,6 +1124,7 @@ Install exactly these versions (`npm install --save-exact`):
 | `@vitejs/plugin-react` | 6.1.1 | dev |
 | `typescript` | 6.0.3 | dev (not 7.x: see part 2) |
 | `@types/react`, `@types/react-dom` | 19.3.0 | dev |
+| `@types/node` | 22.20.4 | dev (matches Node 22) |
 | `eslint` | 10.11.0 | dev |
 | `@eslint/js` | 10.0.1 | dev |
 | `typescript-eslint` | 8.71.0 | dev |
@@ -1165,21 +1166,27 @@ unknown route redirect to `#/household`.
 
 #### Step 1 · Minimal app that builds and runs
 
-- [ ] Done
+- [x] Done
 
 1. Create `package.json` by hand (not with an interactive generator):
    `"name": "au-fire-planner"`, `"private": true`, `"type": "module"`,
    `"engines": { "node": ">=22" }`, and scripts `dev` (`vite`), `build`
    (`vite build`), `preview` (`vite preview`) and `typecheck`
    (`tsc --noEmit`). Install `react`, `react-dom`, `vite`,
-   `@vitejs/plugin-react`, `typescript`, `@types/react` and
-   `@types/react-dom` at the pinned versions.
+   `@vitejs/plugin-react`, `typescript`, `@types/react`,
+   `@types/react-dom` and `@types/node` at the pinned versions. `@types/node`
+   types the config files (`vite.config.ts`, and `playwright.config.ts`'s use
+   of `process.env` in step 5).
 2. Add `.nvmrc` containing `22`.
 3. Add `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`,
    `noImplicitOverride`, `verbatimModuleSyntax`, `"jsx": "react-jsx"`,
    `"module": "ESNext"`, `"moduleResolution": "bundler"`,
    `"target": "ES2022"`, `"lib": ["ES2022", "DOM", "DOM.Iterable"]`,
-   `"noEmit": true`, and `"include": ["src", "tests", "*.config.ts"]`.
+   `"noEmit": true`, `"skipLibCheck": true`, and
+   `"include": ["src", "tests", "*.config.ts"]`. `skipLibCheck` skips
+   type-checking libraries' own declaration files: Vite 8's declarations
+   need Node types and newer `lib` settings that don't apply to this app.
+   Our own code is still fully checked.
 4. Add `vite.config.ts` with the React plugin and `base: "/au-fire-planning/"`
    (needed for GitHub Pages).
 5. Add `index.html` (title "AU FIRE Planner", a `#root` element) and
@@ -1381,6 +1388,6 @@ owner sets the Pages source (step 7) and checks the live site.
 
 - [x] Part 1: agree the requirement ordering.
 - [x] Part 2: agree the tech stack, architecture and testing approach.
-- [ ] Part 3: approve the M0 step-by-step plan (this PR).
+- [x] Part 3: approve the M0 step-by-step plan.
 - [ ] Implement M0 (subagent, step by step), then open the M0 PR for verification.
 - [ ] Plan M1 in its own PR.
