@@ -8,8 +8,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 | Part | Contents | Status |
 | --- | --- | --- |
-| 1 | Order in which the requirements are delivered (this document) | Agreed |
-| 2 | Tech stack, architecture and testing approach | Not started |
+| 1 | Order in which the requirements are delivered | Agreed |
+| 2 | Tech stack, architecture and testing approach | Agreed |
 | 3 | Step-by-step plan for the first milestone (M0) | Not started |
 
 ## 1. Requirement ordering
@@ -53,7 +53,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 - **Mockup conventions:** tables are editable in place, charts have hover
   tooltips, and values can be shown in today's or nominal dollars. Each
   convention applies from the milestone where the table or chart first
-  appears. The inputs panel (mockup 05b) arrives in M16. Until then, inputs
+  appears. Part 2 maps the shared components to the milestones that
+  introduce them. The inputs panel (mockup 05b) arrives in M16. Until then, inputs
   are edited through the steps.
 - **Honest about what's missing:** until the MVP is complete, the app shows
   which parts of the model aren't built yet (for example "tax is not yet
@@ -585,14 +586,450 @@ Agreed in review of part 1:
 3. **The MVP line is M14**, the end of Phase 1. Scenarios (M16) stay in
    Phase 2.
 
-### Open questions
+## 2. Tech stack, architecture and testing
 
-1. **Tech stack.** M0 depends on it. It will be proposed in part 2 of this
-   plan, in its own PR.
+### Constraints that drive the choices
 
-### Next steps
+These come straight from the requirements and mockups:
 
-- [x] Review and agree this ordering.
-- [ ] Part 2: tech stack, architecture and testing approach (separate PR).
+- **The data never leaves the device** (NFR-4, and the §10 non-goal of no
+  backup or sync). So there is no server: every calculation runs on the
+  user's own machine.
+- **Desktop web first** (mockups), with mobile later (BL-6).
+- **Deterministic, traceable calculations** (NFR-1, NFR-2) that can be
+  tested against independently checked worked examples (NFR-6).
+- **Statutory rules stored as dated data** (NFR-3), not in code.
+- **Charts with hover and click** (FIRE-7, COAST-6, mockup conventions), and
+  tables that are edited in place.
+- **CLAUDE.md rule 6:** separate wire types and internal types, with
+  explicit mapping functions at every boundary.
+
+### Proposed stack
+
+| Concern | Choice | Why | Alternatives considered |
+| --- | --- | --- | --- |
+| App type | **Client-only single-page web app**, built to static files | No server means no place for data to leak to (NFR-4). Runs locally with one command and can be hosted as plain static files. | Python/FastAPI backend: needs a server holding financial data. Electron/Tauri desktop app: heavier to build and test. It can wrap the same web app later if needed. |
+| Language | **TypeScript** (strict mode) | Types catch unit and shape mistakes in a calculation-heavy codebase. The same language for engine and UI. | Python engine compiled to WebAssembly (Pyodide): slow start, two languages. |
+| UI | **React** with **Vite** | Mature and widely known, with the largest ecosystem for charts and testing. Vite gives fast builds and a simple static output. | Svelte/SvelteKit: lighter, but a smaller ecosystem. Vue: comparable, no strong reason to prefer it. |
+| Charts | **Recharts** | Line, stacked area and bar charts, reference lines and tooltips cover every chart in the mockups (FIRE-7, COAST-6, sensitivity) without hand-written D3. | D3 directly: most flexible but most code. Chart.js: canvas-based, harder to test and annotate. Observable Plot: good, but less interactive out of the box. |
+| App state | **React state with a reducer** around a single `Plan` | The whole app is one plan document plus derived results. A reducer keeps every edit explicit, which makes undo (mockup 05b) straightforward later. | Redux/Zustand: more machinery than one document needs. Can be adopted later if state grows. |
+| Validation at boundaries | **Zod** | Parses and validates the wire formats (saved plans, rules data) before mapping them to internal types. | Hand-written validators: more code, easy to miss a field. |
+| Storage | **IndexedDB**, via the `idb` library | Keeps the plan on the device (NFR-4) with no server. See [Data representations and storage](#data-representations-and-storage) for the schema, the library and why not localStorage. | localStorage, Dexie.js: compared in that section. |
+| Money arithmetic | **JavaScript numbers (64-bit floats)**, rounded to cents only for display and comparison | A projection compounds rates over decades, so the model is approximate by nature, and floats are deterministic in JavaScript (NFR-2). Tests compare to the cent. | Decimal library (decimal.js): exact cents but slower and noisier code, with no real accuracy gain for a projection. |
+| Hosting | **GitHub Pages**, deployed by GitHub Actions on every merge to `main` | Free static hosting next to the code. Nothing is sent anywhere: the app runs entirely in the browser. See [Hosting and deployment](#hosting-and-deployment). | Local-only: no shareable URL. Netlify/Vercel: another account to manage, with no benefit for static files. |
+| Tooling | **Node 22 LTS**, npm, ESLint, Prettier, TypeScript type-checking | Standard, and already available in this environment. | pnpm/yarn: no need yet. |
+
+Library versions are pinned in M0. Current majors at the time of writing:
+React 19, Vite 8, Recharts 3, Zod 4, TypeScript 7, Vitest 5, Playwright 1.63.
+
+### Architecture
+
+The core idea: a **pure calculation engine** that knows nothing about the
+UI or storage. It takes a plan and a rule set and returns a projection. Everything else is plumbing around it.
+
+```
+ ┌──────────────────────────── Browser ─────────────────────────────┐
+ │                                                                  │
+ │  UI (React)            screens 01–07 + 05b, one per mockup       │
+ │    │  ▲                                                          │
+ │    │  │ view models: formatted figures, chart series,            │
+ │    │  │ today's ↔ nominal conversion (OUT-2)                     │
+ │    ▼  │                                                          │
+ │  Plan state (reducer) ──────────► Engine (pure TypeScript)       │
+ │    │  ▲                            plan + rules → projection     │
+ │    │  │                            + explanations (NFR-1)        │
+ │    │  │                                 ▲                        │
+ │    ▼  │                                 │                        │
+ │  Persistence                       Rules                         │
+ │  PlanDocument (wire) ⇄ Plan        RulesFile (wire) ⇄ RuleSet    │
+ │    │  ▲                            dated data per FY (NFR-3)     │
+ │    ▼  │                                                          │
+ │  IndexedDB (this device only, NFR-4)                             │
+ └──────────────────────────────────────────────────────────────────┘
+```
+
+**Engine** (`src/engine/`)
+- One entry point: `project(plan, ruleSet, startYear) → Projection`.
+  `startYear` is passed in rather than read from the clock, so the same
+  inputs always give the same result (NFR-2).
+- A year-by-year loop. Each year applies, in a fixed and documented order:
+  income → contributions → growth → tax → spending and withdrawals →
+  shortfall check. Each milestone adds its own step (super in M5, tax in
+  M8, property in M12, and so on) without changing the others.
+- Headline figures (FI number, FI age, Coast FIRE number and more) are
+  derived from the projection by small, separately tested functions.
+- **Explanations (NFR-1):** each headline figure and each year's key
+  amounts carry a structured breakdown (label, value, the inputs and rules
+  it came from). The UI renders these as the "how was this calculated?"
+  panels in the mockups.
+- No React, no storage, no dates from the clock. That keeps it fast to
+  test and reusable, e.g. for scenarios (OUT-5) and sensitivity runs
+  (OUT-6), which are just repeated engine calls with changed inputs.
+
+**Internal and wire types** (CLAUDE.md rule 6)
+
+| Boundary | Wire type | Internal type | Mapping |
+| --- | --- | --- | --- |
+| Saved plan in IndexedDB, later export (OUT-7) | `PlanDocument` (versioned, validated with Zod) inside a `PlanRecord` | `Plan` | `planFromWire` / `planToWire`, plus migrations between versions. See [Data representations and storage](#data-representations-and-storage) |
+| Statutory rules data | `RulesFile` (JSON per financial year, validated with Zod) | `RuleSet` | `ruleSetFromWire` |
+| Engine output to UI | none: stays in memory | `Projection` → view models | Formatting functions in the UI layer |
+
+**Rules data** (`src/rules/data/`): one JSON file per financial year, e.g.
+`fy2025-26.json`, holding brackets, caps, rates and minimum drawdowns, with
+the date each takes effect. Years after the latest file use the latest
+known rules, indexed where the law says so. Updating rules for a new year
+means adding a file, not changing the engine.
+
+**UI** (`src/ui/`): one folder per mockup screen, built from shared
+components that match the mockup conventions. See
+[Reusable UI views and components](#reusable-ui-views-and-components).
+
+**Proposed layout**
+
+```
+src/
+  engine/        pure calculations: project(), FI and Coast FIRE metrics
+  rules/         RuleSet types, wire parsing, data/fy*.json
+  plan/          Plan types, reducer, defaults
+  persistence/   PlanDocument wire types, migrations, PlanStore (IndexedDB)
+  ui/            screens/ (one per mockup) and components/
+tests/
+  worked-examples/   NFR-6 fixtures: inputs, expected outputs, how checked
+  e2e/               Playwright user flows
+```
+
+### Data representations and storage
+
+Data handling is where projects like this usually get hard, so storage is
+kept away from the calculations and designed up front.
+
+#### Three representations, kept apart
+
+The same plan exists in three forms. Only the mapping functions between
+them know about more than one form.
+
+```
+  UI form state            In-memory model                Serialised (wire)
+  (what is being typed)    (what the engine computes on)  (what is stored)
+
+  "4.0" in a % field  ──►  Plan                      ──►  PlanDocumentV1
+                           safeWithdrawalRate: 0.04       safeWithdrawalRatePercent: 4
+                           (fractions, numbers,           (explicit units in names,
+                            IDs, no defaults missing)      only user-set values,
+                                │                          schemaVersion, ISO dates)
+                                ▼                               │
+                           Engine → Projection                  ▼
+                           (never serialised:              IndexedDB (and, in M22,
+                            recomputed on load, NFR-2)      export files)
+```
+
+- **The in-memory model and the engine never import anything from
+  persistence.** They can be written and tested without any thought of
+  storage. That's what keeps the calculations simple: storage-format
+  questions (versions, units, missing fields) are answered once, in the
+  mappers, instead of throughout the engine.
+- **Representation decisions are made at the boundary.** They come up the
+  first time anything is written to IndexedDB (M1), and are settled then:
+  - **Units:** the wire format spells units out in field names
+    (`…Percent`, `…Dollars`). Internally, rates are fractions.
+  - **Defaults:** the wire format stores only values the user has set.
+    Defaults are applied by `planFromWire`, so an improved default (e.g. a
+    new inflation default) reaches plans that never overrode it. This also
+    lets the UI show dashed "default" fields, as in the mockups.
+  - **Identifiers:** every person, portfolio, property and row has a stable
+    string ID (`crypto.randomUUID()`) assigned when it is created, never
+    derived from its position in a list.
+  - **Dates:** ISO 8601 strings in the wire format.
+  - **Derived data is never stored:** projections, FI numbers and
+    explanations are always recomputed, so stored data can't disagree with
+    the engine.
+- **Statutory rules** (`RulesFile` → `RuleSet`) ship with the app as static
+  JSON. They are not stored in IndexedDB.
+
+#### Why IndexedDB and not localStorage
+
+| | localStorage | IndexedDB |
+| --- | --- | --- |
+| API | Synchronous: every save blocks the page, and autosave runs on every edit | Asynchronous: saving never freezes typing or charts |
+| What it stores | Strings only: the whole plan is re-stringified and rewritten on each save | Structured objects, written per record |
+| Space | About 5 MB per origin, and the GitHub Pages origin is shared with every other Pages site on the account | Much larger quotas (a share of free disk space). Persistence can be requested with `navigator.storage.persist()` to make eviction less likely |
+| Many records | One key per value, no transactions | Object stores with keys and indexes. Plans and scenarios (OUT-5) are separate records written in atomic transactions |
+| Schema changes | None built in | A versioned database with an upgrade hook (`onupgradeneeded`) for adding stores and indexes |
+| Failure modes | Throws when full | Errors per transaction, which can be caught and reported |
+
+localStorage would be enough for M1 alone, a single small plan. But
+scenarios (M16), autosave on every edit, and schema changes over 25
+milestones all point to IndexedDB. Starting there avoids a data migration
+between storage technologies later, which is the riskiest kind.
+
+#### Library: `idb`
+
+- **[`idb`](https://github.com/jakearchibald/idb)** (version 8, about 1 kB)
+  wraps IndexedDB in promises and lets the database schema be declared as a
+  TypeScript type (`DBSchema`). Store names, keys and record shapes are then
+  type-checked. It stays close to the standard API, so its behaviour is
+  predictable and well documented.
+- **Alternative: [Dexie.js](https://dexie.org/)** (version 4). It's richer:
+  declarative schema versions, query helpers and live queries. Our access
+  pattern is simple (get, put and list records by key), so Dexie's extra
+  layer isn't needed yet. If querying grows (e.g. many scenarios with
+  filtering), Dexie can replace `idb` behind the same `PlanStore`
+  interface.
+- All IndexedDB access goes through one module, `src/persistence/`, behind
+  a small interface:
+
+  ```ts
+  interface PlanStore {
+    loadActivePlan(): Promise<LoadResult>;     // migrated + validated, or an error
+    savePlan(plan: Plan): Promise<SaveResult>; // maps to wire, validates, writes
+    listPlans(): Promise<PlanSummary[]>;       // for scenarios (M16)
+  }
+  ```
+
+  The rest of the app never touches IndexedDB directly.
+
+#### Database schema
+
+Database `au-fire-planner`, **database version 1**. The database version
+covers the *structure* (stores and indexes). It is separate from the
+*document* version inside each record (`schemaVersion`), which covers the
+shape of the plan itself.
+
+| Object store | Key | Indexes | Record | Introduced |
+| --- | --- | --- | --- | --- |
+| `plans` | `id` | `byUpdatedAt`, `byBaseId` | `PlanRecord`: `{ id, name, kind: "base" \| "scenario", baseId?, createdAt, updatedAt, document: PlanDocument }` | M1 (one base plan). Scenarios use `kind`/`baseId` from M16 |
+| `meta` | `key` | none | `{ key, value }`: active plan ID, when the disclaimer was accepted, display preferences (e.g. today's or nominal dollars) | M1 |
+
+The plan document, as first written in M1. It is defined once as a Zod
+schema, and its TypeScript type is inferred from it:
+
+```ts
+const PlanDocumentV1 = z.object({
+  schemaVersion: z.literal(1),
+  household: z.object({
+    people: z.array(z.object({ id: z.string(), label: z.string().optional() })),
+  }),
+  expenses: z.object({
+    livingAnnualDollars: z.number().nonnegative().optional(),
+    retirement: z
+      .discriminatedUnion("kind", [
+        z.object({ kind: z.literal("amount"), annualDollars: z.number().nonnegative() }),
+        z.object({ kind: z.literal("percentOfToday"), percent: z.number().nonnegative() }),
+      ])
+      .optional(),
+  }),
+  assumptions: z.object({ safeWithdrawalRatePercent: z.number().positive().optional() }),
+  portfolios: z.array(z.object({ id: z.string(), name: z.string(), valueDollars: z.number() })),
+});
+```
+
+Each later milestone that adds inputs either adds optional fields (no new
+version needed) or, when the meaning of existing fields changes, bumps
+`schemaVersion` and adds a migration.
+
+#### Save and load paths
+
+```
+ save:  edit ─► reducer ─► Plan ─► (debounce ~500 ms) ─► planToWire
+        ─► validate (Zod) ─► check updatedAt hasn't moved ─► put in a transaction
+
+ load:  get record ─► read schemaVersion ─► migrate step by step to latest
+        ─► validate (Zod) ─► planFromWire (apply defaults) ─► Plan
+        ─► if migrated: write the upgraded record back
+```
+
+- **Migrations** are pure functions (`migrateV1toV2(document)`), applied in
+  sequence. Every released `schemaVersion` keeps a fixture file in
+  `tests/fixtures/plan-documents/`, and tests migrate each one to the
+  latest version, so old saved plans keep loading.
+- **Never overwrite what can't be read.** If a stored record fails
+  validation or migration, it is left untouched, the app reports the
+  problem, and the user can start a new plan without losing the old record.
+- **Several tabs open:** each save checks that the stored `updatedAt`
+  matches the version this tab loaded. If another tab saved in between,
+  the app warns instead of silently overwriting. A `BroadcastChannel`
+  tells other open tabs to reload. When the database version is upgraded,
+  older tabs get a `versionchange` event and are asked to reload.
+- **Unavailable storage:** in some private-browsing modes, IndexedDB is
+  missing or cleared on close. The app then runs on in-memory data and
+  shows that the plan won't be kept.
+
+#### Testing the data layer
+
+- **Mappers and migrations:** Vitest unit tests for round trips
+  (`Plan → PlanDocument → Plan`), defaults, unit conversion, rejection of
+  malformed documents, and every stored fixture version.
+- **`PlanStore` against IndexedDB:** Vitest with
+  [`fake-indexeddb`](https://github.com/dumbmatter/fakeIndexedDB), an
+  in-memory implementation of the IndexedDB API, so tests run in Node
+  without a browser.
+- **Real browser:** Playwright E2E tests that edit a plan, reload the page
+  and check that the plan is still there.
+
+### Reusable UI views and components
+
+The mockups repeat the same building blocks across screens. Building each
+one once, in `src/ui/components/`, keeps the screens consistent and makes
+later milestones mostly a matter of assembly. Each component is introduced
+in the first milestone that needs it, built generally enough for its later
+uses, and covered by React Testing Library tests.
+
+**Layout and views**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `AppShell` + `StepNav` | Header, step navigation, plan picker and export slots | all | M0 | every milestone |
+| `StepPage` | Page title, intro, content and Back/Next footer | 01–04, 06, 07 | M0 | every input step |
+| `Card`, `Banner` | Grouping and notices: disclaimer, "not yet modelled", hints | all | M1 | every milestone |
+| `AssetSidebar` | Asset list grouped by kind, with net worth and investable totals | 03a–03d | M5 | M9, M12–M14, M18 |
+| `InputsPanel` | Drop-down panel that edits any input without leaving the page | 05b | M16 | all result screens |
+
+**Inputs**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `MoneyField`, `PercentField` | Number fields with units, validation and a dashed "default" state | all inputs | M1 | every input milestone |
+| `AgeField`, `YearField` | Ages and years, with plan-aware limits | 01, 02 | M2 | M3, M6, M7, M19 |
+| `SegmentedToggle` | Two or three exclusive options | 01, 02, 03a, 05 | M1 (amount or % of today) | M2 (today's/nominal), M7 (single/couple), M12 (own/rent) |
+| `RadioOptionGroup` | Choices that need a sentence each | 03a, 03c | M13 (rate after fixed period) | M14 (keep or sell in retirement) |
+| `PerPersonFields` | Renders a field once per person | 01, 03d | M5 (one person, built for N) | M7 onward |
+| `OwnershipField` | Splits an asset between people | 03a–03c | M7 | M9, M12, M14 |
+| `GrowthRateField` | "Grows at" dropdown that becomes a number field for custom rates | 02, 03a, 03c | M5 (salary growth) | M12, M14, M15 |
+| `EditableTable` | Click-to-edit cells, ⋯ row menu (Duplicate, Delete), add row in edit mode | 02, 03a, 03c, 03d, 04 | M3 (dated expenses, EXP-6) | M12, M15, M18, M19, M22 |
+
+**Outputs**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `MetricTile` | Headline figure with a sub-line and status | 05, 05b | M1 (FI number, progress) | M2–M6, M16 |
+| `ExplainPanel` | "How was this calculated?" breakdown (NFR-1) | 05, 06 | M1 | every figure; M8 (year detail), M14 (rental cash flow) |
+| `DollarsModeToggle` + `formatMoney` | Today's or nominal dollars for every figure (OUT-2) | 05–07 | M2 | every output |
+| `ProjectionTable` | Year rows, phase bands, collapsed gaps, shortfall flags, column groups, row detail | 06 | M2 | M3 (shortfalls), M5–M14 (new columns) |
+| `TimeSeriesChart` | Lines with reference lines and markers, hover tooltip, click to open the year | 03b, 05, 07 | M3 (FIRE chart a) | M4, M13, M16 |
+| `StackedAreaChart` | Stacked balances over time with a shaded period | 05 | M6 (bridge chart b) | M10 |
+| `CashFlowChart` | Money in above the axis, money out below, per year | 05 | M8 (FIRE chart c) | M9–M14 |
+| `MilestoneTimeline` | Key years on one line (OUT-4) | 05 | M3 | M4, M6, M7, M10, M13 |
+| `StatusMeter` | Need vs projected, with MET / SHORT / OVER status | 03d, 05 | M6 (bridge check) | M11 (cap warnings), M16 |
+| `ComparisonTable` | Options or scenarios side by side | 05, 07 | M16 (scenarios) | M17 (Coast FIRE choices) |
+| `TornadoChart` | One bar per assumption, earlier vs later | 07 | M16 (sensitivity) | none yet |
+| `LearnMoreLink` | Link to further reading (NFR-7) | all | M21 | every screen |
+
+**Milestones where introducing a component early pays off**
+
+- **M1: input groups as self-contained form sections.** Each group of
+  inputs (e.g. "living expenses", "drawdown") is its own component that
+  takes the plan and dispatches edits, with no page layout baked in. The
+  steps use them from M1, and the inputs panel in M16 reuses the same
+  sections instead of re-implementing every input.
+- **M1: `MetricTile` with `ExplainPanel`.** This sets the pattern that every
+  headline figure can show its breakdown (NFR-1), before there are many
+  figures to retrofit.
+- **M2: all money formatting through `formatMoney`.** It is
+  dollars-mode aware from the first figure, because retrofitting the
+  today's/nominal toggle (OUT-2) across finished screens is easy to get
+  subtly wrong.
+- **M3: a generic `EditableTable` and a shared chart wrapper.** The first
+  table input (dated expenses) and first chart are built from column and
+  series configuration, with the hover and click behaviour in one place,
+  because almost every later milestone adds a table or a chart.
+- **M5: `PerPersonFields` and `AssetSidebar` built for many.** M5 still has
+  one person, but building these for N people and N assets is what makes
+  couples (M7) and more portfolios (M9) an addition rather than a rework.
+- **M16: `InputsPanel` is assembly.** If the M1 rule above holds, the panel
+  is mostly tabs around existing form sections, plus undo from the
+  reducer.
+
+### Hosting and deployment
+
+- **Build:** `npm run build` produces static files in `dist/`. Vite's `base`
+  is set to `/au-fire-planning/` so asset paths work under the Pages URL
+  (`https://eatea.github.io/au-fire-planning/`).
+- **Deploy:** a `deploy.yml` GitHub Actions workflow runs on every push to
+  `main`. It builds the app, runs the full checks, then publishes `dist/`
+  with GitHub's official Pages actions (`upload-pages-artifact`,
+  `deploy-pages`). A PR that fails its checks can't reach the live site.
+  The deploy workflow is added in M0, so the skeleton is live from the start.
+- **One-off setup by the repository owner:** in the repository's Settings →
+  Pages, set the source to "GitHub Actions".
+- **No tracking:** no analytics, fonts or scripts are loaded from other
+  sites, so a visit sends nothing beyond the request for the static files.
+- **Shared-origin caveat:** every GitHub Pages project site under an account
+  shares one origin (`https://eatea.github.io`). Browser storage,
+  IndexedDB and localStorage alike, is scoped per origin, so any other
+  Pages site published from this account could read this app's stored
+  plan. That's acceptable while every site on the account is the owner's
+  own. If that changes, the fix is a custom subdomain
+  (e.g. `fire.example.com`), which gives the app an origin of its own.
+  Accepted for now (decision 4 on part 2).
+
+### Testing approach
+
+**Two test frameworks, with a clear split:**
+
+1. **[Vitest](https://vitest.dev/)** for every test that doesn't need a real
+   browser: unit, worked-example, property-based, data-layer and component
+   tests. One runner, one configuration, one command (`npm test`).
+2. **[Playwright Test](https://playwright.dev/)** (`@playwright/test`) for
+   every test that drives the real app in a real browser: the end-to-end
+   user flows. One command (`npm run test:e2e`).
+
+Everything else is a helper library that plugs into one of those two
+runners, not a separate framework.
+
+**Why these two**
+
+| Choice | Over | Reasons |
+| --- | --- | --- |
+| Vitest | Jest | It shares Vite's configuration and transforms, so TypeScript, ES modules and JSX work without Babel or `ts-jest`. Its API is Jest-compatible, so the usual `describe`/`it`/`expect` patterns apply. Its watch mode is fast. |
+| Playwright Test | Cypress | Already used to render the mockups. Waits for elements automatically, so tests are less flaky. Runs tests in parallel. Supports Chromium, Firefox and WebKit. Produces trace files for debugging CI failures, and is well supported on GitHub Actions. |
+
+**What runs where**
+
+| Kind of test | Framework | Helper libraries | Location | What it covers |
+| --- | --- | --- | --- | --- |
+| Unit | Vitest | none | `src/**/*.test.ts`, next to the code | Every calculation, mapper and reducer action, with small hand-checked cases |
+| Worked examples (NFR-6) | Vitest | none | `tests/worked-examples/` | Whole-plan scenarios. Each fixture records its inputs, the expected key figures, and how they were independently checked (e.g. spreadsheet, ATO calculator, hand calculation) |
+| Property-based | Vitest | fast-check (`@fast-check/vitest`) | `src/**/*.test.ts` | Invariants for any input: same inputs give the same projection; today's ⇄ nominal conversion is lossless; balances only go negative in years flagged as shortfalls; zero inflation makes today's and nominal dollars equal |
+| Data layer | Vitest | fake-indexeddb | `src/persistence/*.test.ts`, `tests/fixtures/plan-documents/` | Wire round trips, defaults, malformed documents, migrations of every stored version, `PlanStore` reads and writes |
+| Components | Vitest (jsdom environment) | React Testing Library | `src/ui/**/*.test.tsx` | Shared components (editable tables, toggles, explanations) and form sections, tested the way a user sees them |
+| End-to-end | Playwright Test (Chromium) | none | `tests/e2e/*.spec.ts` | Real user flows in the built app. Each milestone adds or extends a flow, e.g. M1 "enter spending and a portfolio, see the FI number", and data still there after reload |
+| Static checks | TypeScript, ESLint, Prettier | none | whole repository | Types, lint and formatting |
+
+**Commands**
+
+| Command | Runs |
+| --- | --- |
+| `npm test` | All Vitest tests once |
+| `npm run test:watch` | Vitest in watch mode while developing |
+| `npm run test:e2e` | Playwright tests against a production build |
+| `npm run check` | Type-checking, ESLint, Prettier check, then `npm test` |
+
+Both `npm run check` and `npm run test:e2e` must pass before any commit is
+proposed (CLAUDE.md rule 4).
+
+**Continuous integration** (GitHub Actions, added in M0):
+
+- `ci.yml` runs on every PR: the `check` job runs `npm run check`, and the
+  `e2e` job runs `npm run test:e2e`. It uploads Playwright traces when a
+  test fails.
+- `deploy.yml` runs on every push to `main`: it runs the same checks, then
+  publishes to GitHub Pages only if they pass.
+
+## Decisions on part 2
+
+Agreed in review:
+
+1. **Hosting:** GitHub Pages, deployed by GitHub Actions from `main`. Set up in M0.
+2. **No file save before M22:** saving to and opening from a file stays with
+   export (OUT-7) in M22. No backup mechanism for now.
+3. **CI:** GitHub Actions checks on every PR, from M0.
+4. **Shared origin accepted:** the app stays on `eatea.github.io` with no
+   custom subdomain for now. Revisit if Pages sites that aren't the
+   owner's are ever published from this account.
+
+## Next steps
+
+- [x] Part 1: agree the requirement ordering.
+- [x] Part 2: agree the tech stack, architecture and testing approach.
 - [ ] Part 3: step-by-step plan for M0 (separate PR).
 - [ ] Start implementation with M0, once parts 1–3 are agreed.
