@@ -1155,7 +1155,7 @@ Conventions settled while building M1, which later milestones rely on:
 ### Colour scheme: green and gold
 
 **Status:** plan agreed in chat with the owner (deep green pages chosen
-over light cream pages). Awaiting approval of this PR before implementation.
+over light cream pages). Implemented; awaiting the owner's verification.
 
 **Kind:** behavior change. Only the app's appearance changes. The layout,
 navigation and content stay the same.
@@ -1246,7 +1246,7 @@ comes from.
   autofill styling all slip past it. Step 3 closes that gap by measuring
   contrast in a real browser.
 
-#### Step 1 · Add the new roles, keeping the navy look
+#### Step 1 · Add the new roles, keeping the navy look: done
 
 - Add `--colour-header-text`, `--colour-text-highlight` and
   `--colour-border-error` to `tokens.css`, mapped to today's navy-scheme
@@ -1255,7 +1255,7 @@ comes from.
   `tokens.test.ts`.
 - **Check:** `npm run check` passes.
 
-#### Step 2 · Swap the palette to green and gold
+#### Step 2 · Swap the palette to green and gold: done
 
 - Replace the navy palette in `tokens.css` with the green-and-gold palette
   above, and re-map the roles. Update the comments that mention navy and
@@ -1264,7 +1264,7 @@ comes from.
   should be deep green and the current step pill gold.
 - **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 3 · In-browser contrast sweep (E2E)
+#### Step 3 · In-browser contrast sweep (E2E): done
 
 - Add `tests/e2e/contrast.spec.ts`. On every page, with fields empty, then
   filled with valid values, then filled with invalid values, and with each
@@ -1273,9 +1273,11 @@ comes from.
   between its rendered text colour and the first opaque background behind
   it, and fails with a list of offenders below 4.5:1. It also checks every
   link, button and input while hovered and focused.
-- If the white-on-white case the owner saw in Chrome isn't reproduced by
-  then, ask for the page and the element, and add that exact state to the
-  sweep.
+- The sweep reproduced the case the owner saw in Chrome: the welcome page's
+  "Start planning" `<button>` uses `.footer-link`, which never set a
+  background, so it kept Chrome's light grey button background behind
+  white text (1.15:1). `.footer-link` now sets a transparent background
+  and inherits the page font.
 - **Check:** `npm run test:e2e` passes.
 
 ### M2 · Growth over time: step-by-step plan
@@ -1658,4 +1660,4 @@ table is readable on the deep green page.
 - [ ] Approve the M2 step-by-step plan (this PR).
 - [ ] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [ ] Approve the green and gold colour scheme plan (this PR).
-- [ ] Implement the green and gold scheme (steps 1 to 3), one PR.
+- [x] Implement the green and gold scheme (steps 1 to 3), one PR.

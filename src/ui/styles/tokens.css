@@ -2,7 +2,7 @@
  * Design tokens: colour, spacing and font variables. Imported from
  * src/main.tsx before app.css.
  *
- * Colours come in two layers (see "Colour scheme: Australian flag" in
+ * Colours come in two layers (see "Colour scheme: green and gold" in
  * PLAN.md):
  *
  *   palette variables   raw colours, named after what they are
@@ -18,56 +18,66 @@
  * checks every text/background role pair still meets WCAG AA contrast.
  */
 :root {
-  /* ---------- Palette: the Australian flag, plus navy tints ---------- */
+  /* ---------- Palette: Australia's national green and gold, plus tints ---------- */
 
-  /* The flag's official blue and red (Pantone 280 and 185 C). */
-  --flag-navy: #012169;
-  --flag-red: #e4002b;
-  --flag-white: #ffffff;
-  /* Not on the flag: a blue-tinged near-black for the header. */
-  --flag-black: #0b0f1a;
+  /* The official national colours (Pantone 348 C and 116 C). */
+  --aus-green: #00843d;
+  --aus-gold: #ffcd00;
+  --white: #ffffff;
 
-  /* Lighter navy for hover fills, and a subtle navy for dividers. */
-  --navy-raised: #0f3489;
-  --navy-divider: #2b4a94;
-  /* Blue-tinted whites for secondary text and outlines on navy. */
-  --blue-white: #c9d4f2;
-  --blue-grey: #8fa3d9;
-  /* A lighter red for error text: the flag red is too dark to read on navy. */
-  --red-light: #ff5a6e;
+  /* A deeper green for the page, so white text reaches 10:1 (the official
+     green only manages 4.8:1). */
+  --green-deep: #004d25;
+  /* Lighter green for hover fills, and a subtle green for dividers. */
+  --green-raised: #0a6b37;
+  --green-divider: #2e7a4f;
+  /* Green-tinted whites for secondary text and outlines on deep green. */
+  --green-white: #cfe8d6;
+  --green-grey: #9cc9aa;
+  /* Near-black for text on gold. */
+  --green-black: #0b1a10;
+  /* A soft red for errors: readable on deep green and distinct from gold. */
+  --error-pink: #ffb3a7;
 
   /* ---------- Roles: what stylesheets use ---------- */
 
-  --colour-page-background: var(--flag-navy);
-  --colour-header-background: var(--flag-black);
+  --colour-page-background: var(--green-deep);
+  --colour-header-background: var(--aus-green);
   /* Background for hovered pills and buttons. */
-  --colour-surface-raised: var(--navy-raised);
+  --colour-surface-raised: var(--green-raised);
 
-  --colour-text: var(--flag-white);
-  /* Intro paragraphs and inactive step pills. */
-  --colour-text-muted: var(--blue-white);
-  /* Placeholder notes and other low-emphasis text. */
-  --colour-text-faint: var(--blue-grey);
+  --colour-text: var(--white);
+  /* Intro paragraphs, labels and other secondary text. */
+  --colour-text-muted: var(--green-white);
+  /* Placeholder notes, hints and other low-emphasis text. */
+  --colour-text-faint: var(--green-grey);
+  /* Key figures, such as the FI number on the Results page (6.7:1). */
+  --colour-text-highlight: var(--aus-gold);
+  /* Inactive step pills. Muted green-white on the header green is only
+     3.7:1, so the header uses plain white (4.8:1). */
+  --colour-header-text: var(--white);
 
-  --colour-border: var(--blue-grey);
-  --colour-border-soft: var(--navy-divider);
+  --colour-border: var(--green-grey);
+  --colour-border-soft: var(--green-divider);
   /* Outline of the logo and the Back/Next buttons. */
-  --colour-border-strong: var(--flag-white);
+  --colour-border-strong: var(--white);
 
   /*
-   * Red is for fills and borders only. Red text on navy is just 3.1:1, below
-   * the 4.5:1 WCAG AA minimum, so anything red that carries text puts
-   * --colour-on-accent text on a red fill instead.
+   * Gold marks what is selected: the current step and the "on" toggle. Text
+   * on a gold fill uses --colour-on-accent. Gold text is fine on the deep
+   * green page but never on the header green (3.2:1, below WCAG AA).
    */
-  --colour-accent: var(--flag-red);
-  --colour-on-accent: var(--flag-white);
-  /* Validation messages on the navy page (4.9:1). */
-  --colour-text-error: var(--red-light);
+  --colour-accent: var(--aus-gold);
+  --colour-on-accent: var(--green-black);
 
-  /* Input boxes holding a value: white with navy text, so entries stand out.
-     A field still on its default is drawn on the page background instead. */
-  --colour-input-background: var(--flag-white);
-  --colour-input-text: var(--flag-navy);
+  /* Validation messages (5.9:1) and the outline of an invalid field. */
+  --colour-text-error: var(--error-pink);
+  --colour-border-error: var(--error-pink);
+
+  /* Input boxes holding a value: white with deep green text, so entries stand
+     out. A field still on its default is drawn on the page background instead. */
+  --colour-input-background: var(--white);
+  --colour-input-text: var(--green-deep);
 
   /* ---------- Type and spacing ---------- */
 
