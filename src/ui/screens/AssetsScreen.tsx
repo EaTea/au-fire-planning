@@ -5,7 +5,7 @@ import { PortfolioSection } from "../sections/PortfolioSection";
 const step = steps.find((candidate) => candidate.id === "assets")!;
 
 /**
- * The Assets step: for now just the share portfolio. A page layout around
+ * The Assets step: the share portfolio, its expected return and contributions. A page layout around
  * self-contained sections; routed from App.
  */
 export function AssetsScreen() {

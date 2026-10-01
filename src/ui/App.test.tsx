@@ -40,13 +40,13 @@ describe("App", () => {
   });
 
   // Unknown routes redirect to the first step.
-  it("lands on the Household placeholder for an unknown route", async () => {
+  it("lands on the Household page for an unknown route", async () => {
     window.location.hash = "#/no-such-page";
 
     await renderApp();
 
     expect(screen.getByRole("heading", { level: 1, name: "Household" })).toBeInTheDocument();
-    expect(screen.getByText("Arrives in milestone M2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Current age")).toBeInTheDocument();
   });
 
   // Next moves along the journey.
@@ -94,16 +94,14 @@ describe("App", () => {
   });
 
   // Start planning stores the acceptance time and moves on.
-  it("stores disclaimerAcceptedAt and opens Income & expenses when Start planning is pressed", async () => {
+  it("stores disclaimerAcceptedAt and opens Household when Start planning is pressed", async () => {
     const user = userEvent.setup();
     const store = new InMemoryPlanStore();
     await renderApp(store);
 
     await user.click(screen.getByRole("button", { name: "Start planning" }));
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Income & expenses" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Household" })).toBeInTheDocument();
     expect(await store.getMeta("disclaimerAcceptedAt")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 

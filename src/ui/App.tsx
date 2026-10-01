@@ -9,6 +9,7 @@ import { AppShell } from "./components/AppShell";
 import { firstStep, steps, type StepId } from "./navigation/steps";
 import { AssetsScreen } from "./screens/AssetsScreen";
 import { AssumptionsScreen } from "./screens/AssumptionsScreen";
+import { HouseholdScreen } from "./screens/HouseholdScreen";
 import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
@@ -16,6 +17,7 @@ import { WelcomeScreen } from "./screens/WelcomeScreen";
 
 /** The steps that have a real screen; every other step still shows a placeholder. */
 const realScreens: Partial<Record<StepId, ReactElement>> = {
+  household: <HouseholdScreen />,
   "income-expenses": <IncomeExpensesScreen />,
   assets: <AssetsScreen />,
   assumptions: <AssumptionsScreen />,

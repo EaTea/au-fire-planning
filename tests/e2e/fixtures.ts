@@ -44,7 +44,7 @@ export const test = base.extend<{ sameOriginRequestsOnly: void }>({
 export async function startFresh(page: Page, hash = "./"): Promise<void> {
   await page.goto("./");
   await page.getByRole("button", { name: "Start planning" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Income & expenses" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Household" })).toBeVisible();
 
   await page.goto(hash);
 }

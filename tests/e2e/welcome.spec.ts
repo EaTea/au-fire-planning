@@ -16,7 +16,7 @@ test("a first visit shows the welcome page and disclaimer, and after accepting a
   await expect(page.getByRole("navigation", { name: "Steps" })).toBeHidden();
 
   await page.getByRole("button", { name: "Start planning" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Income & expenses" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Household" })).toBeVisible();
 
   // Wait until the acceptance is on disk, then reload.
   await expect

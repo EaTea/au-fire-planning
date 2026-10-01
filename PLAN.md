@@ -1455,7 +1455,7 @@ app still works.
 
 #### Step 5 · Inputs: household, assets, assumptions
 
-- [ ] Done
+- [x] Done
 
 1. `src/ui/sections/PersonAgesSection.tsx`, a card "About you":
    - `AgeField` "Current age" (min 15, max 99, no default);
