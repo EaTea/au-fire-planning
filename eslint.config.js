@@ -25,9 +25,10 @@ export default defineConfig(
     extends: [reactHooks.configs.flat.recommended],
   },
 
-  // Tooling config files (vite.config.ts, eslint.config.js, ...) run in Node.
+  // Tooling config files (vite.config.ts, eslint.config.js, ...) and the
+  // Playwright E2E tests run in Node (the tests drive the browser via `page`).
   {
-    files: ["*.config.{js,ts}"],
+    files: ["*.config.{js,ts}", "tests/e2e/**"],
     languageOptions: { globals: globals.node },
   },
 

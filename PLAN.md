@@ -1311,7 +1311,7 @@ on it.
 
 #### Step 5 · End-to-end tests: Playwright
 
-- [ ] Done
+- [x] Done
 
 1. Install `@playwright/test` at the pinned version.
 2. Add `playwright.config.ts`:
