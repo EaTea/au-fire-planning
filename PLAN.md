@@ -964,23 +964,56 @@ uses, and covered by React Testing Library tests.
 
 ### Testing approach
 
-| Layer | Tool | What it covers |
+**Two test frameworks, with a clear split:**
+
+1. **[Vitest](https://vitest.dev/)** for every test that doesn't need a real
+   browser: unit, worked-example, property-based, data-layer and component
+   tests. One runner, one configuration, one command (`npm test`).
+2. **[Playwright Test](https://playwright.dev/)** (`@playwright/test`) for
+   every test that drives the real app in a real browser: the end-to-end
+   user flows. One command (`npm run test:e2e`).
+
+Everything else is a helper library that plugs into one of those two
+runners, not a separate framework.
+
+**Why these two**
+
+| Choice | Over | Reasons |
 | --- | --- | --- |
-| Engine unit tests | **Vitest** | Every calculation, using small hand-checked cases |
-| Worked examples (NFR-6) | **Vitest** + fixtures in `tests/worked-examples/` | Whole-plan scenarios. Each fixture records its inputs, the expected key figures, and how they were independently checked (e.g. spreadsheet, ATO calculator, hand calculation), so reviewers can verify them |
-| Invariants | **fast-check** (property-based tests) | Rules that must hold for any input: same inputs give the same projection; converting to today's dollars and back is lossless; balances only go negative in years flagged as shortfalls; zero inflation makes today's and nominal dollars equal |
-| Wire mapping | **Vitest** | Round trips `Plan → PlanFileV1 → Plan`, rejection of malformed files, migrations between versions |
-| UI components | **Vitest** + **React Testing Library** | Editable table rows, dropdowns, toggles, showing an explanation |
-| End-to-end | **Playwright** (Chromium) | Real user flows in a real browser: each milestone adds or extends a flow, e.g. M1 "enter spending and a portfolio, see the FI number" |
-| Static checks | **TypeScript**, **ESLint**, **Prettier** | Types, lint and formatting, all run before every commit |
+| Vitest | Jest | It shares Vite's configuration and transforms, so TypeScript, ES modules and JSX work without Babel or `ts-jest`. Its API is Jest-compatible, so the usual `describe`/`it`/`expect` patterns apply. Its watch mode is fast. |
+| Playwright Test | Cypress | Already used to render the mockups. Waits for elements automatically, so tests are less flaky. Runs tests in parallel. Supports Chromium, Firefox and WebKit. Produces trace files for debugging CI failures, and is well supported on GitHub Actions. |
 
-**Continuous integration:** a GitHub Actions workflow runs the static
-checks, unit tests and Playwright E2E tests on every PR. It is added in M0,
-so every milestone PR is checked the same way.
+**What runs where**
 
-**Per-commit checklist:** `npm run check` runs type-checking, lint,
-formatting and unit tests. `npm run test:e2e` runs the browser tests. Both
-must pass before any commit is proposed (CLAUDE.md rule 4).
+| Kind of test | Framework | Helper libraries | Location | What it covers |
+| --- | --- | --- | --- | --- |
+| Unit | Vitest | none | `src/**/*.test.ts`, next to the code | Every calculation, mapper and reducer action, with small hand-checked cases |
+| Worked examples (NFR-6) | Vitest | none | `tests/worked-examples/` | Whole-plan scenarios. Each fixture records its inputs, the expected key figures, and how they were independently checked (e.g. spreadsheet, ATO calculator, hand calculation) |
+| Property-based | Vitest | fast-check (`@fast-check/vitest`) | `src/**/*.test.ts` | Invariants for any input: same inputs give the same projection; today's ⇄ nominal conversion is lossless; balances only go negative in years flagged as shortfalls; zero inflation makes today's and nominal dollars equal |
+| Data layer | Vitest | fake-indexeddb | `src/persistence/*.test.ts`, `tests/fixtures/plan-documents/` | Wire round trips, defaults, malformed documents, migrations of every stored version, `PlanStore` reads and writes |
+| Components | Vitest (jsdom environment) | React Testing Library | `src/ui/**/*.test.tsx` | Shared components (editable tables, toggles, explanations) and form sections, tested the way a user sees them |
+| End-to-end | Playwright Test (Chromium) | none | `tests/e2e/*.spec.ts` | Real user flows in the built app. Each milestone adds or extends a flow, e.g. M1 "enter spending and a portfolio, see the FI number", and data still there after reload |
+| Static checks | TypeScript, ESLint, Prettier | none | whole repository | Types, lint and formatting |
+
+**Commands**
+
+| Command | Runs |
+| --- | --- |
+| `npm test` | All Vitest tests once |
+| `npm run test:watch` | Vitest in watch mode while developing |
+| `npm run test:e2e` | Playwright tests against a production build |
+| `npm run check` | Type-checking, ESLint, Prettier check, then `npm test` |
+
+Both `npm run check` and `npm run test:e2e` must pass before any commit is
+proposed (CLAUDE.md rule 4).
+
+**Continuous integration** (GitHub Actions, added in M0):
+
+- `ci.yml` runs on every PR: the `check` job runs `npm run check`, and the
+  `e2e` job runs `npm run test:e2e`. It uploads Playwright traces when a
+  test fails.
+- `deploy.yml` runs on every push to `main`: it runs the same checks, then
+  publishes to GitHub Pages only if they pass.
 
 ## Decisions on part 2
 
