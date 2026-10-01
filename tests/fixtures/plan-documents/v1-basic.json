@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [{ "id": "person-1", "label": "Person 1" }]
+  },
+  "expenses": {
+    "livingAnnualDollars": 64000,
+    "retirement": { "kind": "percentOfToday", "percent": 90 }
+  },
+  "assumptions": { "safeWithdrawalRatePercent": 4.1 },
+  "portfolios": [{ "id": "portfolio-1", "name": "Share portfolio", "valueDollars": 720000 }]
+}

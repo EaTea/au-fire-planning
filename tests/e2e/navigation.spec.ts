@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, startFresh, test } from "./fixtures";
 
 // End-to-end tests for the M0 walking skeleton (the header, the seven-step
 // navigation and the placeholder pages) and the colour scheme, driven through
@@ -38,7 +40,7 @@ function collectBrowserErrors(page: Page): string[] {
 test("opening the app shows the header, all seven steps and the Household page", async ({
   page,
 }) => {
-  await page.goto("./");
+  await startFresh(page);
 
   await expect(page.getByText("AU FIRE Planner")).toBeVisible();
 
@@ -54,7 +56,7 @@ test("opening the app shows the header, all seven steps and the Household page",
 test("pressing Next six times visits every step in order and ends on Scenarios", async ({
   page,
 }) => {
-  await page.goto("./");
+  await startFresh(page);
 
   const currentStepLink = page.getByRole("navigation", { name: "Steps" }).locator("[aria-current]");
 
@@ -73,7 +75,7 @@ test("pressing Next six times visits every step in order and ends on Scenarios",
 });
 
 test("opening #/results directly shows Results as the current step", async ({ page }) => {
-  await page.goto("./#/results");
+  await startFresh(page, "./#/results");
 
   await expect(page.getByRole("heading", { level: 1, name: "Results" })).toBeVisible();
   await expect(
@@ -83,6 +85,8 @@ test("opening #/results directly shows Results as the current step", async ({ pa
 
 test("no errors are logged to the browser console on any page", async ({ page }) => {
   const browserErrors = collectBrowserErrors(page);
+
+  await startFresh(page);
 
   for (const [index] of stepLabels.entries()) {
     await page.goto("./");
@@ -99,7 +103,8 @@ test("no errors are logged to the browser console on any page", async ({ page })
 test("the app uses the Australian flag colours: navy page and red current step", async ({
   page,
 }) => {
-  await page.goto("./");
+  // Accept the welcome page first: it hides the step navigation until then.
+  await startFresh(page);
 
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(1, 33, 105)");
   await expect(page.locator("body")).toHaveCSS("color", "rgb(255, 255, 255)");

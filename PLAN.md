@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 done and deployed. M1 plan drafted, awaiting approval.
+**Current status:** M0 done and deployed. M1 implemented, awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 done. M1 implemented, in review |
 
 ## 1. Requirement ordering
 
@@ -1113,7 +1113,7 @@ Conventions settled while building M0, which later milestones rely on:
 
 ### M1 · FI number: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** implemented, all eight steps done. Awaiting the owner's verification in the M1 PR.
 
 **Goal:** the first real feature. One person enters their living expenses,
 their retirement spending, one share portfolio's value and a safe
@@ -1211,9 +1211,10 @@ interface ExplanationLine {
 }
 type PlanSummary =
   | { readonly status: "complete"; readonly fiNumber: Explained; readonly progressToFi: Explained;
-      readonly investable: Explained }
+      readonly investable: Explained; readonly retirementSpending: Explained;
+      readonly safeWithdrawalRate: number }  // the last two feed the FI number's sub-line
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
-interface MissingInput { readonly field: "livingExpenses"; readonly label: string }
+interface MissingInput { readonly field: "livingExpenses" | "retirementSpending"; readonly label: string }
 // The engine names the missing field. The UI maps each field to the step where it is entered.
 ```
 
@@ -1256,14 +1257,17 @@ in M2.
 
 #### Step 1 · Plan types and the FI calculations
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/plan/types.ts` (types above), `src/plan/defaults.ts`, and
    `src/plan/resolvePlanInputs.ts`. `resolvePlanInputs` returns either
    `{ status: "complete", inputs }` with every value filled in, or
    `{ status: "incomplete", missing }`. Living expenses are the only input
    that can be missing in M1. They're missing when `undefined`, reported as
-   `{ field: "livingExpenses", label: "Living expenses" }`.
+   `{ field: "livingExpenses", label: "Living expenses" }`. Resolved values
+   carry their source as `Sourced<T> = { value, source: "input" | "default" }`
+   (in `src/plan/types.ts`), so explanation lines can say where each value
+   came from.
 2. Add `src/plan/createNewPlan.ts`: `createNewPlan(generateId)` returns a plan
    with one person labelled "Person 1", one portfolio named "Share
    portfolio", and nothing else set.
@@ -1279,7 +1283,11 @@ in M2.
      equal to `investable ÷ fiNumber` as a fraction. It isn't capped at 100%,
      so 1.25 means 125%.
    - `summarisePlan(plan): PlanSummary`. The investable amount is the
-     portfolio's value (the sum over portfolios, ready for M9).
+     portfolio's value (the sum over portfolios, ready for M9). If retirement
+     spending works out to $0 or less (so the FI number would be $0), it
+     returns `incomplete` with
+     `{ field: "retirementSpending", label: "Retirement spending must be more than $0" }`
+     instead of calculating. The engine never crashes on odd stored data.
    Each explanation line records whether the value came from an input, a
    default or a calculation.
 4. Tests (Vitest, next to the code):
@@ -1290,10 +1298,14 @@ in M2.
    - Defaults used when unset (4%, 100% of today, $0), and their explanation
      lines say `"default"`.
    - A rate ≤ 0 throws.
+   - Retirement spending of $0 (living expenses $0 at a percentage, or a $0
+     amount) → `incomplete`, with the `retirementSpending` field.
 5. Add `tests/worked-examples/`:
    - `README.md` explaining the fixture format: inputs, expected figures to
      the cent, and how each was independently checked;
-   - `m1-fi-number.json` with the three scenarios above, each with
+   - `m1-fi-number.json` with three scenarios: $64,000 with defaults and
+     $720,000 invested; 90% of $60,000 with $0 invested; and a $64,000
+     amount with $2,000,000 invested. Each has
      `"checkedBy": "hand calculation"` and the arithmetic written out;
    - `tests/unit/workedExamples.test.ts`, which loads every fixture file and
      checks `summarisePlan` against it to the cent.
@@ -1310,7 +1322,7 @@ nothing uses this code yet.
 
 #### Step 2 · Plan state: reducer and provider
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/plan/planReducer.ts`: a pure `planReducer(plan, action)` with
    these actions:
@@ -1338,7 +1350,7 @@ nothing uses this code yet.
 
 #### Step 3 · Shared input and output components
 
-- [ ] Done
+- [x] Done
 
 Add the first shared components from part 2's component map, in
 `src/ui/components/`, with styles in `app.css` following
@@ -1355,7 +1367,7 @@ Add the first shared components from part 2's component map, in
 3. `MoneyField` and `PercentField`: a labelled text input. Props: `label`,
    `value?: number` (the plan's value; `undefined` means "not set"),
    `defaultValue?: number`, `onChange(value?: number)`, optional `hint`, and
-   for percentages `min`/`max`. Behaviour:
+   optional `min`/`max` (in the field's own unit: dollars, or a fraction for percentages). Behaviour:
    - While typing, keep a local text draft. Commit on blur or Enter.
    - Empty text commits `undefined`. If there's a `defaultValue`, the field
      then shows it in the dashed "default" style, labelled "default".
@@ -1363,6 +1375,11 @@ Add the first shared components from part 2's component map, in
      nothing.
    - The input has an accessible label, so tests can find it with
      `getByLabelText`.
+   As built: both are thin wrappers around a shared `NumberField`, which holds
+   the draft, commit and validation logic. Leaving a field without changing
+   its text commits nothing, so tabbing through a default doesn't set it.
+   Negative numbers are rejected. Later milestones that need negatives
+   (e.g. losses) must extend the parsers explicitly.
 4. `TextField`: a labelled text input that commits on blur or Enter (used for
    the portfolio name).
 5. `SegmentedToggle`: two or three exclusive options shown as the mockups'
@@ -1382,7 +1399,7 @@ Add the first shared components from part 2's component map, in
 
 #### Step 4 · Input screens: income & expenses, assets, assumptions
 
-- [ ] Done
+- [x] Done
 
 Replace three placeholders with real screens, each built from
 **self-contained form sections** (part 2: the M16 inputs panel will reuse
@@ -1390,12 +1407,14 @@ them). A section reads the plan with `usePlan()`, dispatches with
 `usePlanDispatch()`, and has no page layout of its own.
 
 1. `src/ui/sections/LivingExpensesSection.tsx` (EXP-1): a card "Living
-   expenses today" with a `MoneyField` "Per year, after tax". Hint: "What
+   expenses today" with a `MoneyField` "Per year, after tax" (minimum $1). Hint: "What
    your household spends in a year, after tax. Leave out mortgage repayments
    and rent: they come later."
 2. `src/ui/sections/RetirementSpendingSection.tsx` (EXP-2): a card "Spending
    in retirement" with a `SegmentedToggle` "% of today" / "$ amount", and
-   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`.
+   then a `PercentField` (default 100%, min 1%, max 300%) or a `MoneyField`
+   (minimum $1) labelled "Retirement spending per year". Every field on a
+   page needs a unique label, so screen readers and tests can tell them apart.
    Switching the toggle keeps the equivalent value where possible (e.g. 90%
    of $60,000 becomes $54,000), or clears it if living expenses aren't set.
 3. `src/ui/sections/PortfolioSection.tsx` (IN-14, one portfolio): a card
@@ -1408,7 +1427,13 @@ them). A section reads the plan with `usePlan()`, dispatches with
    (drawdown). Each is a `StepPage` with an intro sentence. Route them in
    `App.tsx` in place of their placeholders. The other steps keep their
    placeholders, and "arrives in" for Results stays until step 5.
-6. Tests: for each section, entering a value dispatches the right action and
+6. **Fix in `NumberField` (step 3), found while building this step:**
+   select the field's text when it gets focus, so typing replaces the shown
+   value (including a dashed default) rather than appending to it, e.g.
+   "4%3.5". Add a test: focus a field showing its default, type a value, and
+   the new value is committed. Also leave a small gap between a
+   `SegmentedToggle` and the field below it.
+7. Tests: for each section, entering a value dispatches the right action and
    the field shows it; clearing restores the dashed default; the toggle
    conversion works.
 
@@ -1417,18 +1442,21 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 5 · Results: FI number and progress
 
-- [ ] Done
+- [x] Done
 
 1. `src/ui/screens/ResultsScreen.tsx`, using `usePlanSummary()`:
    - **complete:** two `MetricTile`s. "FI number" (FIRE-1): value, then a
-     sub-line "{retirement spending}/yr ÷ {rate}". "Progress to FI"
+     sub-line "{retirement spending}/yr ÷ {rate}", read from the summary's
+     `retirementSpending` and `safeWithdrawalRate` (not from explanation line
+     positions, which may change). "Progress to FI"
      (FIRE-2): value, then a sub-line "{investable} invested of
      {FI number}". Each has its `ExplainPanel`.
    - **incomplete:** a `Banner` listing what's missing, each item a link to
      the step where it's entered (e.g. "Living expenses → Income & expenses").
      The field-to-step map (`livingExpenses` → `income-expenses`) lives in the
      UI, in `src/ui/screens/missingInputSteps.ts`, so the engine never
-     imports UI code.
+     imports UI code. Both `livingExpenses` and `retirementSpending` map to
+     `income-expenses`.
    - Always: a `Banner` "Not yet modelled: growth over time and retirement
      age (M2), super (M5), tax (M8), property (M12) and more. These figures
      use today's spending and today's portfolio only." The milestone
@@ -1446,7 +1474,7 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 6 · Wire format and mappers
 
-- [ ] Done
+- [x] Done
 
 1. Install `zod`. Add `src/persistence/planDocument.ts`: the
    `PlanDocumentV1` Zod schema (as in part 2, with optional `valueDollars`),
@@ -1456,6 +1484,10 @@ input, and values survive moving between steps (but not a reload yet).
      set and converts fractions to percent;
    - `planFromWire(document): Plan`, the inverse, which leaves unset values
      `undefined`.
+   As built: percent ↔ fraction conversion rounds to 12 significant digits,
+   so a stored 4.1% becomes exactly 0.041, without floating-point noise. A
+   person stored without a label is labelled "Person N". Unset values are
+   omitted from the wire document, not written as `undefined`.
 3. Add `src/persistence/migrations.ts`: `parsePlanDocument(unknownJson)`.
    It reads `schemaVersion`, applies migrations up to the current version
    (none yet, but the loop and a version-to-migration map exist),
@@ -1475,7 +1507,7 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 7 · Saving to IndexedDB
 
-- [ ] Done
+- [x] Done
 
 1. Install `idb` and `fake-indexeddb`. Add `src/persistence/database.ts`:
    `openPlannerDatabase()` using `idb`'s `openDB` with a typed `DBSchema`.
@@ -1533,7 +1565,7 @@ values survive a reload.
 
 #### Step 8 · Welcome page and disclaimer
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/ui/screens/WelcomeScreen.tsx` at route `#/welcome`. It's not in
    the step list or the header navigation. It shows:
@@ -1547,7 +1579,9 @@ values survive a reload.
      from the `Clock`) in `meta`, then goes to `#/income-expenses`, the first
      step with inputs in M1.
 2. On start, if `disclaimerAcceptedAt` isn't set, `PersistenceProvider`
-   redirects to `#/welcome`, whatever the URL.
+   redirects to `#/welcome`, whatever the URL. The header hides the step
+   navigation on `#/welcome`, so a first-time visitor can't skip past the
+   disclaimer. "Start planning" is the way in.
 3. Add a one-line footer to `AppShell` on every page: "General information
    only, not financial advice. Your data stays on this device."
 4. Update the E2E tests. Add a helper, `startFresh(page)`, that opens the
@@ -1558,6 +1592,17 @@ values survive a reload.
 5. Unit tests for the redirect, and for `disclaimerAcceptedAt` being stored.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Follow-ups found while building M1
+
+- **Flush on close:** an edit made less than 500 ms before the tab closes
+  isn't saved. Add a save on `pagehide`/`visibilitychange` (small; any
+  milestone).
+- **Write back migrated records:** when the first migration is added
+  (`schemaVersion` 2), the load path must write the upgraded record back,
+  as part 2 describes.
+- **Two tabs on an empty database** can each create a record on first save.
+  Resolve alongside multi-plan support and `BroadcastChannel` in M16.
 
 #### After the last step
 
@@ -1645,11 +1690,16 @@ white text and a near-black header.
 
 #### Follow-ups
 
-- M1 adds input fields, the FI number output and validation messages. They
-  should use the role variables and add any new roles they need, such as
-  input field background and error text, in `tokens.css`. Error text on navy
-  needs a lighter red than the flag red to stay readable (`#FF5A6E` is
-  4.9:1).
+- **Done when M1 was merged with the colour scheme:** M1's input fields,
+  results and validation messages use role variables only. New roles in
+  `tokens.css`:
+  - `--colour-text-error` (`#FF5A6E`, 4.9:1 on navy);
+  - `--colour-input-background` (white) and `--colour-input-text` (navy),
+    14.8:1. Fields on their default are drawn as a dashed outline on the
+    page background instead.
+
+  Both pairs are in the contrast test. Keyboard focus outlines now cover
+  buttons as well as links.
 
 ## Next steps
 
@@ -1658,7 +1708,9 @@ white text and a near-black header.
 - [x] Part 3: approve the M0 step-by-step plan.
 - [x] Implement M0 (subagent, step by step).
 - [x] Owner verifies and merges the M0 PR.
-- [ ] Approve the M1 step-by-step plan (this PR).
-- [ ] Implement M1 (subagent, step by step), then open the M1 PR for verification.
-- [ ] Approve the colour scheme plan (this PR).
+- [x] Approve the M1 step-by-step plan.
+- [x] Implement M1 (subagent, step by step).
+- [ ] Owner verifies the M1 PR.
+- [x] Approve the colour scheme plan.
 - [x] Implement the colour scheme (steps 1 and 2), one PR.
+- [ ] Plan M2 in its own PR.

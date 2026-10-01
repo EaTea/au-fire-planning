@@ -119,10 +119,253 @@ body {
   margin-left: auto;
 }
 
+/* ---------- Shared components: card, banner, fields, toggle, metric ---------- */
+
+.card {
+  border: 1.5px solid var(--colour-border);
+  border-radius: 6px;
+  padding: 16px 18px;
+  background: var(--colour-page-background);
+}
+
+.card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--space-medium);
+  font-size: 16px;
+}
+
+.banner {
+  border: 1.5px dashed var(--colour-border);
+  background: var(--colour-surface-raised);
+  padding: 8px var(--space-medium);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--colour-text);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* A warning is a solid, darker box so it stands out from an info notice. */
+.banner-warning {
+  border-style: solid;
+  border-color: var(--colour-accent);
+  color: var(--colour-text);
+}
+
+.field {
+  margin-bottom: var(--space-medium);
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--colour-text-muted);
+  margin-bottom: 4px;
+}
+
+/* The box is a div so the "default" tag can be drawn after the real input. */
+.input {
+  border: 1.5px solid var(--colour-input-background);
+  border-radius: 4px;
+  padding: 7px 10px;
+  min-height: 34px;
+  background: var(--colour-input-background);
+  color: var(--colour-input-text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-small);
+}
+
+.input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+.input:focus-within {
+  outline: 2px solid var(--colour-border-strong);
+  outline-offset: 2px;
+}
+
+.input.default {
+  border-style: dashed;
+  color: var(--colour-text-muted);
+  background: var(--colour-page-background);
+  border-color: var(--colour-border);
+}
+
+.input.default::after {
+  content: "default";
+  font-size: 10px;
+  color: var(--colour-text-faint);
+  border: 1px solid var(--colour-border-soft);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.input.invalid {
+  border-color: var(--colour-accent);
+  box-shadow: 0 0 0 1px var(--colour-accent);
+}
+
+.field-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--colour-text-error);
+  margin-top: 3px;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--colour-text-faint);
+  margin-top: 3px;
+}
+
+.muted {
+  color: var(--colour-text-muted);
+}
+
+.toggle {
+  display: inline-flex;
+  margin-bottom: 12px; /* keeps the toggle off the field label below it */
+  border: 1.5px solid var(--colour-border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toggle button {
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--colour-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle button.on {
+  background: var(--colour-accent);
+  color: var(--colour-on-accent);
+}
+
+.metric {
+  border: 1.5px solid var(--colour-border);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.metric .label {
+  font-size: 12px;
+  color: var(--colour-text-muted);
+}
+
+.metric .value {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 4px 0 2px;
+}
+
+.metric .sub {
+  font-size: 12px;
+  color: var(--colour-text-muted);
+}
+
+/* A text-style button: the explanation toggle should read as a link. */
+.explain-toggle {
+  margin-top: var(--space-small);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--colour-text-muted);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The breakdown table: label left, value right, rows separated by thin lines. */
+.explain-panel {
+  width: 100%;
+  margin-top: var(--space-small);
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.explain-panel td {
+  border-bottom: 1px solid var(--colour-border-soft);
+  padding: 7px 8px;
+  text-align: right;
+}
+
+.explain-panel td:first-child {
+  text-align: left;
+}
+
+/* Results page: tiles and banners stacked with a gap between them. */
+.results-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+}
+
+.banner-heading {
+  margin: 0 0 4px;
+}
+
+.banner-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* ---------- Welcome page and site footer ---------- */
+
+/* The first-run page is narrower than a step page so the text reads comfortably. */
+.welcome {
+  max-width: 640px;
+}
+
+.welcome .card {
+  margin-bottom: var(--space-medium);
+}
+
+.welcome p {
+  margin: 0;
+}
+
+/* One quiet line at the bottom of every page (NFR-5 / NFR-4 reminder). */
+.app-footer {
+  padding: var(--space-medium) var(--space-page-side);
+  border-top: 1px solid var(--colour-border-soft);
+  font-size: 12px;
+  color: var(--colour-text-muted);
+}
+
+.welcome .page-intro {
+  margin-bottom: var(--space-medium);
+}
+
+.banner a {
+  color: var(--colour-text);
+}
+
 /* ---------- Keyboard focus ---------- */
 
-/* The browser's default focus ring is dark blue, which disappears on navy. */
-a:focus-visible {
+/*
+ * The browser's default focus ring is dark blue, which disappears on navy.
+ * Buttons (toggles, "How is this calculated?", "Start planning") need it too.
+ * Inputs show focus on their .input wrapper instead.
+ */
+a:focus-visible,
+button:focus-visible {
   outline: 2px solid var(--colour-border-strong);
   outline-offset: 2px;
 }
