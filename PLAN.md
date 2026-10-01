@@ -53,7 +53,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 - **Mockup conventions:** tables are editable in place, charts have hover
   tooltips, and values can be shown in today's or nominal dollars. Each
   convention applies from the milestone where the table or chart first
-  appears. The inputs panel (mockup 05b) arrives in M16. Until then, inputs
+  appears. Part 2 maps the shared components to the milestones that
+  introduce them. The inputs panel (mockup 05b) arrives in M16. Until then, inputs
   are edited through the steps.
 - **Honest about what's missing:** until the MVP is complete, the app shows
   which parts of the model aren't built yet (for example "tax is not yet
@@ -679,10 +680,9 @@ the date each takes effect. Years after the latest file use the latest
 known rules, indexed where the law says so. Updating rules for a new year
 means adding a file, not changing the engine.
 
-**UI** (`src/ui/`): one folder per mockup screen, plus shared pieces
-matching the mockup conventions: the step navigation, editable tables,
-the growth-rate dropdown, charts with hover tooltips, and the
-today's/nominal toggle.
+**UI** (`src/ui/`): one folder per mockup screen, built from shared
+components that match the mockup conventions. See
+[Reusable UI views and components](#reusable-ui-views-and-components).
 
 **Proposed layout**
 
@@ -865,6 +865,79 @@ version needed) or, when the meaning of existing fields changes, bumps
   without a browser.
 - **Real browser:** Playwright E2E tests that edit a plan, reload the page
   and check that the plan is still there.
+
+### Reusable UI views and components
+
+The mockups repeat the same building blocks across screens. Building each
+one once, in `src/ui/components/`, keeps the screens consistent and makes
+later milestones mostly a matter of assembly. Each component is introduced
+in the first milestone that needs it, built generally enough for its later
+uses, and covered by React Testing Library tests.
+
+**Layout and views**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `AppShell` + `StepNav` | Header, step navigation, plan picker and export slots | all | M0 | every milestone |
+| `StepPage` | Page title, intro, content and Back/Next footer | 01–04, 06, 07 | M0 | every input step |
+| `Card`, `Banner` | Grouping and notices: disclaimer, "not yet modelled", hints | all | M1 | every milestone |
+| `AssetSidebar` | Asset list grouped by kind, with net worth and investable totals | 03a–03d | M5 | M9, M12–M14, M18 |
+| `InputsPanel` | Drop-down panel that edits any input without leaving the page | 05b | M16 | all result screens |
+
+**Inputs**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `MoneyField`, `PercentField` | Number fields with units, validation and a dashed "default" state | all inputs | M1 | every input milestone |
+| `AgeField`, `YearField` | Ages and years, with plan-aware limits | 01, 02 | M2 | M3, M6, M7, M19 |
+| `SegmentedToggle` | Two or three exclusive options | 01, 02, 03a, 05 | M1 (amount or % of today) | M2 (today's/nominal), M7 (single/couple), M12 (own/rent) |
+| `RadioOptionGroup` | Choices that need a sentence each | 03a, 03c | M13 (rate after fixed period) | M14 (keep or sell in retirement) |
+| `PerPersonFields` | Renders a field once per person | 01, 03d | M5 (one person, built for N) | M7 onward |
+| `OwnershipField` | Splits an asset between people | 03a–03c | M7 | M9, M12, M14 |
+| `GrowthRateField` | "Grows at" dropdown that becomes a number field for custom rates | 02, 03a, 03c | M5 (salary growth) | M12, M14, M15 |
+| `EditableTable` | Click-to-edit cells, ⋯ row menu (Duplicate, Delete), add row in edit mode | 02, 03a, 03c, 03d, 04 | M3 (dated expenses, EXP-6) | M12, M15, M18, M19, M22 |
+
+**Outputs**
+
+| Component | Purpose | Mockups | Introduced | Reused in |
+| --- | --- | --- | --- | --- |
+| `MetricTile` | Headline figure with a sub-line and status | 05, 05b | M1 (FI number, progress) | M2–M6, M16 |
+| `ExplainPanel` | "How was this calculated?" breakdown (NFR-1) | 05, 06 | M1 | every figure; M8 (year detail), M14 (rental cash flow) |
+| `DollarsModeToggle` + `formatMoney` | Today's or nominal dollars for every figure (OUT-2) | 05–07 | M2 | every output |
+| `ProjectionTable` | Year rows, phase bands, collapsed gaps, shortfall flags, column groups, row detail | 06 | M2 | M3 (shortfalls), M5–M14 (new columns) |
+| `TimeSeriesChart` | Lines with reference lines and markers, hover tooltip, click to open the year | 03b, 05, 07 | M3 (FIRE chart a) | M4, M13, M16 |
+| `StackedAreaChart` | Stacked balances over time with a shaded period | 05 | M6 (bridge chart b) | M10 |
+| `CashFlowChart` | Money in above the axis, money out below, per year | 05 | M8 (FIRE chart c) | M9–M14 |
+| `MilestoneTimeline` | Key years on one line (OUT-4) | 05 | M3 | M4, M6, M7, M10, M13 |
+| `StatusMeter` | Need vs projected, with MET / SHORT / OVER status | 03d, 05 | M6 (bridge check) | M11 (cap warnings), M16 |
+| `ComparisonTable` | Options or scenarios side by side | 05, 07 | M16 (scenarios) | M17 (Coast FIRE choices) |
+| `TornadoChart` | One bar per assumption, earlier vs later | 07 | M16 (sensitivity) | none yet |
+| `LearnMoreLink` | Link to further reading (NFR-7) | all | M21 | every screen |
+
+**Milestones where introducing a component early pays off**
+
+- **M1: input groups as self-contained form sections.** Each group of
+  inputs (e.g. "living expenses", "drawdown") is its own component that
+  takes the plan and dispatches edits, with no page layout baked in. The
+  steps use them from M1, and the inputs panel in M16 reuses the same
+  sections instead of re-implementing every input.
+- **M1: `MetricTile` with `ExplainPanel`.** This sets the pattern that every
+  headline figure can show its breakdown (NFR-1), before there are many
+  figures to retrofit.
+- **M2: all money formatting through `formatMoney`.** It is
+  dollars-mode aware from the first figure, because retrofitting the
+  today's/nominal toggle (OUT-2) across finished screens is easy to get
+  subtly wrong.
+- **M3: a generic `EditableTable` and a shared chart wrapper.** The first
+  table input (dated expenses) and first chart are built from column and
+  series configuration, with the hover and click behaviour in one place,
+  because almost every later milestone adds a table or a chart.
+- **M5: `PerPersonFields` and `AssetSidebar` built for many.** M5 still has
+  one person, but building these for N people and N assets is what makes
+  couples (M7) and more portfolios (M9) an addition rather than a rework.
+- **M16: `InputsPanel` is assembly.** If the M1 rule above holds, the panel
+  is mostly tabs around existing form sections, plus undo from the
+  reducer.
 
 ### Hosting and deployment
 
