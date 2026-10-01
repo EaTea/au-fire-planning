@@ -25,6 +25,14 @@ const retirementSpendings: fc.Arbitrary<RetirementSpending> = fc.oneof(
   })),
 );
 
+/** Whole ages from 0 to 120. */
+const ages = fc.integer({ min: 0, max: 120 });
+
+/** A fraction made from a whole-hundredth percent (0% to 150%), as the UI would produce. */
+const wholeHundredthsFraction = fc
+  .integer({ min: 0, max: 15_000 })
+  .map((hundredthsOfPercent) => percentToFraction(hundredthsOfPercent / 100));
+
 /** Arbitrary plans where every optional value may or may not be set. */
 const plans: fc.Arbitrary<Plan> = fc
   .record({
@@ -37,11 +45,28 @@ const plans: fc.Arbitrary<Plan> = fc
       { nil: undefined },
     ),
     portfolioValue: fc.option(dollars, { nil: undefined }),
+    inflationRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
+    currentAge: fc.option(ages, { nil: undefined }),
+    targetRetirementAge: fc.option(ages, { nil: undefined }),
+    expectedReturn: fc.option(wholeHundredthsFraction, { nil: undefined }),
+    annualContribution: fc.option(dollars, { nil: undefined }),
+    contributionsStopAge: fc.option(ages, { nil: undefined }),
     personLabel: fc.string(),
     portfolioName: fc.string(),
   })
   .map((generated) => ({
-    household: { people: [{ id: "person-id", label: generated.personLabel }] },
+    household: {
+      people: [
+        {
+          id: "person-id",
+          label: generated.personLabel,
+          ...(generated.currentAge !== undefined ? { currentAge: generated.currentAge } : {}),
+          ...(generated.targetRetirementAge !== undefined
+            ? { targetRetirementAge: generated.targetRetirementAge }
+            : {}),
+        },
+      ],
+    },
     expenses: {
       ...(generated.livingAnnual !== undefined ? { livingAnnual: generated.livingAnnual } : {}),
       ...(generated.retirementSpending !== undefined
@@ -52,12 +77,22 @@ const plans: fc.Arbitrary<Plan> = fc
       ...(generated.safeWithdrawalRate !== undefined
         ? { safeWithdrawalRate: generated.safeWithdrawalRate }
         : {}),
+      ...(generated.inflationRate !== undefined ? { inflationRate: generated.inflationRate } : {}),
     },
     portfolios: [
       {
         id: "portfolio-id",
         name: generated.portfolioName,
         ...(generated.portfolioValue !== undefined ? { value: generated.portfolioValue } : {}),
+        ...(generated.expectedReturn !== undefined
+          ? { expectedReturn: generated.expectedReturn }
+          : {}),
+        ...(generated.annualContribution !== undefined
+          ? { annualContribution: generated.annualContribution }
+          : {}),
+        ...(generated.contributionsStopAge !== undefined
+          ? { contributionsStopAge: generated.contributionsStopAge }
+          : {}),
       },
     ],
   }));
@@ -109,6 +144,40 @@ describe("planToWire", () => {
       retirement: { kind: "percentOfToday", percent: 90 },
     });
     expect(document.assumptions).toStrictEqual({ safeWithdrawalRatePercent: 4 });
+  });
+});
+
+describe("planToWire: growth fields", () => {
+  // Fractions become percents, ages and dollars keep their values, units in the names.
+  it("writes the growth fields with units in the field names", () => {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    const [portfolio] = blank.portfolios;
+    if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+    const document = planToWire({
+      household: { people: [{ ...person, currentAge: 34, targetRetirementAge: 50 }] },
+      expenses: {},
+      assumptions: { inflationRate: 0.025 },
+      portfolios: [
+        { ...portfolio, expectedReturn: 0.07, annualContribution: 30000, contributionsStopAge: 50 },
+      ],
+    });
+
+    expect(document.household.people[0]).toStrictEqual({
+      id: "id-1",
+      label: "Person 1",
+      currentAgeYears: 34,
+      targetRetirementAgeYears: 50,
+    });
+    expect(document.assumptions).toStrictEqual({ inflationPercent: 2.5 });
+    expect(document.portfolios[0]).toStrictEqual({
+      id: "id-2",
+      name: "Share portfolio",
+      expectedReturnPercent: 7,
+      annualContributionDollars: 30000,
+      contributionsStopAgeYears: 50,
+    });
   });
 });
 

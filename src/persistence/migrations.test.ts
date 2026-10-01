@@ -35,6 +35,62 @@ describe("parsePlanDocument", () => {
     });
   });
 
+  // M2 fields were added without a new schema version, so a document using them must load too.
+  it("parses a document with the M2 growth fields and maps it to a plan", () => {
+    const result = parsePlanDocument(readFixture("v1-growth.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(planFromWire(result.document)).toStrictEqual({
+      household: {
+        people: [{ id: "person-1", label: "Person 1", currentAge: 34, targetRetirementAge: 50 }],
+      },
+      expenses: { livingAnnual: 64000 },
+      assumptions: { inflationRate: 0.025 },
+      portfolios: [
+        {
+          id: "portfolio-1",
+          name: "Share portfolio",
+          value: 720000,
+          expectedReturn: 0.07,
+          annualContribution: 30000,
+          contributionsStopAge: 50,
+        },
+      ],
+    });
+  });
+
+  // Ages are whole numbers from 0 to 120; anything else is rejected.
+  it.each([-1, 121, 34.5])("rejects a current age of %s", (age) => {
+    const document = readFixture("v1-growth.json") as {
+      household: { people: Record<string, unknown>[] };
+    };
+    const [person] = document.household.people;
+
+    const result = parsePlanDocument({
+      ...document,
+      household: { people: [{ ...person, currentAgeYears: age }] },
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
+  // Percents and dollars can't be negative.
+  it("rejects a negative inflation percent and a negative contribution", () => {
+    const document = readFixture("v1-growth.json") as Record<string, unknown>;
+
+    expect(parsePlanDocument({ ...document, assumptions: { inflationPercent: -1 } }).ok).toBe(
+      false,
+    );
+    expect(
+      parsePlanDocument({
+        ...document,
+        portfolios: [{ id: "p", name: "P", annualContributionDollars: -5 }],
+      }).ok,
+    ).toBe(false);
+  });
+
   // A field with the wrong type must be rejected by validation.
   it("rejects wrong types", () => {
     const document = readFixture("v1-basic.json") as Record<string, unknown>;

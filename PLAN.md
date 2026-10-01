@@ -1416,7 +1416,7 @@ app still works.
 
 #### Step 3 · Wire format
 
-- [ ] Done
+- [x] Done
 
 1. Add the optional wire fields above to `planDocumentV1Schema`. Ages are
    integers from 0 to 120, and percents are non-negative.
