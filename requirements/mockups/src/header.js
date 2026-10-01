@@ -4,7 +4,8 @@
  * Each screen's <body> sets data-step to the step it represents (1-7).
  * This script fills the empty <header class="app-header"> with the logo,
  * the step navigation (marking earlier steps done and the current one
- * active) and the save/export actions. Keeping the header here means the
+ * active) and the header actions: "Edit inputs" (from the results
+ * onward), the plan picker and export. Keeping the header here means the
  * step list is defined once, so all screens stay consistent when the
  * flow changes.
  */
@@ -33,10 +34,19 @@
     })
     .join("");
 
+  // From the results onward (steps 5-7), inputs are edited in a panel that
+  // drops down over the current screen (05b-inputs-panel.html), so the user
+  // doesn't lose their place. data-panel="open" draws the button pressed.
+  const panelOpen = document.body.dataset.panel === "open";
+  const editInputsButton = currentStep >= 5
+    ? `<span class="btn ${panelOpen ? "primary" : ""}">Edit inputs ${panelOpen ? "▴" : "▾"}</span>`
+    : "";
+
   header.innerHTML = `
     <span class="logo">AU FIRE Planner</span>
     <nav class="steps">${stepPills}</nav>
     <div class="header-actions">
+      ${editInputsButton}
       <span class="btn ghost">Plan: "Alex &amp; Sam" ▾</span>
       <span class="btn">Export <span class="req">OUT-7</span></span>
     </div>`;

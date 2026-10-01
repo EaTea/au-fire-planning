@@ -34,6 +34,7 @@ They show one possible user flow and screen layout for the requirements in
 | 03d | [Assets: super, cash & debts](03d-assets-super-cash-debts.png) | IN-21 – IN-27, SUPER-1 – SUPER-9 |
 | 04 | [Assumptions](04-assumptions.png) | IN-10 – IN-13, TAX-8, NFR-3 |
 | 05 | [Results dashboard](05-results.png) | FIRE-1 – FIRE-7, COAST-1 – COAST-6, OUT-2, OUT-4, NFR-1 |
+| 05b | [Inputs panel](05b-inputs-panel.png) | Editing any input from Results, Year by year or Scenarios without leaving the page |
 | 06 | [Year by year](06-projection.png) | OUT-1 – OUT-3 (shown for a scenario with a bridge-period shortfall) |
 | 07 | [Scenarios](07-scenarios.png) | OUT-5, OUT-6 |
 
@@ -63,6 +64,9 @@ They show one possible user flow and screen layout for the requirements in
 
 ### 05 · Results dashboard
 ![Results](05-results.png)
+
+### 05b · Inputs panel
+![Inputs panel open over the results](05b-inputs-panel.png)
 
 ### 06 · Year by year
 ![Year by year projection](06-projection.png)

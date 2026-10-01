@@ -14,6 +14,7 @@
   .flow .node.step { fill: #f2f2f2; }
   .flow .node.hub { fill: #d9d9d9; stroke-width: 2.4; }
   .flow .node.side { stroke-dasharray: 5 4; }
+  .flow .node.panel { fill: #e8f0fc; stroke: #1f5fbf; stroke-width: 2; }
   .flow .edge { stroke: #222; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
   .flow .edge.loop { stroke-dasharray: 6 5; stroke: #555; }
 </style>
@@ -25,7 +26,7 @@
     <p class="page-intro">
       How a user moves through the app. First-time users go through the four input steps in order.
       Returning users land straight on their results. From the results they can drill into the
-      projection, save and compare scenarios, or go back and change any input.
+      projection or save and compare scenarios. To change an input, they open the inputs panel without leaving the screen they're on.
     </p>
 
     <svg class="flow" viewBox="0 96 1376 630" width="1376">
@@ -113,18 +114,21 @@
       <text class="edge-label" x="1082" y="408">calculate</text>
 
       <!-- Returning users skip straight to results -->
-      <path class="edge" d="M330,204 L330,330 L900,330 L900,370"/>
-      <text class="edge-label" x="340" y="322">yes: go straight to results</text>
+      <path class="edge" d="M330,204 L330,335 L880,335 L880,370"/>
+      <text class="edge-label" x="340" y="327">yes: go straight to results</text>
 
-      <!-- Edit loop from results back to any input step -->
-      <path class="edge loop" d="M1030,372 L1030,250"/>
-      <path class="edge loop" d="M790,250 L1210,250" style="marker-end:none"/>
-      <path class="edge loop" d="M790,250 L790,198"/>
-      <path class="edge loop" d="M1020,250 L1020,198"/>
-      <path class="edge loop" d="M1210,250 L1210,198"/>
-      <path class="edge loop" d="M1070,390 L1158,390"/>
-      <text class="edge-label" x="1040" y="290">edit any input,</text>
-      <text class="edge-label" x="1040" y="305">results recalculate</text>
+      <!-- Inputs panel: edit any input without leaving the results or scenarios -->
+      <rect class="node panel" x="590" y="226" width="270" height="76" rx="6"/>
+      <text class="title" x="725" y="250" text-anchor="middle">Inputs panel</text>
+      <text class="sub" x="725" y="267" text-anchor="middle">drops down over Results, Projection</text>
+      <text class="sub" x="725" y="282" text-anchor="middle">or Scenarios; results update live</text>
+      <text class="req" x="725" y="296" text-anchor="middle">05b</text>
+
+      <path class="edge" d="M1000,372 L1000,264 L862,264"/>
+      <text class="edge-label" x="1010" y="300">"Edit inputs ▾"</text>
+      <text class="edge-label" x="1010" y="315">from the header</text>
+      <path class="edge loop" d="M790,226 L790,198"/>
+      <text class="edge-label" x="800" y="216">open full step</text>
 
       <!-- Drill-downs from the results hub -->
       <path class="edge" d="M840,408 L742,408"/>
@@ -146,7 +150,7 @@
 
     <div class="grid-3" style="margin-top: 8px">
       <div class="banner" style="display:block"><b>Grey box:</b> numbered step in the header nav. <b>Dashed box:</b> action available from the results.</div>
-      <div class="banner" style="display:block"><b>Dashed arrows:</b> from the results, the user can go back and edit any input. The results recalculate when they return.</div>
+      <div class="banner" style="display:block"><b>Inputs panel (blue):</b> after the first run, inputs are edited in a panel that drops down over the current screen, so the user keeps their place. The steps stay available for full edits.</div>
       <div class="banner">All data stays on this device. No backup or sync to other services (§10)</div>
     </div>
   </div>
