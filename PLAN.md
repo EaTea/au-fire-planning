@@ -9,7 +9,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
-| 2 | Tech stack, architecture and testing approach | In review |
+| 2 | Tech stack, architecture and testing approach | Agreed |
 | 3 | Step-by-step plan for the first milestone (M0) | Not started |
 
 ## 1. Requirement ordering
@@ -959,8 +959,8 @@ uses, and covered by React Testing Library tests.
   Pages site published from this account could read this app's stored
   plan. That's acceptable while every site on the account is the owner's
   own. If that changes, the fix is a custom subdomain
-  (e.g. `fire.example.com`), which gives the app an origin of its own. See
-  open question 1.
+  (e.g. `fire.example.com`), which gives the app an origin of its own.
+  Accepted for now (decision 4 on part 2).
 
 ### Testing approach
 
@@ -1023,17 +1023,13 @@ Agreed in review:
 2. **No file save before M22:** saving to and opening from a file stays with
    export (OUT-7) in M22. No backup mechanism for now.
 3. **CI:** GitHub Actions checks on every PR, from M0.
-
-## Open questions
-
-1. **Shared GitHub Pages origin.** Every Pages site under the account shares
-   the `eatea.github.io` origin and its browser storage (see
-   [Hosting and deployment](#hosting-and-deployment)). Is that acceptable
-   for now, or should the app get its own custom subdomain?
+4. **Shared origin accepted:** the app stays on `eatea.github.io` with no
+   custom subdomain for now. Revisit if Pages sites that aren't the
+   owner's are ever published from this account.
 
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
-- [ ] Part 2: agree the tech stack, architecture and testing approach (this PR).
+- [x] Part 2: agree the tech stack, architecture and testing approach.
 - [ ] Part 3: step-by-step plan for M0 (separate PR).
 - [ ] Start implementation with M0, once parts 1–3 are agreed.
