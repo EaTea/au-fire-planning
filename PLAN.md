@@ -1633,7 +1633,7 @@ app still works.
    API. It must not depend on the real date.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
-table is readable on navy.
+table is readable on the deep green page.
 
 #### Follow-ups
 
