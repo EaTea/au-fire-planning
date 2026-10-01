@@ -283,6 +283,8 @@ describe("summarisePlan: projection", () => {
     if (summary.status !== "complete" || summary.projection.status !== "complete") return;
     expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, age: 46 });
     expect(summary.projection.fiNumberAtRetirement.value).toBeCloseTo(2375208.99, 2);
+    expect(summary.projection.retirementAge).toBe(50);
+    expect(summary.projection.retirementYear).toBe(2042);
     expect(summary.projection.fiNumberAtRetirement.lines.map((line) => line.operator)).toEqual([
       undefined,
       "×",

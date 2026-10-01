@@ -1,5 +1,8 @@
 import { Link } from "react-router";
 
+import { MAX_PROJECTION_AGE } from "../../engine/projection";
+import type { Explained } from "../../engine/explained";
+import type { MissingInput } from "../../plan/resolvePlanInputs";
 import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
@@ -9,6 +12,46 @@ import { steps } from "../navigation/steps";
 import { missingInputSteps } from "./missingInputSteps";
 
 const step = steps.find((candidate) => candidate.id === "results")!;
+
+/**
+ * Lists inputs the user still has to enter, each linked to the step where it
+ * is entered. Used by ResultsScreen for both the M1 inputs (living expenses)
+ * and the projection's ages.
+ */
+function MissingInputsBanner({ missing }: { readonly missing: readonly MissingInput[] }) {
+  return (
+    <Banner tone="warning">
+      <div>
+        <p className="banner-heading">Enter these to see your results:</p>
+        <ul className="banner-list">
+          {missing.map((missingInput) => {
+            const targetStep = steps.find(
+              (candidate) => candidate.id === missingInputSteps[missingInput.field],
+            )!;
+
+            return (
+              <li key={missingInput.label}>
+                <Link to={targetStep.path}>
+                  {missingInput.label} → {targetStep.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </Banner>
+  );
+}
+
+/**
+ * Joins the FI number's working with the extra lines that carry it forward
+ * to the retirement age (FIRE-1). The projection's own first line ("FI number
+ * today") repeats the "= FI number" line that ends the first breakdown, so it
+ * is left out.
+ */
+function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explained): Explained {
+  return { ...fiNumber, lines: [...fiNumber.lines, ...atRetirement.lines.slice(1)] };
+}
 
 /**
  * The Results step (FIRE-1, FIRE-2): the FI number and progress to FI, each
@@ -23,17 +66,12 @@ export function ResultsScreen() {
   return (
     <StepPage
       step={step}
-      intro="Your FI number: how much you need invested to fund your retirement, and how far along you are."
+      intro="Your FI number: how much you need invested to fund your retirement, when you could reach it, and how far along you are."
     >
       <div className="results-stack">
         {summary.status === "complete" ? (
           <>
-            <MetricTile
-              label="FI number"
-              value={formatDollars(summary.fiNumber.value)}
-              subLine={`${formatDollars(summary.retirementSpending.value)}/yr ÷ ${formatPercent(summary.safeWithdrawalRate)}`}
-              explanation={summary.fiNumber}
-            />
+            <FiNumberTile summary={summary} />
 
             <MetricTile
               label="Progress to FI"
@@ -41,35 +79,89 @@ export function ResultsScreen() {
               subLine={`${formatDollars(summary.investable.value)} invested of ${formatDollars(summary.fiNumber.value)}`}
               explanation={summary.progressToFi}
             />
+
+            {summary.projection.status === "complete" ? (
+              <FiReachedTile projection={summary.projection} />
+            ) : (
+              <MissingInputsBanner missing={summary.projection.missing} />
+            )}
           </>
         ) : (
-          <Banner tone="warning">
-            <div>
-              <p className="banner-heading">Enter these to see your results:</p>
-              <ul className="banner-list">
-                {summary.missing.map((missingInput) => {
-                  const targetStep = steps.find(
-                    (candidate) => candidate.id === missingInputSteps[missingInput.field],
-                  )!;
-
-                  return (
-                    <li key={missingInput.field}>
-                      <Link to={targetStep.path}>
-                        {missingInput.label} → {targetStep.label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </Banner>
+          <MissingInputsBanner missing={summary.missing} />
         )}
 
         <Banner tone="info">
-          Not yet modelled: growth over time and retirement age (M2), super (M5), tax (M8), property
-          (M12) and more. These figures use today&apos;s spending and today&apos;s portfolio only.
+          Not yet modelled: withdrawals in retirement and when money runs out (M3), super (M5), tax
+          (M8), property (M12) and more.
         </Banner>
       </div>
     </StepPage>
+  );
+}
+
+/** The complete variant of the plan summary, as ResultsScreen receives it. */
+type CompleteSummary = Extract<ReturnType<typeof usePlanSummary>, { status: "complete" }>;
+
+/**
+ * The FI number tile: today's-dollar figure with its calculation. When the
+ * projection is complete it gains a second sub-line with the nominal figure
+ * at the target retirement age (FIRE-1), always in nominal dollars (it does
+ * not follow the today's/nominal toggle), and the working for it.
+ */
+function FiNumberTile({ summary }: { readonly summary: CompleteSummary }) {
+  const { projection } = summary;
+  const todaySubLine = `${formatDollars(summary.retirementSpending.value)}/yr ÷ ${formatPercent(summary.safeWithdrawalRate)}`;
+
+  if (projection.status !== "complete") {
+    return (
+      <MetricTile
+        label="FI number"
+        value={formatDollars(summary.fiNumber.value)}
+        subLine={todaySubLine}
+        explanation={summary.fiNumber}
+      />
+    );
+  }
+
+  const atRetirementLine = `${formatDollars(projection.fiNumberAtRetirement.value)} at age ${projection.retirementAge} (${projection.retirementYear})`;
+
+  return (
+    <MetricTile
+      label="FI number"
+      value={formatDollars(summary.fiNumber.value)}
+      subLine={[todaySubLine, atRetirementLine]}
+      explanation={combineFiNumberExplanations(summary.fiNumber, projection.fiNumberAtRetirement)}
+    />
+  );
+}
+
+/**
+ * The "FI reached" tile (OUT-4): the year the projected balance first meets
+ * that year's FI number, or a note that it doesn't by the end of the projection.
+ */
+function FiReachedTile({
+  projection,
+}: {
+  readonly projection: Extract<CompleteSummary["projection"], { status: "complete" }>;
+}) {
+  const { fiReached } = projection;
+
+  if (fiReached === undefined) {
+    return (
+      <MetricTile
+        label="FI reached"
+        value={`Not by age ${MAX_PROJECTION_AGE}`}
+        subLine="With today's inputs and no withdrawals"
+      />
+    );
+  }
+
+  return (
+    <MetricTile
+      label="FI reached"
+      value={String(fiReached.calendarYear)}
+      subLine={`Age ${fiReached.age}`}
+      explanation={fiReached.explanation}
+    />
   );
 }

@@ -44,4 +44,11 @@ describe("MetricTile", () => {
     await user.click(button);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("stacks several sub-lines", () => {
+    render(<MetricTile label="FI number" value="$1" subLine={["First line", "Second line"]} />);
+
+    expect(screen.getByText("First line")).toBeInTheDocument();
+    expect(screen.getByText("Second line")).toBeInTheDocument();
+  });
 });

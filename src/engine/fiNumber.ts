@@ -34,6 +34,10 @@ export type ProjectionSummary =
       readonly fiReached?: FiMilestone;
       /** The FI number in nominal dollars at the target retirement age (FIRE-1). */
       readonly fiNumberAtRetirement: Explained;
+      /** The target retirement age, so screens needn't look it up. */
+      readonly retirementAge: number;
+      /** The calendar year the target retirement age is reached: start year + (retirement age − current age). */
+      readonly retirementYear: number;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -271,6 +275,8 @@ function summariseProjection(
   );
 
   const fiReached = findFiReached(rows);
+  const retirementAge = projectionInputs.targetRetirementAge.value;
+  const yearsUntilRetirement = retirementAge - projectionInputs.currentAge.value;
 
   return {
     status: "complete",
@@ -279,8 +285,10 @@ function summariseProjection(
     fiNumberAtRetirement: calculateFiNumberAtRetirement(
       fiNumberToday,
       projectionInputs.inflationRate.value,
-      projectionInputs.targetRetirementAge.value - projectionInputs.currentAge.value,
+      yearsUntilRetirement,
     ),
+    retirementAge,
+    retirementYear: startYear + yearsUntilRetirement,
   };
 }
 

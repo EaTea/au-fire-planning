@@ -1485,7 +1485,7 @@ app still works.
 
 #### Step 6 · Results: nominal FI number and FI year
 
-- [ ] Done
+- [x] Done
 
 1. On Results, when the projection is complete:
    - **FI number tile:** add a second sub-line, "{nominal} at age {retirement
@@ -1504,6 +1504,11 @@ app still works.
    using worked example A for the values.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+**As built:** the `complete` variant of `ProjectionSummary` also carries
+`retirementAge: number` and `retirementYear: number` (start year + retirement
+age − current age), so screens never derive them. Results reads them from
+the summary.
 
 #### Step 7 · Year by year
 

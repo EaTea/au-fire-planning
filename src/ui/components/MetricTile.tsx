@@ -8,8 +8,8 @@ interface MetricTileProps {
   readonly label: string;
   /** The already-formatted headline value, e.g. "$1,600,000". */
   readonly value: string;
-  /** A short line under the value, e.g. "Spending ÷ withdrawal rate". */
-  readonly subLine?: string;
+  /** A short line under the value, e.g. "Spending ÷ withdrawal rate"; several lines are stacked. */
+  readonly subLine?: string | readonly string[];
   /** If given, a "How is this calculated?" button reveals this breakdown. */
   readonly explanation?: Explained;
 }
@@ -21,13 +21,18 @@ interface MetricTileProps {
  */
 export function MetricTile({ label, value, subLine, explanation }: MetricTileProps) {
   const panelId = useId();
+  const subLines = subLine === undefined ? [] : [subLine].flat();
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
   return (
     <div className="metric">
       <div className="label">{label}</div>
       <div className="value">{value}</div>
-      {subLine !== undefined && <div className="sub">{subLine}</div>}
+      {subLines.map((line) => (
+        <div className="sub" key={line}>
+          {line}
+        </div>
+      ))}
 
       {explanation !== undefined && (
         <>
