@@ -301,3 +301,19 @@ body {
 .explain-panel td:first-child {
   text-align: left;
 }
+
+/* Results page: tiles and banners stacked with a gap between them. */
+.results-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+}
+
+.banner-heading {
+  margin: 0 0 4px;
+}
+
+.banner-list {
+  margin: 0;
+  padding-left: 18px;
+}

@@ -19,6 +19,8 @@ export type PlanSummary =
       readonly fiNumber: Explained;
       readonly progressToFi: Explained;
       readonly investable: Explained;
+      readonly retirementSpending: Explained;
+      readonly safeWithdrawalRate: number;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -158,6 +160,10 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  * The M1 entry point: resolves the plan's inputs, then calculates the FI
  * number, the investable amount and progress to FI.
  *
+ * On success it also returns the retirement spending and the resolved safe
+ * withdrawal rate, so the UI can show them without digging into breakdown
+ * lines.
+ *
  * Returns `incomplete` (naming what is missing) rather than guessing when
  * required inputs are absent or retirement spending is not above $0. The investable amount is the sum of the
  * portfolios' values, ready for more portfolios in later milestones.
@@ -190,7 +196,14 @@ export function summarisePlan(plan: Plan): PlanSummary {
   const investable = sumPortfolios(inputs.portfolios);
   const progressToFi = calculateProgressToFi(investable, fiNumber);
 
-  return { status: "complete", fiNumber, progressToFi, investable };
+  return {
+    status: "complete",
+    fiNumber,
+    progressToFi,
+    investable,
+    retirementSpending: spending,
+    safeWithdrawalRate: inputs.safeWithdrawalRate.value,
+  };
 }
 
 /**

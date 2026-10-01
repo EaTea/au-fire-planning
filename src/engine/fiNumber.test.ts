@@ -140,6 +140,8 @@ describe("summarisePlan", () => {
     expect(summary.fiNumber.value).toBeCloseTo(1_600_000, 2);
     expect(summary.progressToFi.value).toBeCloseTo(0.45, 10);
     expect(summary.investable.value).toBe(720000);
+    expect(summary.retirementSpending.value).toBe(64000);
+    expect(summary.safeWithdrawalRate).toBe(0.04);
   });
 
   // 90% of $60,000 = $54,000, so $1,350,000 at 4%.

@@ -1211,7 +1211,8 @@ interface ExplanationLine {
 }
 type PlanSummary =
   | { readonly status: "complete"; readonly fiNumber: Explained; readonly progressToFi: Explained;
-      readonly investable: Explained }
+      readonly investable: Explained; readonly retirementSpending: Explained;
+      readonly safeWithdrawalRate: number }  // the last two feed the FI number's sub-line
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 interface MissingInput { readonly field: "livingExpenses" | "retirementSpending"; readonly label: string }
 // The engine names the missing field. The UI maps each field to the step where it is entered.
@@ -1441,11 +1442,13 @@ input, and values survive moving between steps (but not a reload yet).
 
 #### Step 5 · Results: FI number and progress
 
-- [ ] Done
+- [x] Done
 
 1. `src/ui/screens/ResultsScreen.tsx`, using `usePlanSummary()`:
    - **complete:** two `MetricTile`s. "FI number" (FIRE-1): value, then a
-     sub-line "{retirement spending}/yr ÷ {rate}". "Progress to FI"
+     sub-line "{retirement spending}/yr ÷ {rate}", read from the summary's
+     `retirementSpending` and `safeWithdrawalRate` (not from explanation line
+     positions, which may change). "Progress to FI"
      (FIRE-2): value, then a sub-line "{investable} invested of
      {FI number}". Each has its `ExplainPanel`.
    - **incomplete:** a `Banner` listing what's missing, each item a link to

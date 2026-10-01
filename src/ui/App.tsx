@@ -8,12 +8,14 @@ import { AssetsScreen } from "./screens/AssetsScreen";
 import { AssumptionsScreen } from "./screens/AssumptionsScreen";
 import { IncomeExpensesScreen } from "./screens/IncomeExpensesScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { ResultsScreen } from "./screens/ResultsScreen";
 
 /** The steps that have a real screen; every other step still shows a placeholder. */
 const realScreens: Partial<Record<StepId, ReactElement>> = {
   "income-expenses": <IncomeExpensesScreen />,
   assets: <AssetsScreen />,
   assumptions: <AssumptionsScreen />,
+  results: <ResultsScreen />,
 };
 
 /**
