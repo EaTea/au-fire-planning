@@ -620,7 +620,10 @@ These come straight from the requirements and mockups:
 | Tooling | **Node 22 LTS**, npm, ESLint, Prettier, TypeScript type-checking | Standard, and already available in this environment. | pnpm/yarn: no need yet. |
 
 Library versions are pinned in M0. Current majors at the time of writing:
-React 19, Vite 8, Recharts 3, Zod 4, TypeScript 7, Vitest 5, Playwright 1.63.
+React 19, Vite 8, Recharts 3, Zod 4, TypeScript 6.0, Vitest 5, Playwright 1.63.
+TypeScript stays on 6.0 rather than the newer 7.x: typescript-eslint, which
+gives ESLint its type-aware rules, supports TypeScript below 6.1 only.
+Move to 7.x once typescript-eslint supports it.
 
 ### Architecture
 
