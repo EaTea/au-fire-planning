@@ -1568,7 +1568,7 @@ how to run or test the app, it updates the README in that step.
 ### Colour scheme: Australian flag
 
 **Status:** plan agreed in chat with the owner (navy pages chosen over
-light pages). Being implemented.
+light pages). Implemented; awaiting the owner's verification.
 
 **Kind:** behavior change. Only the app's appearance changes. The layout,
 navigation and content stay the same.
@@ -1630,11 +1630,13 @@ white text and a near-black header.
   fails.
 - **Check:** `npm run check` passes.
 
-#### Step 2 · Apply the scheme to the app shell
+#### Step 2 · Apply the scheme to the app shell: done
 
 - Change `app.css` to use the role variables: the near-black header with a
   red underline, red for the current step, the navy page and white text.
-  Remove the greyscale variables from `tokens.css`.
+  Remove the greyscale variables from `tokens.css`. Links get a white
+  keyboard-focus outline, since the browser's default blue ring disappears
+  on navy.
 - Add an E2E test that checks the page background is navy and the current
   step pill is red. This makes sure the stylesheet is actually loaded and
   applied in the production build.
@@ -1659,4 +1661,4 @@ white text and a near-black header.
 - [ ] Approve the M1 step-by-step plan (this PR).
 - [ ] Implement M1 (subagent, step by step), then open the M1 PR for verification.
 - [ ] Approve the colour scheme plan (this PR).
-- [ ] Implement the colour scheme (steps 1 and 2), one PR.
+- [x] Implement the colour scheme (steps 1 and 2), one PR.

@@ -60,17 +60,6 @@
   --colour-accent: var(--flag-red);
   --colour-on-accent: var(--flag-white);
 
-  /* ---------- M0 greyscale wireframe colours (removed in step 2) ---------- */
-
-  --ink: #222;
-  --ink-soft: #666;
-  --ink-faint: #999;
-  --line: #bbb;
-  --line-soft: #ddd;
-  --fill: #f2f2f2;
-  --fill-dark: #d9d9d9;
-  --paper: #fff;
-
   /* ---------- Type and spacing ---------- */
 
   --font-body: "Helvetica Neue", Arial, sans-serif;

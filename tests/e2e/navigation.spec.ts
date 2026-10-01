@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// End-to-end tests for the M0 walking skeleton: the header, the seven-step
-// navigation and the placeholder pages, driven through a real browser against
-// the production build (see playwright.config.ts).
+// End-to-end tests for the M0 walking skeleton (the header, the seven-step
+// navigation and the placeholder pages) and the colour scheme, driven through
+// a real browser against the production build (see playwright.config.ts).
 
 /** The seven steps in journey order, matching src/ui/navigation/steps.ts. */
 const stepLabels = [
@@ -91,4 +91,20 @@ test("no errors are logged to the browser console on any page", async ({ page })
   }
 
   expect(browserErrors).toEqual([]);
+});
+
+// The colour scheme (see "Colour scheme: Australian flag" in PLAN.md). Checks
+// the stylesheets are loaded in the production build and the flag colours
+// reach the page, which unit tests of tokens.css alone can't show.
+test("the app uses the Australian flag colours: navy page and red current step", async ({
+  page,
+}) => {
+  await page.goto("./");
+
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(1, 33, 105)");
+  await expect(page.locator("body")).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(page.getByRole("navigation", { name: "Steps" }).locator("[aria-current]")).toHaveCSS(
+    "background-color",
+    "rgb(228, 0, 43)",
+  );
 });

@@ -1,7 +1,8 @@
 /*
  * Layout styles for the app shell: header, step pills, page and footer.
- * Values follow the mockups (requirements/mockups/src/wireframe.css); colours
- * and spacing come from tokens.css.
+ * Sizes follow the mockups (requirements/mockups/src/wireframe.css). Colours
+ * are the Australian-flag scheme's role variables and spacing comes from
+ * tokens.css; only role variables are used here, never palette ones.
  */
 
 * {
@@ -10,9 +11,9 @@
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: var(--colour-page-background);
   font: 14px/1.4 var(--font-body);
-  color: var(--ink);
+  color: var(--colour-text);
 }
 
 /* ---------- Header and step navigation ---------- */
@@ -22,12 +23,14 @@ body {
   align-items: center;
   gap: var(--space-large);
   padding: 14px var(--space-page-side);
-  border-bottom: 2px solid var(--ink);
+  background: var(--colour-header-background);
+  /* The red stripe separates the near-black header from the navy page. */
+  border-bottom: 3px solid var(--colour-accent);
 }
 
 .logo {
   font-weight: 700;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--colour-border-strong);
   padding: var(--space-small) 10px;
   white-space: nowrap;
 }
@@ -41,17 +44,17 @@ body {
 
 .step-pill {
   padding: var(--space-small) var(--space-medium);
-  border: 1px solid var(--line);
+  border: 1px solid var(--colour-border);
   border-radius: 16px;
-  color: var(--ink-soft);
+  color: var(--colour-text-muted);
   font-size: 13px;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .step-pill:hover {
-  background: var(--fill);
-  color: var(--ink);
+  background: var(--colour-surface-raised);
+  color: var(--colour-text);
 }
 
 .step-number {
@@ -59,12 +62,12 @@ body {
   margin-right: 4px;
 }
 
-/* The current step is filled. */
+/* The current step is filled red, the flag's accent colour. */
 .step-active,
 .step-active:hover {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
+  background: var(--colour-accent);
+  color: var(--colour-on-accent);
+  border-color: var(--colour-accent);
 }
 
 /* ---------- Page layout ---------- */
@@ -79,16 +82,16 @@ body {
 }
 
 .page-intro {
-  color: var(--ink-soft);
+  color: var(--colour-text-muted);
   margin: 0 0 20px;
   max-width: 900px;
 }
 
 .placeholder-note {
-  border: 1.5px dashed var(--line);
+  border: 1.5px dashed var(--colour-border);
   border-radius: 6px;
   padding: 16px 18px;
-  color: var(--ink-faint);
+  color: var(--colour-text-faint);
 }
 
 /* Back on the left, Next on the right (the Next link alone still sits right). */
@@ -97,21 +100,29 @@ body {
   justify-content: space-between;
   margin-top: var(--space-large);
   padding-top: var(--space-medium);
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--colour-border-soft);
 }
 
 .footer-link {
-  color: var(--ink);
+  color: var(--colour-text);
   text-decoration: none;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid var(--colour-border-strong);
   border-radius: 4px;
   padding: 7px 14px;
 }
 
 .footer-link:hover {
-  background: var(--fill);
+  background: var(--colour-surface-raised);
 }
 
 .footer-next {
   margin-left: auto;
+}
+
+/* ---------- Keyboard focus ---------- */
+
+/* The browser's default focus ring is dark blue, which disappears on navy. */
+a:focus-visible {
+  outline: 2px solid var(--colour-border-strong);
+  outline-offset: 2px;
 }
