@@ -64,3 +64,17 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e
 
 `npm run check` (which does not include the end-to-end tests) must pass before
 every commit.
+
+## Continuous integration
+
+Every pull request (and any manual run from the Actions tab) runs
+`.github/workflows/ci.yml`, which has two jobs that run in parallel:
+
+- **check**: `npm ci` then `npm run check` (type-check, lint, format check and
+  unit/component tests).
+- **e2e**: `npm ci`, installs Chromium with
+  `npx playwright install --with-deps chromium`, then `npm run test:e2e`. If
+  it fails, the Playwright HTML report and `test-results/` are uploaded as the
+  `playwright-report` artifact.
+
+A new push to the same branch cancels the run still in progress for it.

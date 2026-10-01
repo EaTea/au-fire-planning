@@ -1347,7 +1347,7 @@ all E2E tests pass, and `npm run check` still passes.
 
 #### Step 6 · Continuous integration on every PR
 
-- [ ] Done
+- [x] Done
 
 1. Add `.github/workflows/ci.yml`:
    - runs on `pull_request` and `workflow_dispatch`, and cancels in-progress

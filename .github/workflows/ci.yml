@@ -1,0 +1,71 @@
+# Continuous integration: runs on every pull request (and on demand).
+#
+#   pull_request --+--> check : type-check, lint, format check, unit tests
+#                  |
+#                  +--> e2e   : Playwright tests in a real Chromium
+#
+# The two jobs are independent and run in parallel, so a failure in one does
+# not hide a failure in the other.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# The workflows only read the repository; they never need to write to it.
+permissions:
+  contents: read
+
+# A new push to the same branch makes the previous run obsolete, so cancel it
+# rather than queueing up stale runs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast checks that need no browser: the same command developers run before
+  # every commit.
+  check:
+    name: Type-check, lint, format and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+  # End-to-end tests against the production build, driven in Chromium.
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Downloads Chromium plus the system libraries it needs on the runner.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      # Keep the HTML report and traces so a failing run can be diagnosed.
+      - name: Upload Playwright report and test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
