@@ -8,8 +8,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 | Part | Contents | Status |
 | --- | --- | --- |
-| 1 | Order in which the requirements are delivered (this document) | Agreed |
-| 2 | Tech stack, architecture and testing approach | Not started |
+| 1 | Order in which the requirements are delivered | Agreed |
+| 2 | Tech stack, architecture and testing approach | In review |
 | 3 | Step-by-step plan for the first milestone (M0) | Not started |
 
 ## 1. Requirement ordering
@@ -585,14 +585,155 @@ Agreed in review of part 1:
 3. **The MVP line is M14**, the end of Phase 1. Scenarios (M16) stay in
    Phase 2.
 
-### Open questions
+## 2. Tech stack, architecture and testing
 
-1. **Tech stack.** M0 depends on it. It will be proposed in part 2 of this
-   plan, in its own PR.
+### Constraints that drive the choices
 
-### Next steps
+These come straight from the requirements and mockups:
 
-- [x] Review and agree this ordering.
-- [ ] Part 2: tech stack, architecture and testing approach (separate PR).
+- **The data never leaves the device** (NFR-4, and the §10 non-goal of no
+  backup or sync). So there is no server: every calculation runs on the
+  user's own machine.
+- **Desktop web first** (mockups), with mobile later (BL-6).
+- **Deterministic, traceable calculations** (NFR-1, NFR-2) that can be
+  tested against independently checked worked examples (NFR-6).
+- **Statutory rules stored as dated data** (NFR-3), not in code.
+- **Charts with hover and click** (FIRE-7, COAST-6, mockup conventions), and
+  tables that are edited in place.
+- **CLAUDE.md rule 6:** separate wire types and internal types, with
+  explicit mapping functions at every boundary.
+
+### Proposed stack
+
+| Concern | Choice | Why | Alternatives considered |
+| --- | --- | --- | --- |
+| App type | **Client-only single-page web app**, built to static files | No server means no place for data to leak to (NFR-4). Runs locally with one command and can be hosted as plain static files. | Python/FastAPI backend: needs a server holding financial data. Electron/Tauri desktop app: heavier to build and test. It can wrap the same web app later if needed. |
+| Language | **TypeScript** (strict mode) | Types catch unit and shape mistakes in a calculation-heavy codebase. The same language for engine and UI. | Python engine compiled to WebAssembly (Pyodide): slow start, two languages. |
+| UI | **React** with **Vite** | Mature and widely known, with the largest ecosystem for charts and testing. Vite gives fast builds and a simple static output. | Svelte/SvelteKit: lighter, but a smaller ecosystem. Vue: comparable, no strong reason to prefer it. |
+| Charts | **Recharts** | Line, stacked area and bar charts, reference lines and tooltips cover every chart in the mockups (FIRE-7, COAST-6, sensitivity) without hand-written D3. | D3 directly: most flexible but most code. Chart.js: canvas-based, harder to test and annotate. Observable Plot: good, but less interactive out of the box. |
+| App state | **React state with a reducer** around a single `Plan` | The whole app is one plan document plus derived results. A reducer keeps every edit explicit, which makes undo (mockup 05b) straightforward later. | Redux/Zustand: more machinery than one document needs. Can be adopted later if state grows. |
+| Validation at boundaries | **Zod** | Parses and validates the wire formats (saved plans, rules data) before mapping them to internal types. | Hand-written validators: more code, easy to miss a field. |
+| Storage | **Browser storage** (IndexedDB, via a small wrapper) | Keeps the plan on the device (NFR-4) with no server. A versioned wire format allows future migrations. | localStorage: simpler but size-limited and synchronous. Files only: safest against data loss, but clunkier for everyday use (see open question 2). |
+| Money arithmetic | **JavaScript numbers (64-bit floats)**, rounded to cents only for display and comparison | A projection compounds rates over decades, so the model is approximate by nature, and floats are deterministic in JavaScript (NFR-2). Tests compare to the cent. | Decimal library (decimal.js): exact cents but slower and noisier code, with no real accuracy gain for a projection. |
+| Tooling | **Node 22 LTS**, npm, ESLint, Prettier, TypeScript type-checking | Standard, and already available in this environment. | pnpm/yarn: no need yet. |
+
+Library versions are pinned in M0. Current majors at the time of writing:
+React 19, Vite 8, Recharts 3, Zod 4, TypeScript 7, Vitest 5, Playwright 1.63.
+
+### Architecture
+
+The core idea: a **pure calculation engine** that knows nothing about the
+UI or storage. It takes a plan and a rule set and returns a projection. Everything else is plumbing around it.
+
+```
+ ┌──────────────────────────── Browser ─────────────────────────────┐
+ │                                                                  │
+ │  UI (React)            screens 01–07 + 05b, one per mockup       │
+ │    │  ▲                                                          │
+ │    │  │ view models: formatted figures, chart series,            │
+ │    │  │ today's ↔ nominal conversion (OUT-2)                     │
+ │    ▼  │                                                          │
+ │  Plan state (reducer) ──────────► Engine (pure TypeScript)       │
+ │    │  ▲                            plan + rules → projection     │
+ │    │  │                            + explanations (NFR-1)        │
+ │    │  │                                 ▲                        │
+ │    ▼  │                                 │                        │
+ │  Persistence                       Rules                         │
+ │  PlanFile (wire) ⇄ Plan            RulesFile (wire) ⇄ RuleSet    │
+ │    │  ▲                            dated data per FY (NFR-3)     │
+ │    ▼  │                                                          │
+ │  IndexedDB (this device only, NFR-4)                             │
+ └──────────────────────────────────────────────────────────────────┘
+```
+
+**Engine** (`src/engine/`)
+- One entry point: `project(plan, ruleSet, startYear) → Projection`.
+  `startYear` is passed in rather than read from the clock, so the same
+  inputs always give the same result (NFR-2).
+- A year-by-year loop. Each year applies, in a fixed and documented order:
+  income → contributions → growth → tax → spending and withdrawals →
+  shortfall check. Each milestone adds its own step (super in M5, tax in
+  M8, property in M12, and so on) without changing the others.
+- Headline figures (FI number, FI age, Coast FIRE number and more) are
+  derived from the projection by small, separately tested functions.
+- **Explanations (NFR-1):** each headline figure and each year's key
+  amounts carry a structured breakdown (label, value, the inputs and rules
+  it came from). The UI renders these as the "how was this calculated?"
+  panels in the mockups.
+- No React, no storage, no dates from the clock. That keeps it fast to
+  test and reusable, e.g. for scenarios (OUT-5) and sensitivity runs
+  (OUT-6), which are just repeated engine calls with changed inputs.
+
+**Internal and wire types** (CLAUDE.md rule 6)
+
+| Boundary | Wire type | Internal type | Mapping |
+| --- | --- | --- | --- |
+| Saved plan in IndexedDB, later export (OUT-7) | `PlanFileV1` (versioned JSON, validated with Zod) | `Plan` | `planFromWire` / `planToWire`, plus migrations between versions |
+| Statutory rules data | `RulesFile` (JSON per financial year, validated with Zod) | `RuleSet` | `ruleSetFromWire` |
+| Engine output to UI | none: stays in memory | `Projection` → view models | Formatting functions in the UI layer |
+
+**Rules data** (`src/rules/data/`): one JSON file per financial year, e.g.
+`fy2025-26.json`, holding brackets, caps, rates and minimum drawdowns, with
+the date each takes effect. Years after the latest file use the latest
+known rules, indexed where the law says so. Updating rules for a new year
+means adding a file, not changing the engine.
+
+**UI** (`src/ui/`): one folder per mockup screen, plus shared pieces
+matching the mockup conventions: the step navigation, editable tables,
+the growth-rate dropdown, charts with hover tooltips, and the
+today's/nominal toggle.
+
+**Proposed layout**
+
+```
+src/
+  engine/        pure calculations: project(), FI and Coast FIRE metrics
+  rules/         RuleSet types, wire parsing, data/fy*.json
+  plan/          Plan types, reducer, defaults
+  persistence/   PlanFile wire types, migrations, IndexedDB store
+  ui/            screens/ (one per mockup) and components/
+tests/
+  worked-examples/   NFR-6 fixtures: inputs, expected outputs, how checked
+  e2e/               Playwright user flows
+```
+
+### Testing approach
+
+| Layer | Tool | What it covers |
+| --- | --- | --- |
+| Engine unit tests | **Vitest** | Every calculation, using small hand-checked cases |
+| Worked examples (NFR-6) | **Vitest** + fixtures in `tests/worked-examples/` | Whole-plan scenarios. Each fixture records its inputs, the expected key figures, and how they were independently checked (e.g. spreadsheet, ATO calculator, hand calculation), so reviewers can verify them |
+| Invariants | **fast-check** (property-based tests) | Rules that must hold for any input: same inputs give the same projection; converting to today's dollars and back is lossless; balances only go negative in years flagged as shortfalls; zero inflation makes today's and nominal dollars equal |
+| Wire mapping | **Vitest** | Round trips `Plan → PlanFileV1 → Plan`, rejection of malformed files, migrations between versions |
+| UI components | **Vitest** + **React Testing Library** | Editable table rows, dropdowns, toggles, showing an explanation |
+| End-to-end | **Playwright** (Chromium) | Real user flows in a real browser: each milestone adds or extends a flow, e.g. M1 "enter spending and a portfolio, see the FI number" |
+| Static checks | **TypeScript**, **ESLint**, **Prettier** | Types, lint and formatting, all run before every commit |
+
+**Continuous integration:** a GitHub Actions workflow runs the static
+checks, unit tests and Playwright E2E tests on every PR. It is added in M0,
+so every milestone PR is checked the same way.
+
+**Per-commit checklist:** `npm run check` runs type-checking, lint,
+formatting and unit tests. `npm run test:e2e` runs the browser tests. Both
+must pass before any commit is proposed (CLAUDE.md rule 4).
+
+## Open questions
+
+1. **Hosting.** The app is static files, so it can run locally
+   (`npm run dev` / `npm run preview`) or be hosted on any static host,
+   e.g. GitHub Pages. Hosting wouldn't send any data anywhere, because
+   everything runs in the browser. Local-only for now, or set up GitHub
+   Pages early?
+2. **Protecting against lost data.** Browser storage can be wiped when a
+   user clears their browsing data. Should a simple "save to file / open
+   file" (a slice of OUT-7, which is a Could in M22) move into M1? Files
+   stay on the device, so this keeps NFR-4 and the no-sync non-goal.
+3. **CI in M0.** Is a GitHub Actions workflow on every PR wanted from the
+   start?
+
+## Next steps
+
+- [x] Part 1: agree the requirement ordering.
+- [ ] Part 2: agree the tech stack, architecture and testing approach (this PR).
 - [ ] Part 3: step-by-step plan for M0 (separate PR).
 - [ ] Start implementation with M0, once parts 1–3 are agreed.
