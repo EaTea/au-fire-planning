@@ -25,6 +25,8 @@ const realScreens: Partial<Record<StepId, ReactElement>> = {
 interface AppProps {
   /** Where the plan is stored. Omitted in the real app (browser storage); component tests pass an in-memory store. */
   readonly openStore?: () => Promise<PlanStore>;
+  /** Calendar year of today in the projection. Omitted in the real app (the clock is used); tests fix it, e.g. 2026. */
+  readonly startYear?: number;
 }
 
 /**
@@ -36,9 +38,9 @@ interface AppProps {
  * so every screen can read and edit the plan, and the persistence provider
  * (inside it) loads the saved plan and autosaves edits.
  */
-export function App({ openStore }: AppProps) {
+export function App({ openStore, startYear }: AppProps) {
   return (
-    <PlanProvider>
+    <PlanProvider startYear={startYear}>
       <PersistenceProvider openStore={openStore}>
         <HashRouter>
           <AppShell>

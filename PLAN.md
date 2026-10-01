@@ -1397,7 +1397,7 @@ app still works.
 
 #### Step 2 · Plan state
 
-- [ ] Done
+- [x] Done
 
 1. Add reducer actions, each with an `undefined` payload clearing the value
    back to its default:

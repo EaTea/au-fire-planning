@@ -29,6 +29,19 @@ function PlanProbe() {
       <p data-testid="progress">
         {summary.status === "complete" ? summary.progressToFi.value : "none"}
       </p>
+      <p data-testid="fi-year">
+        {summary.status === "complete" && summary.projection.status === "complete"
+          ? (summary.projection.rows[0]?.calendarYear ?? "none")
+          : "none"}
+      </p>
+      <button
+        onClick={() => {
+          dispatch({ type: "setCurrentAge", personId: "person-1", age: 34 });
+          dispatch({ type: "setTargetRetirementAge", personId: "person-1", age: 50 });
+        }}
+      >
+        ages
+      </button>
       <button onClick={() => dispatch({ type: "setLivingExpenses", annual: 64000 })}>living</button>
       <button
         onClick={() =>
@@ -70,6 +83,37 @@ describe("PlanProvider", () => {
     expect(screen.getByTestId("status")).toHaveTextContent("complete");
     expect(screen.getByTestId("fi-number")).toHaveTextContent("1600000");
     expect(screen.getByTestId("progress")).toHaveTextContent("0.45");
+  });
+
+  // The projection appears once the ages are entered, and row 0 uses the start year given.
+  it("adds a projection starting at the given start year once ages are entered", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanProvider initialPlan={blankPlan} startYear={2026}>
+        <PlanProbe />
+      </PlanProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "living" }));
+    expect(screen.getByTestId("fi-year")).toHaveTextContent("none");
+
+    await user.click(screen.getByRole("button", { name: "ages" }));
+    expect(screen.getByTestId("fi-year")).toHaveTextContent("2026");
+  });
+
+  // Without a start year the clock supplies the current calendar year.
+  it("defaults the start year to the current calendar year", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanProvider initialPlan={blankPlan}>
+        <PlanProbe />
+      </PlanProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "living" }));
+    await user.click(screen.getByRole("button", { name: "ages" }));
+
+    expect(screen.getByTestId("fi-year")).toHaveTextContent(String(new Date().getFullYear()));
   });
 
   // Without initialPlan the provider builds a blank plan (one portfolio, nothing entered).

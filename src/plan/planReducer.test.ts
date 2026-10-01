@@ -133,4 +133,66 @@ describe("planReducer", () => {
     expect(after).not.toBe(before);
     expect(before).toEqual(snapshot);
   });
+
+  // Each person action sets its field on the named person, and `undefined` clears it.
+  it.each([
+    ["setCurrentAge", "currentAge"],
+    ["setTargetRetirementAge", "targetRetirementAge"],
+  ] as const)("%s sets and clears %s on the named person", (type, field) => {
+    const set = planReducer(buildBlankPlan(), { type, personId: "person-1", age: 34 });
+    expect(set.household.people[0]?.[field]).toBe(34);
+
+    const cleared = planReducer(set, { type, personId: "person-1" });
+    expect(cleared.household.people[0]?.[field]).toBeUndefined();
+  });
+
+  // An unknown person id changes nothing.
+  it("ignores an age for a person that doesn't exist", () => {
+    const blank = buildBlankPlan();
+
+    expect(planReducer(blank, { type: "setCurrentAge", personId: "nobody", age: 34 })).toEqual(
+      blank,
+    );
+  });
+
+  // Inflation lives in assumptions; undefined clears it.
+  it("sets and clears the inflation rate", () => {
+    const set = planReducer(buildBlankPlan(), { type: "setInflationRate", rate: 0.03 });
+    expect(set.assumptions.inflationRate).toBe(0.03);
+
+    expect(
+      planReducer(set, { type: "setInflationRate" }).assumptions.inflationRate,
+    ).toBeUndefined();
+  });
+
+  // Each portfolio action sets its field on the named portfolio, and `undefined` clears it.
+  it.each([
+    [{ type: "setExpectedReturn", portfolioId: "portfolio-1", rate: 0.05 }, "expectedReturn", 0.05],
+    [
+      { type: "setAnnualContribution", portfolioId: "portfolio-1", annual: 12000 },
+      "annualContribution",
+      12000,
+    ],
+    [
+      { type: "setContributionsStopAge", portfolioId: "portfolio-1", age: 45 },
+      "contributionsStopAge",
+      45,
+    ],
+  ] as const)("%j sets %s, and clearing resets it", (action, field, expected) => {
+    const set = planReducer(buildBlankPlan(), action);
+    expect(set.portfolios[0]?.[field]).toBe(expected);
+
+    const { type, portfolioId } = action;
+    const cleared = planReducer(set, { type, portfolioId });
+    expect(cleared.portfolios[0]?.[field]).toBeUndefined();
+  });
+
+  // An unknown portfolio id changes nothing.
+  it("ignores growth settings for a portfolio that doesn't exist", () => {
+    const blank = buildBlankPlan();
+
+    expect(
+      planReducer(blank, { type: "setExpectedReturn", portfolioId: "nothing", rate: 0.05 }),
+    ).toEqual(blank);
+  });
 });
