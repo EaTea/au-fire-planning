@@ -21,11 +21,12 @@ Everything is calculated in your browser and saved only on your device.
   with a "How is this calculated?" breakdown. A chart of investable net worth
   against the FI number, in today's or nominal dollars, marks the FI year and
   retirement and shades any years that can't be funded; hover for the values,
-  or click a year to see it in Year by year.
-- **Year by year:** the projection of cash and the portfolio, one row per year
-  to the plan-until age, in today's or nominal dollars. Retirement spending is
-  drawn from cash first, then the portfolio. The year FI is reached is
-  highlighted, and years that can't be funded are flagged.
+  or click a year to jump to it in the table below.
+- **Results, year by year:** at the bottom of Results, the projection of cash
+  and the portfolio, one row per year to the plan-until age. Retirement
+  spending is drawn from cash first, then the portfolio. The year FI is
+  reached is highlighted, and years that can't be funded are flagged. One
+  today's/nominal toggle at the top of Results covers the whole page.
 
 Super, tax and property aren't modelled yet; see
 [PLAN.md](PLAN.md) for what comes next.

@@ -59,7 +59,7 @@ export function useDollarsMode(): DollarsModeContextValue {
 /**
  * Returns `formatMoney(nominalValue, inflationIndex)`. In today's mode it
  * divides the nominal value by the row's inflation index first; in nominal
- * mode it shows the value as it is. Used by the Year by year table and the
+ * mode it shows the value as it is. Used by the Year by year table, the chart and the
  * Results screen so every projected figure follows the toggle.
  */
 export function useMoneyFormatter(): (nominalValue: number, inflationIndex: number) => string {

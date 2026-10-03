@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1, M2, M3 and the colour scheme are done. A plan to put Results and Year by year on one page is in review.
+**Current status:** M0, M1, M2, M3 and the colour scheme are done. Results and Year by year on one page is implemented and awaiting verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 done. One-page Results plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 done. One-page Results implemented, awaiting verification |
 
 ## 1. Requirement ordering
 
@@ -1958,7 +1958,8 @@ to verify.
 
 ### Results and Year by year on one page: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved in PR #20. Steps A and B are done, awaiting the
+owner's verification.
 
 **Kind:** behavior change. It changes what the user sees and where, not
 any figure.
@@ -2086,7 +2087,7 @@ Notes from building it:
 
 #### Step B · Remove the Year by year step (end of PR)
 
-- [ ] Done
+- [x] Done
 
 1. Remove `year-by-year` from `steps.ts`, and its entry in `App`'s screen
    map. Scenarios becomes step 6.
@@ -2132,6 +2133,7 @@ for the owner to verify.
 - [x] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.
 - [x] Owner verifies and merges M3 PR B.
-- [ ] Approve the one-page Results plan (this PR).
-- [ ] Implement the one-page Results (steps A and B), then open it for
+- [x] Approve the one-page Results plan.
+- [x] Implement the one-page Results (steps A and B), then open it for
       verification.
+- [ ] Owner verifies and merges the one-page Results PR.

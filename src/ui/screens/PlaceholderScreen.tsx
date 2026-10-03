@@ -11,9 +11,7 @@ const stepPurposes: Record<StepId, string> = {
   assets: "What you own and owe: your home, shares, investment property, super, cash and debts.",
   assumptions:
     "The economic assumptions and rules that drive the projection, with sensible defaults.",
-  results: "Your FI and Coast FIRE numbers, milestones and charts.",
-  "year-by-year":
-    "Every year of the plan, with how each year's tax and withdrawals were worked out.",
+  results: "Your FI and Coast FIRE numbers, milestones and charts, then every year of the plan.",
   scenarios: "Saved variations of your plan compared side by side.",
 };
 

@@ -7,7 +7,7 @@ import { missingInputSteps } from "./missingInputSteps";
 
 /**
  * Lists inputs the user still has to enter, each linked to the step where it
- * is entered. Used by ResultsScreen and YearByYearScreen for both the M1
+ * is entered. Used by ResultsScreen for both the M1
  * inputs (living expenses) and the projection's ages.
  */
 export function MissingInputsBanner({ missing }: { readonly missing: readonly MissingInput[] }) {

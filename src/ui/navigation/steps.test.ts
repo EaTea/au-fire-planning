@@ -4,10 +4,10 @@ import { findStepByPath, getNeighbouringSteps, steps } from "./steps";
 
 // Tests for the step list that drives the router, header and Back/Next links.
 describe("steps", () => {
-  // Guards the single source of truth: seven steps, numbered in order.
-  it("has seven steps numbered 1 to 7 in order", () => {
-    expect(steps).toHaveLength(7);
-    expect(steps.map((step) => step.number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  // Guards the single source of truth: six steps, numbered in order.
+  it("has six steps numbered 1 to 6 in order", () => {
+    expect(steps).toHaveLength(6);
+    expect(steps.map((step) => step.number)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   // Duplicate ids or paths would make two steps indistinguishable to the router.
@@ -22,6 +22,8 @@ describe("findStepByPath", () => {
   it("finds a step by its path and returns undefined for unknown paths", () => {
     expect(findStepByPath("/results")?.label).toBe("Results");
     expect(findStepByPath("/nowhere")).toBeUndefined();
+    // Year by year is a section of Results now, not a step (its old route redirects in App).
+    expect(findStepByPath("/year-by-year")).toBeUndefined();
   });
 });
 
@@ -35,10 +37,10 @@ describe("getNeighbouringSteps", () => {
   });
 
   // The last step has nothing after it.
-  it("has no next step after step 7", () => {
+  it("has no next step after step 6", () => {
     const { previous, next } = getNeighbouringSteps("scenarios");
 
-    expect(previous?.id).toBe("year-by-year");
+    expect(previous?.id).toBe("results");
     expect(next).toBeUndefined();
   });
 

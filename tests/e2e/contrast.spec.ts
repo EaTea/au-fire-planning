@@ -15,15 +15,8 @@ import { expect, startFresh, test } from "./fixtures";
 /** WCAG AA minimum contrast for normal-size text. */
 const minimumTextContrast = 4.5;
 
-/** The step pages that exist so far (M2), by hash route. */
-const stepPages = [
-  "#/household",
-  "#/income-expenses",
-  "#/assets",
-  "#/assumptions",
-  "#/results",
-  "#/year-by-year",
-];
+/** The step pages that exist so far, by hash route. */
+const stepPages = ["#/household", "#/income-expenses", "#/assets", "#/assumptions", "#/results"];
 
 /** Pages with input fields, filled in by fillEveryInput. */
 const inputPages = ["#/household", "#/income-expenses", "#/assets", "#/assumptions"];
@@ -302,14 +295,14 @@ test("the results page with its chart has readable text in both dollar modes, wi
   expect(await findLowContrastWhileInteracting(page)).toEqual([]);
 });
 
-test("the year by year table has readable text in both dollar modes, including the FI row", async ({
+test("the year by year table on results has readable text in both dollar modes, including the FI row", async ({
   page,
 }) => {
   await startFresh(page);
   for (const inputPage of inputPages) {
     await fillPage(page, inputPage, "valid");
   }
-  await page.goto("#/year-by-year");
+  await page.goto("#/results?view=year-by-year");
 
   // The highlighted FI row is the one styled differently, so make sure it's there.
   await expect(page.locator("tr[data-highlighted='true']")).toHaveCount(1);
@@ -321,7 +314,7 @@ test("the year by year table has readable text in both dollar modes, including t
   }
 });
 
-test("the results and year by year pages have readable text with a shortfall, its banners and an outlined row", async ({
+test("results has readable text with a shortfall, its banners and an outlined row", async ({
   page,
 }) => {
   // Fix "now" so the shortfall year (2031) and the ?year= row are the same on any day.
@@ -356,8 +349,10 @@ test("the results and year by year pages have readable text with a shortfall, it
   expect(await findLowContrastWhileInteracting(page), "results with a shortfall").toEqual([]);
 
   // Opening with ?year= outlines that row for a few seconds, so check it straight away.
-  await page.goto("#/year-by-year?year=2029");
-  await expect(page.getByRole("alert")).toContainText("1 year can't be funded: 2031");
+  await page.goto("#/results?year=2029");
+  await expect(page.locator(".year-by-year-section").getByRole("alert")).toContainText(
+    "1 year can't be funded: 2031",
+  );
   await expect(page.getByText("Shortfall −$6,729")).toBeVisible();
   await expect(page.locator("tr[data-outlined='true']")).toHaveCount(1);
 
