@@ -68,7 +68,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 | [M0 · Walking skeleton](#m0--walking-skeleton) | Foundation | 0 | Header and step navigation; empty screens 01–07 |
 | [M1 · FI number](#m1--fi-number) | 1 · Must | 11 | 02, 03b, 04, 05 (first versions) |
 | [M2 · Growth over time](#m2--growth-over-time) | 1 · Must | 10 | 01, 03b, 04, 05, 06 (first versions) |
-| [M3 · Retirement drawdown and solvency](#m3--retirement-drawdown-and-solvency) | 1 · Must | 8 | 04, 05 chart (a), 06 |
+| [M3 · Retirement drawdown and solvency](#m3--retirement-drawdown-and-solvency) | 1 · Must | 9 | 04, 05 chart (a), 06 |
 | [M4 · Coast FIRE](#m4--coast-fire) | 1 · Must | 3 | 05 Coast FIRE section |
 | [M5 · Superannuation: accumulation](#m5--superannuation-accumulation) | 1 · Must | 8 | 03d (super), 02 (salary) |
 | [M6 · Super access and the bridge period](#m6--super-access-and-the-bridge-period) | 1 · Must | 8 | 01 (access age), 05 bridge check and chart (b), Coast FIRE (c) |
@@ -158,6 +158,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 | 6 | **OUT-3** Shortfall flags | Must | all |
 | 7 | **FIRE-3** Earliest feasible retirement age | Must | part: one person |
 | 8 | **FIRE-7** FIRE visualisations | Must | part: chart (a) |
+| 9 | **OUT-4** Key milestones | Must | part: age money runs out |
 
 ### M4 · Coast FIRE
 
@@ -565,7 +566,7 @@ is split, it is finished in the last milestone listed.
 | **OUT-1** Year-by-year projection | Must | M2 → every milestone adds its columns |
 | **OUT-2** Today's or nominal dollars | Must | M2 |
 | **OUT-3** Shortfall flags | Must | M3 |
-| **OUT-4** Key milestones | Must | M2 → M6 → M10 → M13 |
+| **OUT-4** Key milestones | Must | M2 → M3 → M6 → M10 → M13 |
 | **OUT-5** Scenarios | Should | M16 |
 | **OUT-6** Sensitivity | Should | M16 |
 | **OUT-7** Export | Could | M22 |
@@ -912,7 +913,7 @@ uses, and covered by React Testing Library tests.
 | `TimeSeriesChart` | Lines with reference lines and markers, hover tooltip, click to open the year | 03b, 05, 07 | M3 (FIRE chart a) | M4, M13, M16 |
 | `StackedAreaChart` | Stacked balances over time with a shaded period | 05 | M6 (bridge chart b) | M10 |
 | `CashFlowChart` | Money in above the axis, money out below, per year | 05 | M8 (FIRE chart c) | M9–M14 |
-| `MilestoneTimeline` | Key years on one line (OUT-4) | 05 | M3 | M4, M6, M7, M10, M13 |
+| `MilestoneTimeline` | Key years on one line (OUT-4) | 05 | M4 | M6, M7, M10, M13 |
 | `StatusMeter` | Need vs projected, with MET / SHORT / OVER status | 03d, 05 | M6 (bridge check) | M11 (cap warnings), M16 |
 | `ComparisonTable` | Options or scenarios side by side | 05, 07 | M16 (scenarios) | M17 (Coast FIRE choices) |
 | `TornadoChart` | One bar per assumption, earlier vs later | 07 | M16 (sensitivity) | none yet |
@@ -1152,531 +1153,666 @@ Conventions settled while building M1, which later milestones rely on:
 - **Styles use colour role variables only** (see the colour scheme below).
   New text/background pairs go in the contrast test.
 
-### Colour scheme: green and gold
+### Colour scheme: green and gold: done
 
-**Status:** plan agreed in chat with the owner (deep green pages chosen
-over light cream pages). Implemented; awaiting the owner's verification.
+Delivered in PRs #13 (plan) and #14: Australia's national green and gold,
+replacing the navy scheme, plus an in-browser contrast sweep. The full plan
+is in git history.
 
-**Kind:** behavior change. Only the app's appearance changes. The layout,
-navigation and content stay the same.
+Rules every later stylesheet must follow:
 
-**Goal:** external user feedback asked for Australia's national colours,
-green and gold, instead of the flag's navy, red and white. This replaces
-the navy scheme (git history has its plan). The owner also reported text
-that renders white on white in Chrome. This plan adds an in-browser
-contrast check so that kind of problem is caught by tests, wherever it
-comes from.
+- **Use only role variables** (`--colour-…`) in stylesheets. Palette
+  variables (`--aus-green`, `--aus-gold`, `--green-deep` and so on) are
+  referenced only inside `src/ui/styles/tokens.css`.
+- **Add any new role to `tokens.css`, and every new text-on-background pair
+  to `src/ui/styles/tokens.test.ts`.** Text needs WCAG AA, 4.5:1.
+  Graphics (chart lines, outlines, markers) need 3:1.
+- **Gold is never text on the header green** (3.2:1). Gold text is fine on
+  the deep green page (6.7:1). Text on a gold fill uses `--colour-on-accent`.
+- **Errors** use `--colour-text-error` and `--colour-border-error` (pink),
+  never the gold accent, so "invalid" never looks like "selected".
+- **Every new page goes into the in-browser sweep**,
+  `tests/e2e/contrast.spec.ts`, with its fields empty, valid and invalid,
+  and with its explanation panels open. The sweep catches inherited colours
+  and browser default styles that the token test can't see.
+- The mockups stay greyscale. They show layout, not visual design.
 
-#### Design decisions
+### M2 · Growth over time: done
 
-- **Same two layers of colour variables in `src/ui/styles/tokens.css`.**
-  *Palette* variables hold raw colours and are only referenced from that
-  file. *Role* variables (`--colour-page-background`, `--colour-text`,
-  `--colour-accent` and so on) say what a colour is for, and are the only
-  colour variables stylesheets use. Mostly, only the palette changes.
-- **Palette.**
+Delivered in PR #15: ages, inflation, expected return and flat
+contributions; a year-by-year projection; the FI year and the nominal FI
+number at retirement; the Year by year table with a today's/nominal toggle.
+The full step-by-step plan is in git history.
 
-  | Variable | Colour | Use |
-  | --- | --- | --- |
-  | `--aus-green` | `#00843D` | Header. The official national green (Pantone 348 C). |
-  | `--aus-gold` | `#FFCD00` | Accent: current step, toggles, header underline, key figures. The official national gold (Pantone 116 C). |
-  | `--green-deep` | `#004D25` | Page background. |
-  | `--green-raised` | `#0A6B37` | Hover fill for pills and buttons. |
-  | `--green-divider` | `#2E7A4F` | Thin dividers. |
-  | `--green-white` | `#CFE8D6` | Muted text. |
-  | `--green-grey` | `#9CC9AA` | Faint text and outlines. |
-  | `--green-black` | `#0B1A10` | Text on gold. |
-  | `--error-pink` | `#FFB3A7` | Error text and invalid-field outlines. |
-  | `--white` | `#FFFFFF` | Text, and input box backgrounds. |
+Conventions settled while building M2, which later milestones rely on:
 
-- **Where each colour goes.**
+- **Projection timing** (`src/engine/projection.ts`):
+  - Row 0 is today, with no flows. Row *k* is the end of year *k*, labelled
+    `startYear + k`.
+  - Every value in row *k* is nominal and shares one inflation index,
+    `(1+i)^k`. Today's dollars = nominal ÷ that index.
+  - Growth is on the opening balance, and flows are added at the end of the
+    year.
+  - Contributions are flat dollars (not indexed). They are added while
+    `age ≤ stop age`, which defaults to the target retirement age.
+- **Two levels of "complete":** `summarisePlan(plan, startYear)` returns
+  M1's figures once living expenses are known. Its `projection` part has its
+  own `complete`/`incomplete` status, because it also needs the ages.
+- **The start year comes from a `Clock`** (`src/plan/clock.ts`) through
+  `PlanProvider`'s `startYear` prop. The engine never reads the date. Unit
+  tests pass 2026. E2E tests fix it with `page.clock.install`.
+- **Money on screen goes through `useMoneyFormatter()`**, which follows the
+  `DollarsModeProvider` (in memory, starting on today's dollars).
+  Figures that are nominal by definition, such as "FI number at
+  retirement", say so and don't follow the toggle.
+- **Explanation units** are `dollars`, `fraction` (shown as a percentage)
+  and `factor` (shown as a plain multiplier, such as 1.4845). The line's
+  operator supplies the ×, ÷, − or =.
+- **Fields:** `AgeField` takes whole years. Stored ages are accepted from
+  0 to 120, looser than any form, so that tightening a form never makes a
+  saved plan unreadable.
+- **Worked-example fixtures** with a projection have a top-level
+  `startYear`, and list only the rows and fields worth checking.
+- **Shared screen pieces:** `MissingInputsBanner` ("Enter these") and
+  `ProjectionTable` (generic over `{ header, cell(row) }` columns).
 
-  ```
-  +---------------------------------------------------------+
-  | [AU FIRE Planner]  (2 gold pill)(3)(4)(5)(6)(7)          |  green header, white text
-  +=========================================================+  gold underline
-  |  Page title (white)                                     |
-  |  Intro text (muted green-white)                         |  deep green page
-  |  [ FI number  $1,250,000 (gold) ]                       |
-  |  [ input: white box, deep green text ]                  |
-  |                                  [ Next: ... -> ]       |  white outline button
-  +---------------------------------------------------------+
-  ```
+### M3 · Retirement drawdown and solvency: step-by-step plan
 
-- **New roles.** These are needed because green and gold don't drop into
-  every slot the navy scheme used:
-  - `--colour-header-text` (white). Muted green-white on the official green
-    header is only 3.7:1, so the step pills in the header use white text
-    instead of muted text.
-  - `--colour-text-highlight` (gold) for key figures such as the FI number.
-    Gold on the deep green page is 6.7:1.
-  - `--colour-border-error` (error pink). Invalid fields currently use the
-    accent for their outline. With a gold accent, that would make "invalid"
-    look the same as "selected".
-- **Contrast meets WCAG AA (at least 4.5:1) for every text and background
-  pair.**
+**Status:** draft, awaiting the owner's approval. Do not implement yet.
 
-  | Text | Background | Ratio |
-  | --- | --- | --- |
-  | White | Deep green page | 10.1:1 |
-  | Muted `#CFE8D6` | Deep green page | 7.7:1 |
-  | Faint `#9CC9AA` | Deep green page | 5.4:1 |
-  | Gold | Deep green page | 6.7:1 |
-  | Error pink | Deep green page | 5.9:1 |
-  | White | Green header | 4.8:1 |
-  | White | Raised green (hover) | 6.6:1 |
-  | Near-black | Gold | 12.0:1 |
-  | Deep green | White input | 10.1:1 |
+**Kind:** behavior change.
 
-  **Gold is never used as text on the header green**, because that is only
-  3.2:1. The gold underline is not text, so it only needs WCAG's 3:1 for
-  graphics, and passes.
-- **Rules every later stylesheet must follow** (unchanged from the navy
-  scheme, delivered in PRs #9 and #10):
-  - use only the role variables (`--colour-…`). Palette variables are
-    referenced only inside `tokens.css`;
-  - add any new role to `tokens.css`, and add every new text-on-background
-    pair to `src/ui/styles/tokens.test.ts`;
-  - the mockups stay greyscale. They show layout, not visual design.
-- **Why the token test can't catch white on white by itself.**
-  `tokens.test.ts` only checks the pairs listed in it. It has no way to
-  know which text actually sits on which background in the page. Text that
-  inherits a colour onto a background it wasn't listed against, browser
-  default styles (for example on `<button>` or `<select>`), and Chrome's
-  autofill styling all slip past it. Step 3 closes that gap by measuring
-  contrast in a real browser.
+**Goal:** the projection keeps going after retirement. Each retired year,
+the plan's spending is drawn from cash and then the portfolio. The app
+shows whether the money lasts to the end of the plan, flags any year it
+can't be funded, and finds the earliest age you could retire and still be
+solvent.
 
-#### Step 1 · Add the new roles, keeping the navy look: done
+**Requirements in scope:**
+- IN-4 projection end age (one person);
+- IN-10 the retirement withdrawal (constant, inflation-adjusted);
+- IN-26 cash savings;
+- IN-12 the general interest rate, for interest on cash only;
+- EXP-6 dated and one-off expenses;
+- OUT-3 shortfall flags;
+- FIRE-3 the earliest feasible retirement age (one person);
+- FIRE-7 chart (a): investable net worth against the FI number over time;
+- OUT-4, part: the age money runs out, if it does.
 
-- Add `--colour-header-text`, `--colour-text-highlight` and
-  `--colour-border-error` to `tokens.css`, mapped to today's navy-scheme
-  colours so nothing changes visibly. Point the header pills, `.metric
-  .value` and `.input.invalid` at them in `app.css`. Add the new pairs to
-  `tokens.test.ts`.
-- **Check:** `npm run check` passes.
+**Out of scope (later milestones):**
+- salary and other income (M5), so before retirement, contributions are
+  still entered directly;
+- super, preservation age and the bridge period (M5, M6);
+- tax, and a tax-aware withdrawal order (M8, M20). M3 always draws from cash
+  first, then the portfolio;
+- a cash buffer, more than one cash account, and interest on offset
+  accounts and loans (IN-12's other parts arrive with mortgages in M13);
+- temporary changes to inflation and interest (IN-13, M18);
+- the milestones timeline (`MilestoneTimeline`, moved to M4, where Coast
+  FIRE gives it enough milestones to be worth a component);
+- collapsing quiet years and "milestones only" in Year by year;
+- remembering the today's/nominal choice between visits. It's still a
+  follow-up.
 
-#### Step 2 · Swap the palette to green and gold: done
-
-- Replace the navy palette in `tokens.css` with the green-and-gold palette
-  above, and re-map the roles. Update the comments that mention navy and
-  red (`tokens.css`, `app.css`, the focus-outline note).
-- Update the colour E2E test in `tests/e2e/navigation.spec.ts`. The page
-  should be deep green and the current step pill gold.
-- **Check:** `npm run check` and `npm run test:e2e` pass.
-
-#### Step 3 · In-browser contrast sweep (E2E): done
-
-- Add `tests/e2e/contrast.spec.ts`. On every page, with fields empty, then
-  filled with valid values, then filled with invalid values, and with each
-  "How is this calculated?" panel open, it finds every element that shows
-  text (and every input). For each one, it computes the WCAG contrast
-  between its rendered text colour and the first opaque background behind
-  it, and fails with a list of offenders below 4.5:1. It also checks every
-  link, button and input while hovered and focused.
-- The sweep reproduced the case the owner saw in Chrome: the welcome page's
-  "Start planning" `<button>` uses `.footer-link`, which never set a
-  background, so it kept Chrome's light grey button background behind
-  white text (1.15:1). `.footer-link` now sets a transparent background
-  and inherits the page font.
-- **Check:** `npm run test:e2e` passes.
-
-### M2 · Growth over time: step-by-step plan
-
-**Status:** implemented (steps 1–7), awaiting the owner's verification in the M2 PR.
-
-**Goal:** the plan gains time. The user enters their age, a target
-retirement age, inflation, the portfolio's expected return and regular
-contributions. The app projects the portfolio year by year, and shows:
-
-- the **year they reach FI**;
-- the FI number in nominal dollars at their target retirement age;
-- a **year-by-year table**, viewable in today's or nominal dollars.
-
-**Requirements delivered** (from part 1): IN-2 current age, IN-3 target
-retirement age (one person), IN-11 inflation, EXP-3 expenses grow with
-inflation, IN-15 expected return (total return only), IN-18 regular
-contributions, FIRE-1 FI number in nominal dollars at retirement, OUT-1
-year-by-year projection (first columns), OUT-2 today's or nominal dollars,
-OUT-4 FI number and FI year.
-
-**Out of scope for M2:**
-- withdrawals in retirement and running out of money (M3);
-- the projection end age, IN-4 (M3). M2 projects to age 100;
-- the earliest feasible retirement age (M3) and Coast FIRE (M4);
-- charts (M3);
-- splitting return into growth and yield (M9);
-- remembering the today's/nominal choice between visits. It's a follow-up,
-  kept in memory for now.
+**Two PRs.** The work splits at a point where the app is coherent:
+- **PR A, drawdown and solvency (steps 1 to 7).** The money is spent in
+  retirement, shortfalls are flagged, and Results says whether the money
+  lasts.
+- **PR B, earliest retirement age and the FIRE chart (steps 8 to 10).** It
+  builds on the solvency check from PR A.
 
 **Definition of done:**
 
-- Household (step 1) is a real screen: current age and target retirement
-  age. The welcome page leads there.
-- Assets adds expected return (default 7%), contributions per year (the
-  same dollar amount every year, default $0), and the age contributions stop (default: the target
-  retirement age). Assumptions adds inflation (default 2.5%).
-- With the worked example below, Results shows an FI number of $1,600,000 in
-  today's dollars, $2,375,209 nominal at age 50, and **FI reached in 2038, at
-  age 46**.
-- Year by year shows a row per year, with a working today's/nominal toggle.
-- Everything is saved and survives a reload.
+- Household has "Plan until age" (default 95).
+- Assets has "Cash savings" (default $0).
+- Assumptions has "General interest rate" (default 4%) and states the
+  withdrawal rule.
+- Income & expenses has a "Dated and one-off expenses" table.
+- Year by year runs to the end age, with the following:
+  - Working and Retired bands;
+  - spending, cash and investable columns;
+  - shortfall flags, with a banner listing the years that can't be funded.
+- Results shows:
+  - whether the money lasts, or the age it runs out;
+  - the earliest feasible retirement age;
+  - chart (a), with hover values, and markers for the FI year and
+    retirement.
+- With the worked examples below, the figures match to the cent.
+- Everything is saved and survives a reload. Plans saved by M2 still load.
 - `npm run check` and `npm run test:e2e` pass, and CI is green.
 
-#### Design decisions for M2
+#### Design decisions for M3
 
-**Projection timing**
-
-Row 0 is today. Row *k* is the end of the *k*-th year from now.
+**Projection timing, extended.** M2's rules still hold. Row *k* (age
+`a + k`, inflation index `(1+i)^k`) now also has cash and spending:
 
 ```
-  row 0 (today)         row 1                  row 2
-  age a, balance B0 ──► age a+1                age a+2 ...
-                        growth   = B0 × r
-                        contrib  = C             (if a+1 ≤ stop age)
-                        B1 = B0 + growth + contrib
-                        FI number = FI_today × (1+i)^1
+  start of year k                                 end of year k
+  cash C0  ──► + interest  = C0 × g  ──────────► cash available
+  port P0  ──► + growth    = P0 × r
+           ──► + contribution (if age ≤ stop age) ► portfolio available
+
+  spending to fund (nominal) =
+      retirement spending × index    (only if age > retirement age)
+    + dated expenses for this year × index
+
+  take it from: 1. cash available   2. portfolio available
+  anything left over = shortfall for this year (cash and portfolio end at $0)
 ```
 
-- `r` is the expected nominal return and `i` is inflation.
-- `C` is the yearly contribution, **the same dollar amount every year**.
-  It isn't indexed to inflation: entering $10,000 means $10,000 goes in each
-  year, which is what people expect when they type a number. In today's
-  dollars, later contributions are therefore worth a little less, which
-  errs on the conservative side. Contributions that grow (e.g. with salary)
-  can come later as a "grows at" option, using the `GrowthRateField`
-  planned for salary in M5.
-- `FI_today` is M1's FI number.
-- **Every value in row *k* uses the same inflation index, `(1+i)^k`.**
-  Converting any value in the row to today's dollars divides by that one
-  number.
-- **Living expenses** in row *k* are `living × (1+i)^k` (EXP-3).
-- **Contributions** are added in row *k* only while `a + k ≤ stop age`, so
-  the year you turn the stop age is the last one with a contribution.
-- **FI is reached** in the first row where the balance is at least that
-  row's FI number, which may be row 0. If no row up to age 100 reaches it,
-  FI isn't reached.
-- **No withdrawals in M2.** Contributions stop, and growth continues to age
-  100. Year by year notes that withdrawals arrive in M3.
+- `g` is the general interest rate. `r` is the portfolio's expected return.
+- **Retired years are those with `age > target retirement age`.** M2 makes
+  the year you turn the retirement age the last year with a contribution,
+  so the first retired row is the year after.
+- **The withdrawal in retirement is the year's spending** (IN-10's
+  "constant, inflation-adjusted withdrawal"). It is retirement spending in
+  today's dollars, grown by inflation. There is no separate "withdrawal
+  rate" field. The safe withdrawal rate still sizes the FI number only.
+- **Order: cash first, then the portfolio.** This is fixed until the
+  withdrawal order arrives (TAX-8, M20).
+- **Living expenses before retirement aren't drawn from savings.** They're
+  assumed to be paid from salary, as in M2: contributions are what's left
+  over.
+- **Dated expenses are drawn from savings in any year, including before
+  retirement.** Until salary arrives (M5), there is nothing else to pay
+  them from. A $40,000 car in 2030 comes out of cash and then the
+  portfolio that year, even while working.
+- **Dated expenses are in today's dollars and grow with inflation** (EXP-3,
+  "all expenses grow with inflation"), like living expenses. That differs
+  from contributions, which are flat. Hints on both fields say so.
+- **A dated expense applies in rows whose calendar year is from its "From"
+  year to its "To" year, inclusive.** A one-off has From = To. Row 0 is
+  today and has no flows, so years start next year: the year fields'
+  minimum is the start year + 1.
+- **Investable net worth = cash + portfolio.** It replaces "the portfolio"
+  in progress to FI (M1) and in the FI reached check (M2). Plans without
+  cash give the same figures as before.
+- **A shortfall year** is any row where spending can't be fully funded. The
+  unfunded amount is recorded, and the row is flagged. The projection
+  carries on, so later years can be flagged too.
+- **The projection runs to the end age** (IN-4, default 95, "Plan until
+  age"). It replaces M2's fixed `MAX_PROJECTION_AGE = 100`. If FI isn't
+  reached, Results says "Not by age {end age}".
+- **Validation**, reported as missing inputs so the projection shows as
+  incomplete with a clear message:
+  - the end age must be after the current age;
+  - the target retirement age must be before the end age.
 
-**New plan fields (internal types).** All are optional, keeping
-"only what the user entered":
+**Earliest feasible retirement age (FIRE-3).**
+- It tries every retirement age from the current age up to the end age, in
+  order. It returns the first one whose projection has no shortfall year.
+- Everything else stays the same, except that a stop age left at its
+  default follows the retirement age being tried. A stop age the user
+  entered is kept.
+- Retiring later never makes the plan less solvent: it means fewer years of
+  withdrawals and, with the default stop age, more contributions. So the
+  first solvent age is the earliest. A linear scan runs at most about 80
+  short projections, which is instant.
+- **If no age works** (for example, a dated expense larger than everything
+  you'll ever have), the result is "not feasible by age {end age}".
+- **Explanation lines:** the last unsuccessful age and why, then the answer:
+  - "Retiring at 42: runs short in 2085 (age 93)", valued at that year's
+    shortfall;
+  - "Retiring at 43: lasts to age 95", valued at the investable net worth
+    at the end;
+  - "= Earliest feasible retirement age", valued at 43.
+
+  The last line needs a new explanation unit, `years`, shown as a plain
+  whole number.
+
+**New plan fields (internal types).** All are optional, keeping "only what
+the user entered":
 
 ```ts
-interface Person    { id; label; currentAge?: number; targetRetirementAge?: number }  // whole years
-interface Portfolio { id; name; value?; expectedReturn?: number;      // fraction, e.g. 0.07
-                      annualContribution?: number;                    // dollars per year, not indexed
-                      contributionsStopAge?: number }                 // whole years
-assumptions: { safeWithdrawalRate?; inflationRate?: number }          // fraction, e.g. 0.025
-```
+household:   { people; projectionEndAge?: number }        // whole years, default 95
+cash?:       { balance?: number }                          // dollars today, default $0
+assumptions: { ...; interestRate?: number }                // fraction, default 0.04
+expenses:    { ...; datedExpenses?: readonly DatedExpense[] }   // default: none
 
-New defaults (`src/plan/defaults.ts`):
-- inflation 0.025;
-- expected return 0.07;
-- annual contribution 0;
-- contributions stop at **the target retirement age**. It's a default that
-  depends on another input, and is resolved in `resolvePlanInputs`.
-
-Current age and target retirement age have **no default**.
-
-**Two levels of "complete".** M1's figures (FI number and progress in
-today's dollars) need only living expenses. The projection also needs the
-two ages. So:
-- `summarisePlan(plan, startYear)` keeps M1's `complete`/`incomplete`
-  result.
-- The `complete` variant gains `projection: ProjectionSummary`, which is
-  itself `complete` or `incomplete`:
-
-```ts
-type ProjectionSummary =
-  | { status: "complete"; rows: readonly ProjectionRow[];
-      fiReached?: FiMilestone;          // undefined if not reached by age 100
-      fiNumberAtRetirement: Explained } // nominal, at the target retirement age (FIRE-1)
-  | { status: "incomplete"; missing: readonly MissingInput[] };
-
-interface ProjectionRow {
-  yearIndex: number; calendarYear: number; age: number;
-  inflationIndex: number;            // (1+i)^yearIndex; today's dollars = value ÷ this
-  openingBalance: number; growth: number; contribution: number; closingBalance: number;
-  livingExpenses: number; fiNumber: number;                 // all nominal
+interface DatedExpense {
+  id: string;
+  name: string;           // e.g. "Replace car"; may be ""
+  annual?: number;        // today's dollars per year; unset counts as $0
+  fromYear: number;       // calendar year, set when the row is added
+  toYear: number;         // ≥ fromYear; equal for a one-off
 }
-interface FiMilestone { yearIndex: number; calendarYear: number; age: number;
-                        explanation: Explained }          // balance vs FI number that year
 ```
 
-- `MissingInput.field` gains `"currentAge"` and `"targetRetirementAge"`, both
-  mapped to step `household`.
-- A target retirement age below the current age is reported as missing:
-  "Target retirement age must be at or after your current age".
-- `startYear` is passed in. The UI gets it from a `Clock` (the current
-  calendar year), and the engine still never reads the clock.
+- **One cash balance, not a list of accounts.** IN-26 asks only for cash
+  savings. A list (mockup 03d) can come later without a schema change,
+  because the wire field is optional.
+- **A new dated expense row starts as** `{ name: "", fromYear: startYear +
+  1, toYear: startYear + 1 }`, so it's always valid. Its amount shows a
+  dashed "$0" until typed.
 
-**The engine's projection** is a pure function in `src/engine/projection.ts`:
-`projectPortfolio(inputs, startYear): ProjectionRow[]`. `summarisePlan`
-calls it. `MAX_PROJECTION_AGE = 100` lives in `src/engine/projection.ts`
-until IN-4 replaces it in M3.
+**Wire format** (optional additions to `PlanDocumentV1`, no
+`schemaVersion` bump):
+- `household.projectionEndAgeYears`;
+- `cash.balanceDollars`;
+- `assumptions.interestPercent`;
+- `expenses.datedExpenses[]`, each `{ id, name, annualDollars?, fromYear,
+  toYear }`. Years are integers from 1900 to 2200. The schema checks
+  `toYear ≥ fromYear`, and rejects the document otherwise.
 
-**Wire format.** Optional fields are added to `PlanDocumentV1`, with no new
-`schemaVersion`:
-- `people[].currentAgeYears`, `people[].targetRetirementAgeYears`;
-- `assumptions.inflationPercent`;
-- `portfolios[].expectedReturnPercent`, `annualContributionDollars`,
-  `contributionsStopAgeYears`.
+**Projection types.** `ProjectionRow` gains:
+- `phase: "working" | "retired"`;
+- `cashOpening`, `cashInterest`, `cashClosing`;
+- `spending` (nominal, to fund this year), `fromCash`, `fromPortfolio` and
+  `shortfall`;
+- `investableClosing` (cash + portfolio).
 
-Ages are whole numbers between 0 and 120.
+M2's `openingBalance`, `growth` and `closingBalance` are renamed
+`portfolioOpening`, `portfolioGrowth` and `portfolioClosing` (step 1), so
+"balance" is never ambiguous once cash exists.
 
-**Today's or nominal dollars (OUT-2):**
-- A `DollarsModeProvider` in `src/ui/dollarsMode.tsx` holds the mode:
-  `"today"` (the default) or `"nominal"`.
-- `useMoneyFormatter()` returns `formatMoney(nominalValue, inflationIndex)`.
-  It divides by the index in today's mode, then calls `formatDollars`.
-- `DollarsModeToggle` is a `SegmentedToggle` labelled "Show values in", with
-  the options "Today's dollars" and "Nominal".
-- The mode lives in memory only in M2. It's a follow-up to save it in `meta`.
+`ProjectionSummary`'s `complete` variant gains:
+- `endAge`;
+- `solvency: Solvency`, which is either
+  - `{ status: "lasts"; explanation }`, the investable net worth at the end
+    age, or
+  - `{ status: "runsOut"; year; age; shortfallYears: number[]; explanation }`,
+    with the lines "Spending to fund in {year}", "− Cash and portfolio
+    available" and "= Shortfall".
+- PR B adds `earliestRetirement: { status: "feasible"; age; year;
+  explanation } | { status: "notFeasible"; explanation }`.
+
+**The Year by year table.**
+- **Columns:** Year, Age, Contributions, Growth & interest, Spending, Cash,
+  Portfolio, Investable, FI number, Status.
+- **Status** is "✓", or the unfunded amount (for example "−$6,729") in
+  error text with a "Shortfall" label, so it never relies on colour alone.
+- **Band rows** start each phase: "Working · contributing" and "Retired ·
+  spending drawn from cash, then the portfolio".
+- **The FI row highlight** stays.
+- **Progress and Living expenses columns are dropped.** Progress is on
+  Results, and pre-retirement living expenses aren't drawn from savings,
+  so showing them in the table would mislead.
+- **A shortfall banner** above the table reads "{N} years can't be funded:
+  2051 – 2053", with consecutive years shown as ranges.
+
+**Results.**
+- **"Money lasts" tile** (OUT-3, OUT-4), with its explanation:
+  - "To age 95 ✓", sub-line "{investable} left in {year}"; or
+  - "Runs out at age 65", sub-line "2031 · 1 year can't be funded".
+- **"Earliest retirement" tile** (PR B):
+  - "Age 43", sub-line "{year} · your target is {age} ({year})"; or
+  - "Not feasible by age 95".
+- **Chart (a)** (PR B): investable net worth and the FI number, by year,
+  following the dollars toggle. It has a vertical marker at the FI year and
+  at retirement, and a red-pink band on any shortfall years.
+  - Hovering shows the year's values.
+  - Clicking a year opens Year by year scrolled to that row, which is
+    briefly outlined. This uses `#/year-by-year?year=2038`.
+- **The "Not yet modelled" banner** becomes "super (M5), the bridge to super
+  (M6), tax (M8), property (M12) and more."
+
+**Charts (PR B).**
+- **Recharts 3.10.1**, as chosen in part 2, behind one wrapper:
+  `TimeSeriesChart` in `src/ui/components/`.
+  - It is generic over series `{ key, label, className, dashed? }`, vertical
+    markers `{ year, label }` and shaded bands `{ fromYear, toYear, label }`.
+  - It owns the tooltip and the click-to-year behaviour.
+  - Later charts (M4, M13, M16) reuse it.
+- **Colours come from CSS classes on the series, not props.** SVG
+  presentation attributes can't read `var(--…)`, so the series get a
+  `className`, and `app.css` sets `stroke` from role variables.
+- **New roles**, checked at 3:1 against the page background (graphics,
+  WCAG 1.4.11):
+  - `--colour-chart-primary` (gold) for investable net worth;
+  - `--colour-chart-reference` (white, dashed) for the FI number and
+    markers;
+  - `--colour-chart-band` (error pink, low opacity) for shortfall years.
+    The band label is text, so it's checked at 4.5:1.
+- **The data for the chart** comes from a pure function,
+  `buildFireChartSeries(projection, dollarsMode)` in `src/ui/charts/`. Unit
+  tests check it, so the component tests only need a smoke test.
+  - jsdom has no layout, so the wrapper takes an explicit `width` and
+    `height` in tests.
+  - The real page uses Recharts' `ResponsiveContainer`, with a
+    `ResizeObserver` stub in the test setup.
 
 #### Worked examples
 
 These were checked with an independent script, not the app's code. Each
-becomes a fixture in `tests/worked-examples/m2-growth.json`.
+becomes a fixture in `tests/worked-examples/m3-drawdown.json`. The start
+year is 2026.
 
-| | A: headline | B: by hand | C: never FI |
-| --- | --- | --- | --- |
-| Current age / retirement / stop age | 34 / 50 / 50 | 40 / 41 / 41 | 60 / 60 / 60 |
-| Portfolio, return, contribution | $720,000, 7%, $30,000 | $100,000, 10%, $10,000 | $0, 0%, $0 |
-| Inflation, living, rate | 2.5%, $64,000, 4% | 0%, $20,000, 5% | 2%, $50,000, 4% |
-| Row 1 | growth $50,400.00, contribution $30,000.00, balance $800,400.00 | growth $10,000, contribution $10,000, balance $120,000 | — |
-| Row 2 | balance $886,428.00 | growth $12,000, contribution $0, balance $132,000 | — |
-| FI reached | row 12: **2038, age 46**, balance $2,158,231.48 vs FI number $2,151,822.12 | not checked | **not reached** |
-| FI number at retirement (nominal) | $2,375,208.99 (age 50) | — | — |
+**A: headline.** M2's example A, plus cash and an end age.
+- **Inputs:**
+  - age 34, retire at 50, plan until 95;
+  - $720,000 at 7%, with $30,000 a year. The stop age is left at its
+    default, so contributions stop at the retirement age being tried;
+  - $20,000 cash at 4%;
+  - 2.5% inflation, $64,000 living, retirement spending at the default
+    100%, and a 4% safe withdrawal rate.
+- **Row 1 (2027):** interest $800.00, growth $50,400.00, contribution
+  $30,000.00, cash $20,800.00, portfolio $800,400.00.
+- **FI reached:** row 12 (2038, age 46). Investable is $2,190,252.13
+  against an FI number of $2,151,822.12. Cash adds to the M2 figure, but
+  the year doesn't change.
+- **Row 17 (2043, age 51), the first retired year:** spending $97,383.57,
+  from cash $38,958.01, from the portfolio $58,425.56. Cash ends at $0.00
+  and the portfolio at $3,111,127.91.
+- **Money lasts:** to age 95 (2087), with $24,101,430.35 investable
+  (nominal).
+- **Earliest retirement:** age 43. Retiring at 42 runs short in 2085, at
+  age 93.
 
-The start year is 2026. Example B's row 2 has no contribution, because age 42
-is past the stop age of 41.
+**B: by hand, runs out.**
+- **Inputs:** age 60, retire at 60, plan until 65. $100,000 at 10%, no
+  contributions. $10,000 cash at 5%. 0% inflation. Living and retirement
+  spending $30,000 (as an amount), and a 4% safe withdrawal rate.
+
+  | Year | Age | Interest | Growth | Spending | From cash | From portfolio | Shortfall | Portfolio |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 2027 | 61 | $500 | $10,000 | $30,000 | $10,500 | $19,500 | — | $90,500 |
+  | 2028 | 62 | — | $9,050 | $30,000 | — | $30,000 | — | $69,550 |
+  | 2029 | 63 | — | $6,955 | $30,000 | — | $30,000 | — | $46,505 |
+  | 2030 | 64 | — | $4,650.50 | $30,000 | — | $30,000 | — | $21,155.50 |
+  | 2031 | 65 | — | $2,115.55 | $30,000 | — | $23,271.05 | **$6,728.95** | $0 |
+
+- **Results:** FI is not reached. The money runs out at age 65 (2031), and
+  only 2031 can't be funded. The earliest retirement age is 61.
+
+**C: dated expenses, before and after retirement.**
+- **Inputs:**
+  - age 40, retire at 45, plan until 50;
+  - $200,000 at 5%, with $20,000 a year, and the stop age left at its
+    default;
+  - no cash;
+  - 2% inflation, $40,000 living, spending 100%, and a 4% safe withdrawal
+    rate;
+  - dated expenses: "Replace car" $30,000 in 2028 only, and "School fees"
+    $10,000 a year from 2029 to 2030.
+- **2028 (age 42, working):** spending $31,212.00, all from the portfolio,
+  which ends at $230,288.00.
+- **2029:** spending $10,612.08, and the portfolio ends at $251,190.32.
+- **2032 (age 46, the first retired year):** spending $45,046.50, and the
+  portfolio ends at $276,853.88.
+- **2036 (age 50, the end):** the portfolio ends at $132,703.89, so the
+  money lasts.
+- **Earliest retirement:** age 44. Retiring at 43 runs short in 2036, at
+  age 50.
 
 #### Pinned versions
 
-No new dependencies.
+PR B adds `recharts` 3.10.1 and its peer `react-is` 19.3.0, matching
+React 19.3.0. They are installed with `--save-exact`. PR A adds no
+dependencies.
 
-#### Step 1 · Projection engine
+---
 
-- [x] Done
+**PR A · Drawdown and solvency**
 
-1. Add the new optional fields to `src/plan/types.ts`, and the new defaults
-   to `src/plan/defaults.ts`.
-2. Extend `resolvePlanInputs` so it also resolves the projection inputs:
-   - current age and target retirement age;
-   - inflation, expected return, contribution and stop age, with defaults
-     and sources. The stop age defaults to the target retirement age.
+#### Step 1 · Rename the portfolio fields in projection rows
 
-   Missing ages are reported as above.
-3. Add `src/engine/projection.ts` with `projectPortfolio`, following the
-   timing rules above exactly. Also add `findFiReached(rows)`, which returns
-   the first row whose closing balance (row 0: the opening balance) is at
-   least that row's FI number, with an explanation:
-   - "Balance at end of {year} (age {age})";
-   - "FI number in {year}";
-   - "= FI reached".
-4. Extend `summarisePlan(plan, startYear)` with `projection`, as above,
-   including `fiNumberAtRetirement`: FI_today × (1+i)^(retirement age −
-   current age). Its explanation lines are the FI number today, × the
-   inflation growth over those years, and = the FI number at that age.
-5. Tests:
-   - unit tests for each function;
-   - fixture `tests/worked-examples/m2-growth.json` with examples A, B and C.
-     Extend `tests/unit/workedExamples.test.ts` to check the projection
-     figures: rows 1 and 2, the FI row and the FI number at retirement, to
-     the cent;
+- [ ] Done
+
+**Kind:** internal refactor. Behaviour doesn't change.
+
+1. In `ProjectionRow`, rename `openingBalance`, `growth` and
+   `closingBalance` to `portfolioOpening`, `portfolioGrowth` and
+   `portfolioClosing`.
+2. Update every use, the worked-examples test and the M2 fixture's field
+   names.
+
+**Check:** `npm run check` and `npm run test:e2e` pass, with no other
+changes to tests.
+
+#### Step 2 · Engine: cash, spending, dated expenses and shortfalls
+
+- [ ] Done
+
+1. Add the new optional fields to `src/plan/types.ts` (`DatedExpense`, cash,
+   interest rate, end age), and the defaults to `src/plan/defaults.ts`: end
+   age 95, interest 0.04, and cash $0.
+2. Extend `resolvePlanInputs`:
+   - resolve the end age, interest rate, cash balance and dated expenses,
+     with defaults and sources. Dated expenses resolve to `annual ?? 0`;
+   - add the two validations from the design decisions to the
+     projection's missing inputs, with these labels:
+     - "Plan until age must be after your current age";
+     - "Target retirement age must be before your plan-until age".
+3. Extend `projectPortfolio` to follow the timing rules above exactly, and
+   remove `MAX_PROJECTION_AGE`. `findFiReached` compares
+   `investableClosing`.
+4. Add `assessSolvency(rows)` in `src/engine/solvency.ts`, returning
+   `Solvency` with its explanation. Add `endAge` and `solvency` to
+   `ProjectionSummary`.
+5. Change investable (M1's progress to FI) to portfolios + cash. Its
+   explanation gains a "Cash savings" line.
+6. Tests:
+   - unit tests for each function, including:
+     - a dated expense before retirement;
+     - one spanning retirement;
+     - cash exactly covering spending;
+     - a shortfall followed by more shortfall years;
+   - fixture `tests/worked-examples/m3-drawdown.json` with examples A, B and
+     C, checking the rows listed above, FI reached and solvency to the cent.
+     Earliest retirement is added in step 8;
+   - the M1 and M2 fixtures still pass unchanged;
    - property tests:
-     - determinism;
-     - with zero inflation, today's and nominal values are equal;
-     - a higher return never makes FI later;
-     - larger contributions never make FI later;
-     - every row's balance equals the previous row's balance plus growth
-       plus contribution.
-
-**As built:**
-- `findFiReached`'s last line is "FI reached" with operator `=` and the
-  margin (balance − FI number) as its value, because explanation lines need
-  a number. The FI number line uses `−`.
-- A target retirement age below the current age makes the projection
-  incomplete, with the `MissingInput` label "Target retirement age must be
-  at or after your current age".
-- The opening balance is the total of all portfolios; return, contribution
-  and stop age come from the first portfolio.
-- "Inflation growth over N years" is a `fraction` line, so it would display
-  as a percentage (132.13%). Step 4 adds a `factor` unit for it (below).
-
-**Check:** `npm run check` passes. Existing callers of `summarisePlan` now
-pass a start year. Update `PlanProvider` to pass one (see step 2), so the
-app still works.
-
-#### Step 2 · Plan state
-
-- [x] Done
-
-1. Add reducer actions, each with an `undefined` payload clearing the value
-   back to its default:
-   - `setCurrentAge { personId, age? }`
-   - `setTargetRetirementAge { personId, age? }`
-   - `setInflationRate { rate? }`
-   - `setExpectedReturn { portfolioId, rate? }`
-   - `setAnnualContribution { portfolioId, annual? }`
-   - `setContributionsStopAge { portfolioId, age? }`
-2. `PlanProvider` takes a `startYear` prop, defaulting to the current
-   calendar year from a `Clock`, and passes it to `summarisePlan`. `App`
-   passes it through, so tests can fix it at 2026.
-3. Tests for each action and for the provider's projection summary.
-
-**Check:** `npm run check` passes. The app works as in M1.
-
-#### Step 3 · Wire format
-
-- [x] Done
-
-1. Add the optional wire fields above to `planDocumentV1Schema`. Ages are
-   integers from 0 to 120, and percents are non-negative.
-2. Extend `planToWire`/`planFromWire`, converting percent ↔ fraction.
-3. Tests:
-   - extend the round-trip property test to the new fields;
-   - `v1-basic.json` still loads, with the new fields unset;
-   - a document with the new fields round-trips;
-   - out-of-range ages are rejected.
+     - every row conserves money: opening cash + interest + opening
+       portfolio + growth + contribution = closing cash + closing portfolio
+       + spending − shortfall;
+     - balances are never negative;
+     - more cash never creates a shortfall that wasn't there;
+     - a later end age never removes a shortfall year that's still in range.
 
 **Check:** `npm run check` passes.
 
-#### Step 4 · Shared pieces: age field and dollars mode
+#### Step 3 · Plan state and wire format
 
-- [x] Done
+- [ ] Done
 
-1. `AgeField` in `src/ui/components/`: a `NumberField` for whole years. It
-   accepts `34`, rejects `34.5` and text, takes `min`/`max`, and supports the
-   dashed default. It needs `parseAge` and `formatAge` in `format.ts`.
-2. `src/ui/dollarsMode.tsx`: `DollarsModeProvider`, `useDollarsMode()`,
-   `useMoneyFormatter()` and `DollarsModeToggle`, as described above. Wrap
-   the app in the provider.
-3. Add a `factor` unit to `ExplainedUnit` (src/engine/explained.ts),
-   displayed to four decimal places, e.g. "1.3213", wherever explanations
-   are formatted. The "×" comes from the line's operator, like the "÷" on
-   the withdrawal rate line. Use it for the "Inflation growth over N years" line in
-   `calculateFiNumberAtRetirement`.
+1. Add reducer actions. An `undefined` value clears back to the default.
+   - `setProjectionEndAge { age? }`
+   - `setCashBalance { balance? }`
+   - `setInterestRate { rate? }`
+   - `addDatedExpense { id, startYear }`, using the defaults above
+   - `updateDatedExpense { id, changes: Partial<{ name, annual, fromYear,
+     toYear }> }`. It keeps `toYear ≥ fromYear` by moving `toYear` up when
+     `fromYear` passes it.
+   - `duplicateDatedExpense { id, newId }`, inserted after the original
+   - `removeDatedExpense { id }`
+2. Wire fields as above, through `planToWire`/`planFromWire`.
+   - Add the fixture `tests/fixtures/plan-documents/v1-drawdown.json`.
+   - `v1-basic.json` and `v1-growth.json` must still load unchanged.
+3. Tests:
+   - each action;
+   - the round-trip property test generates the new fields, including empty
+     and several dated expenses;
+   - the schema rejects `toYear < fromYear` and non-integer years.
+
+**Check:** `npm run check` passes. The app works as in M2.
+
+#### Step 4 · Shared pieces: `YearField` and `EditableTable`
+
+- [ ] Done
+
+1. `YearField` in `src/ui/components/`: a `NumberField` for whole calendar
+   years, with `min`/`max`. It needs `parseYear` in `format.ts`, and is
+   formatted without a thousands separator ("2030", not "2,030").
+2. `EditableTable` in `src/ui/components/`, generic over rows and column
+   definitions `{ header, cell(row), editor?(row, commit, cancel) }`.
+   - **Display:** a cell with an editor shows its value as a button.
+     Clicking the button, or pressing Enter on it, swaps in the editor (a
+     field). Enter or blur commits the edit, and Escape cancels it. Focus
+     returns to the cell.
+   - **Row menu:** each row has a "⋯" button labelled "Actions for {row
+     name}", opening a small menu with Duplicate and Delete. Escape closes
+     it.
+   - **Adding rows:** an "+ Add {noun}" button under the table. The new
+     row's first editable cell opens for editing.
+   - **When the table is empty,** it shows one line of text, passed in.
+   - **Keyboard and screen readers:** everything works without a mouse.
+     Cells have accessible names such as "Amount for Replace car".
+3. Tests:
+   - `YearField` parsing and limits;
+   - `EditableTable`:
+     - editing commits on Enter and on blur;
+     - Escape cancels;
+     - Duplicate and Delete;
+     - adding a row opens its first cell;
+     - keyboard-only use.
+
+**Check:** `npm run check` passes.
+
+#### Step 5 · Inputs: end age, cash, interest, withdrawal rule, dated expenses
+
+- [ ] Done
+
+1. **Household:** add `AgeField` "Plan until age" (default 95, min 50,
+   max 110). Hint: "The projection runs to this age."
+2. **Assets:** add a `CashSection` card "Cash" with `MoneyField` "Cash
+   savings" (default $0, min $0). Hint: "Earns the general interest rate
+   (Assumptions). Spent before the portfolio in retirement."
+3. **Assumptions:**
+   - In the Inflation card, rename the card "Economy" and add
+     `PercentField` "General interest rate" (default 4%, min 0%, max 15%).
+     Hint: "Paid on cash savings."
+   - In the drawdown card, add a read-only line: "Withdrawal in retirement:
+     constant, inflation-adjusted. Each year's spending is drawn from cash
+     first, then the portfolio." Other strategies are in the backlog
+     (BL-1).
+4. **Income & expenses:** add a `DatedExpensesSection` card "Dated and
+   one-off expenses", using `EditableTable`.
+   - **Columns:** Expense (text), Per year (money, "today's dollars"), From
+     (year), To (year, shown as "(once)" when equal to From).
+   - **Year limits:** From and To accept the start year + 1 up to the year
+     you reach the plan-until age. "+ Add expense" adds a row.
+   - **Hint:** "In today's dollars, grown with inflation. Paid from cash and
+     then the portfolio in those years, even before you retire."
+5. `missingInputSteps.ts`: map the new validation messages to `household`.
+6. Tests for each new field and section: entering, clearing to default,
+   limits, and the table's add, edit, duplicate and delete.
+7. Add Household's new field and the dated expenses table to the contrast
+   sweep (`tests/e2e/contrast.spec.ts`). Valid and invalid passes cover the
+   table with one row.
+
+**Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Step 6 · Year by year: drawdown, phases and shortfalls
+
+- [ ] Done
+
+1. Replace the table's columns with the M3 set above, all money through
+   `useMoneyFormatter`. Rows now run from today to the end age.
+2. Extend `ProjectionTable` with band rows between phases. Each is a full-
+   width row with the phase text, so a screen reader reads it in order.
+3. Status cells: "✓", or "Shortfall −$6,729" in error text.
+4. A shortfall `Banner` above the table, with year ranges. The "No
+   withdrawals" banner is removed.
+5. **Scroll to a year:** if the URL has `?year=`, the matching row is
+   scrolled into view and outlined for a few seconds. PR B uses this, but it
+   is built here with the table.
+6. Tests:
+   - example B's five rows and the 2031 shortfall flag, in nominal mode;
+   - example C's 2028 row (a dated expense while working);
+   - the band rows;
+   - the banner text for a range and for a single year;
+   - `?year=` highlights the row.
+
+**Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Step 7 · Results: does the money last? (end of PR A)
+
+- [ ] Done
+
+1. Add the "Money lasts" tile, with its explanation, as described above.
+2. When the projection runs out, show a `Banner` on Results linking to Year
+   by year: "Your money runs out at age {age} ({year}). See the years that
+   can't be funded."
+3. Update the "Not yet modelled" banner, and change "Not by age 100" to use
+   the end age.
+4. Tests for both solvency outcomes, using examples A and B.
+5. E2E (`tests/e2e/drawdown.spec.ts`):
+   - enter example B through the screens, with the clock fixed in 2026;
+   - Results shows "Runs out at age 65";
+   - Year by year flags 2031 and shows the banner;
+   - add a dated expense in Income & expenses, and check Year by year's
+     spending changes for that year;
+   - after a reload, the cash, end age and dated expense are still there.
+
+**Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A** for
+the owner to verify.
+
+---
+
+**PR B · Earliest retirement age and the FIRE chart**
+
+#### Step 8 · Engine: earliest feasible retirement age
+
+- [ ] Done
+
+1. Add `findEarliestRetirementAge(inputs, startYear)` in
+   `src/engine/earliestRetirement.ts`, following the design decisions above.
+   It reuses `projectPortfolio` and `assessSolvency`, without copying their
+   rules.
+2. Add the `years` explanation unit, and its formatting in `ExplainPanel`
+   (a plain whole number).
+3. Add `earliestRetirement` to `ProjectionSummary`.
 4. Tests:
-   - `AgeField` parsing and limits;
-   - the `factor` unit's formatting;
-   - `formatMoney` in both modes (e.g. $1,640,000 with index 1.025 shows as
-     $1,600,000 in today's mode);
-   - the toggle switches the mode.
+   - examples A (43), B (61) and C (44) in the fixture;
+   - "retire now" (feasible at the current age);
+   - not feasible at all;
+   - an explicit stop age is kept;
+   - a property test: the plan is solvent at the returned age, and not
+     solvent at the age before it, unless that is below the current age.
 
 **Check:** `npm run check` passes.
 
-#### Step 5 · Inputs: household, assets, assumptions
+#### Step 9 · Results: earliest retirement tile
 
-- [x] Done
+- [ ] Done
 
-1. `src/ui/sections/PersonAgesSection.tsx`, a card "About you":
-   - `AgeField` "Current age" (min 15, max 99, no default);
-   - `AgeField` "Target retirement age" (min 18, max 100, no default).
-
-   Hint: "Only your age is stored, not your date of birth."
-2. `HouseholdScreen` replaces the Household placeholder, using that section.
-   The welcome page's "Start planning" now goes to `#/household`, the first
-   step. Update its tests and `startFresh`.
-3. Extend `PortfolioSection` (Assets):
-   - `PercentField` "Expected return per year" (default 7%, min 0%, max 15%).
-     Hint: "Total return before inflation: growth plus dividends."
-   - `MoneyField` "Contributions per year" (default $0, min $0). Hint: "The
-     same dollar amount every year, until the age below."
-   - `AgeField` "Contributions stop at age" (min 15, max 100). It defaults to
-     the target retirement age, shown dashed. If that isn't set, it shows no
-     default.
-4. Extend `DrawdownSection`, or add `InflationSection` (Assumptions):
-   `PercentField` "Inflation per year" (default 2.5%, min 0%, max 15%).
-   Hint: "Grows your spending and FI number, and converts results to
-   today's dollars."
-5. `missingInputSteps.ts`: map `currentAge` and `targetRetirementAge` to
-   `household`.
-6. Tests for each new field: entering, clearing to default, and limits.
+1. Add the "Earliest retirement" tile, with its explanation, as described
+   above. It sits after "FI reached".
+2. Tests for the feasible and not-feasible cases, using examples A and B.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 6 · Results: nominal FI number and FI year
+#### Step 10 · FIRE chart (a) (end of PR B)
 
-- [x] Done
+- [ ] Done
 
-1. On Results, when the projection is complete:
-   - **FI number tile:** add a second sub-line, "{nominal} at age {retirement
-     age} ({year})". Its explanation adds the `fiNumberAtRetirement` lines
-     (FIRE-1).
-   - **New "FI reached" tile** (OUT-4):
-     - value "{year}", sub-line "Age {age}", with the `FiMilestone`
-       explanation;
-     - if FI isn't reached, the value "Not by age 100" and the sub-line "With
-       today's inputs and no withdrawals".
-2. When the projection is incomplete, add the missing ages to the existing
-   "Enter these" banner. The M1 tiles still show.
-3. Update the "Not yet modelled" banner to "withdrawals in retirement and
-   when money runs out (M3), super (M5), tax (M8), property (M12) and more."
-4. Tests for the complete, not-reached and incomplete-projection cases,
-   using worked example A for the values.
+1. Install `recharts` 3.10.1 and `react-is` 19.3.0 with `--save-exact`.
+   Add a `ResizeObserver` stub to the Vitest setup.
+2. Add `TimeSeriesChart` in `src/ui/components/`, as described above.
+   - It has an accessible name, and a visually hidden table of the same
+     data, so the figures aren't only in the picture.
+   - Hover shows a tooltip with the year, age and each series' value.
+   - Clicking a year calls `onSelectYear(year)`.
+3. Add `buildFireChartSeries` in `src/ui/charts/fireChart.ts`, which builds
+   the chart's data. It covers:
+   - investable net worth and the FI number for each year, in the current
+     dollars mode;
+   - the FI year and retirement markers;
+   - shortfall bands.
+4. Add a `FireChartSection` card on Results, below the tiles: "Investable
+   net worth vs FI number". Clicking a year goes to
+   `#/year-by-year?year={year}`.
+5. Add the chart roles to `tokens.css`. Add the graphics pairs (3:1) and the
+   band-label pair (4.5:1) to `tokens.test.ts`. Add the Results page with
+   data to the contrast sweep.
+6. Tests:
+   - `buildFireChartSeries` for examples A and B, in both modes;
+   - a smoke test that `TimeSeriesChart` renders its series, markers and
+     hidden table.
+7. E2E (`tests/e2e/fireChart.spec.ts`):
+   - enter example A;
+   - Results shows "Earliest retirement: Age 43";
+   - hovering the chart shows a tooltip with a year and two dollar values;
+   - clicking a year opens Year by year with that row outlined.
 
-**Check:** `npm run check` and `npm run test:e2e` pass.
-
-**As built:** the `complete` variant of `ProjectionSummary` also carries
-`retirementAge: number` and `retirementYear: number` (start year + retirement
-age − current age), so screens never derive them. Results reads them from
-the summary.
-
-#### Step 7 · Year by year
-
-- [x] Done
-
-1. `ProjectionTable` in `src/ui/components/` (part 2's component map),
-   generic over column definitions `{ header, cell(row) }`. It renders one row
-   per projection row, with a header row and a highlighted FI row.
-2. `YearByYearScreen` replaces the placeholder:
-   - a `DollarsModeToggle`;
-   - a `ProjectionTable` with columns Year, Age, Contributions, Growth,
-     Portfolio balance, Living expenses, FI number and Progress, all money
-     through `useMoneyFormatter`;
-   - rows from today to the later of the target retirement age and the FI
-     row (or to the retirement age if FI isn't reached);
-   - a `Banner`: "Withdrawals in retirement aren't modelled yet (M3).
-     Balances after you stop contributing assume nothing is spent."
-   - if the projection is incomplete, the same "Enter these" banner as
-     Results.
-3. Tests:
-   - the table's rows match worked example A in nominal mode, where the
-     contributions all read $30,000, and in today's mode, where row 1's
-     contribution reads $29,268 ($30,000 ÷ 1.025);
-   - the FI row is highlighted.
-4. E2E (`tests/e2e/growth.spec.ts`):
-   - enter worked example A through the screens;
-   - Results shows FI reached in 2038 at age 46;
-   - Year by year shows the 2038 row highlighted;
-   - the toggle starts on today's dollars, and switching to nominal changes
-     the balances;
-   - after a reload, the values are still there.
-
-   The test fixes the start year at 2026. The app reads it from a `Clock`,
-   so the E2E test needs a way to set it, e.g. Playwright's `page.clock`
-   API. It must not depend on the real date.
-
-**Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that the
-table is readable on the deep green page.
-
-**As built:**
-- `MissingInputsBanner` moved out of `ResultsScreen` into
-  `src/ui/screens/MissingInputsBanner.tsx`, so Results and Year by year share
-  it.
-- `ProjectionTable` takes `rows`, `columns`, `getRowKey`, `isHighlighted` and
-  an accessible `label`. The highlighted row has class
-  `projection-row-highlight` and `data-highlighted="true"`, and is bold on a
-  raised background (existing role pair, already in the contrast test).
-- Progress is the closing balance ÷ that row's FI number, shown as a percent.
-  It doesn't change with the dollars toggle.
-- The E2E spec uses `page.clock.install({ time })` to fix the date in 2026.
-- README gained a "What it does" section.
+**Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
+the chart reads clearly on the deep green page. **Open PR B** for the owner
+to verify.
 
 #### Follow-ups
 
-- **Remember the today's/nominal choice** in `meta` between visits.
+- **Remember the today's/nominal choice** in `meta` between visits (from
+  M2).
 - **Carried from M1:**
   - flush unsaved edits when the tab closes;
   - write back migrated records once the first migration exists;
@@ -1698,4 +1834,9 @@ table is readable on the deep green page.
 - [x] Approve the green and gold colour scheme plan.
 - [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
-- [ ] Owner verifies and merges the M2 PR.
+- [x] Owner verifies and merges the M2 PR.
+- [ ] Approve the M3 step-by-step plan (this PR).
+- [ ] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
+      for verification.
+- [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
+      8 to 10), then open it for verification.
