@@ -146,6 +146,46 @@ describe("planReducer", () => {
     expect(cleared.household.people[0]?.[field]).toBeUndefined();
   });
 
+  // Salary actions edit the named person's salary and tidy up when it is empty.
+  it("sets and clears the salary and its growth on the named person", () => {
+    const withSalary = planReducer(buildBlankPlan(), {
+      type: "setSalary",
+      personId: "person-1",
+      annual: 145000,
+    });
+    expect(withSalary.household.people[0]?.salary).toEqual({ annual: 145000 });
+
+    const withGrowth = planReducer(withSalary, {
+      type: "setSalaryGrowth",
+      personId: "person-1",
+      growth: { kind: "fixed", rate: 0.03 },
+    });
+    expect(withGrowth.household.people[0]?.salary).toEqual({
+      annual: 145000,
+      growth: { kind: "fixed", rate: 0.03 },
+    });
+
+    const growthCleared = planReducer(withGrowth, {
+      type: "setSalaryGrowth",
+      personId: "person-1",
+    });
+    expect(growthCleared.household.people[0]?.salary).toEqual({ annual: 145000 });
+
+    // Clearing the last field removes the salary entirely.
+    const allCleared = planReducer(growthCleared, { type: "setSalary", personId: "person-1" });
+    expect(allCleared.household.people[0]).not.toHaveProperty("salary");
+  });
+
+  it("ignores a salary for a person that doesn't exist, and leaves other fields alone", () => {
+    const blank = buildBlankPlan();
+
+    expect(planReducer(blank, { type: "setSalary", personId: "nobody", annual: 1 })).toBe(blank);
+
+    const aged = planReducer(blank, { type: "setCurrentAge", personId: "person-1", age: 34 });
+    const salaried = planReducer(aged, { type: "setSalary", personId: "person-1", annual: 1 });
+    expect(salaried.household.people[0]?.currentAge).toBe(34);
+  });
+
   // An unknown person id changes nothing.
   it("ignores an age for a person that doesn't exist", () => {
     const blank = buildBlankPlan();

@@ -11,13 +11,17 @@
 // converted to and from these by explicit mapper functions.
 
 /**
- * How a salary grows each year (IN-7). "Inflation" is `inflationPlus` with a
- * margin of 0; "Inflation − 1%" is a margin of −0.01.
+ * How an amount grows each year. Shared by every "Grows at" field (salary now;
+ * property and others later). "Inflation" is `inflationPlus` with a margin of
+ * 0; "Inflation − 1%" is a margin of −0.01.
  */
-export type SalaryGrowth =
+export type GrowthRate =
   | { readonly kind: "inflationPlus"; readonly margin: number } // inflation + margin
   | { readonly kind: "fixed"; readonly rate: number } // the same rate every year
   | { readonly kind: "none" }; // flat
+
+/** How a salary grows each year (IN-7): a `GrowthRate`. */
+export type SalaryGrowth = GrowthRate;
 
 /** A person's pay (IN-7). Every field is optional; unset means the default. */
 export interface Salary {

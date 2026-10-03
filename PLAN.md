@@ -1834,7 +1834,7 @@ No new dependencies.
 
 #### Step 3 · Salary state, wire format and shared fields
 
-- [ ] Done
+- [x] Done
 
 1. Reducer actions:
    - `setSalary { personId, annual? }`;
@@ -1851,6 +1851,30 @@ No new dependencies.
    - keyboard use.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `GrowthRate` (generic) in `src/plan/types.ts`; `SalaryGrowth` is an alias.
+- `GrowthRateField` takes `label`, `options`, `value`, `defaultValue`
+  (default: inflation), `onChange` and `hint`. The number box is named
+  "<label> percentage". Choices:
+  - A custom choice starts at +1% (Inflation +), −1% (Inflation −) or 3%
+    (Fixed), so the pick holds.
+  - "Inflation + …%" and "Inflation − …%" show the size of the margin
+    (0% to 15% and 0% to 10%); "Fixed …%" runs −10% to +15%.
+  - Choosing the default's own choice, or clearing the number, calls
+    `onChange(undefined)`. Choosing "Inflation" when the default is something
+    else sets margin 0.
+  - Typing 0 beside an inflation option becomes plain "Inflation".
+- `PercentField` gained an opt-in `allowNegative` (and `parsePercent` a second
+  argument), because "Fixed …%" runs from −10%. Other fields still reject a
+  minus sign.
+- `PerPersonFields` takes `people` and a render function
+  `(person, fieldLabel) => ReactNode`; `fieldLabel` adds "Name: " only when
+  there are several people.
+- `.input select` shares the `.input input` styling in `app.css`. The
+  contrast sweep for it is step 4.
+
+
 
 #### Step 4 · Salary on screen (end of PR A)
 

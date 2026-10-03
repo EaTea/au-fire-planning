@@ -6,7 +6,14 @@
 // These are the only functions that know about both shapes. Neither type is
 // ever stored or used in place of the other.
 
-import type { DatedExpense, Person, Plan, Portfolio, RetirementSpending } from "../plan/types";
+import type {
+  DatedExpense,
+  GrowthRate,
+  Person,
+  Plan,
+  Portfolio,
+  RetirementSpending,
+} from "../plan/types";
 import { CURRENT_SCHEMA_VERSION, type PlanDocumentV1 } from "./planDocument";
 
 /** The wire form of retirement spending, taken from the document type. */
@@ -76,6 +83,35 @@ function retirementSpendingFromWire(retirement: WireRetirement): RetirementSpend
   return { kind: "percentOfToday", fraction: percentToFraction(retirement.percent) };
 }
 
+/** The wire form of a growth rate, taken from the document type. */
+type WireGrowthRate = NonNullable<
+  NonNullable<PlanDocumentV1["household"]["people"][number]["salary"]>["growth"]
+>;
+
+/** Maps a growth rate to its wire form, converting fractions to percents. */
+function growthRateToWire(growth: GrowthRate): WireGrowthRate {
+  switch (growth.kind) {
+    case "inflationPlus":
+      return { kind: "inflationPlus", marginPercent: fractionToPercent(growth.margin) };
+    case "fixed":
+      return { kind: "fixed", ratePercent: fractionToPercent(growth.rate) };
+    case "none":
+      return { kind: "none" };
+  }
+}
+
+/** Inverse of `growthRateToWire`: converts stored percents back to fractions. */
+function growthRateFromWire(wireGrowth: WireGrowthRate): GrowthRate {
+  switch (wireGrowth.kind) {
+    case "inflationPlus":
+      return { kind: "inflationPlus", margin: percentToFraction(wireGrowth.marginPercent) };
+    case "fixed":
+      return { kind: "fixed", rate: percentToFraction(wireGrowth.ratePercent) };
+    case "none":
+      return { kind: "none" };
+  }
+}
+
 /**
  * Converts the in-memory plan to the stored document. Called by the save path
  * just before validation and writing. Only values that are set are written
@@ -123,6 +159,15 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
         if (person.targetRetirementAge !== undefined) {
           wirePerson.targetRetirementAgeYears = person.targetRetirementAge;
         }
+        // The salary section is written only once something in it is set.
+        if (person.salary?.annual !== undefined || person.salary?.growth !== undefined) {
+          wirePerson.salary = {
+            ...(person.salary.annual !== undefined ? { annualDollars: person.salary.annual } : {}),
+            ...(person.salary.growth !== undefined
+              ? { growth: growthRateToWire(person.salary.growth) }
+              : {}),
+          };
+        }
         return wirePerson;
       }),
     },
@@ -165,6 +210,18 @@ export function planFromWire(document: PlanDocumentV1): Plan {
     ...(wirePerson.currentAgeYears !== undefined ? { currentAge: wirePerson.currentAgeYears } : {}),
     ...(wirePerson.targetRetirementAgeYears !== undefined
       ? { targetRetirementAge: wirePerson.targetRetirementAgeYears }
+      : {}),
+    ...(wirePerson.salary !== undefined
+      ? {
+          salary: {
+            ...(wirePerson.salary.annualDollars !== undefined
+              ? { annual: wirePerson.salary.annualDollars }
+              : {}),
+            ...(wirePerson.salary.growth !== undefined
+              ? { growth: growthRateFromWire(wirePerson.salary.growth) }
+              : {}),
+          },
+        }
       : {}),
   }));
 

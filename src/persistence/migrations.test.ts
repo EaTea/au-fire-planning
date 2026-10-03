@@ -95,6 +95,36 @@ describe("parsePlanDocument", () => {
     });
   });
 
+  // Salary (M5) was also added without a new schema version.
+  it("parses a document with salary and maps it to a plan", () => {
+    const result = parsePlanDocument(readFixture("v1-salary.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(planFromWire(result.document).household.people).toStrictEqual([
+      {
+        id: "person-1",
+        label: "Person 1",
+        currentAge: 34,
+        targetRetirementAge: 50,
+        salary: { annual: 145000, growth: { kind: "inflationPlus", margin: 0.01 } },
+      },
+    ]);
+  });
+
+  // A growth kind this version doesn't know is rejected rather than guessed at.
+  it("rejects an unknown salary growth kind", () => {
+    const document = readFixture("v1-salary.json") as {
+      household: { people: { salary: { growth: unknown } }[] };
+    };
+    const [person] = document.household.people;
+    if (person === undefined) throw new Error("fixture has no person");
+    person.salary.growth = { kind: "compound" };
+
+    expect(parsePlanDocument(document).ok).toBe(false);
+  });
+
   // A dated expense that ends before it starts is rejected, not repaired.
   it("rejects a dated expense whose toYear is before its fromYear", () => {
     const document = readFixture("v1-drawdown.json") as {
