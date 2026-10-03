@@ -113,6 +113,34 @@ describe("parsePlanDocument", () => {
     ]);
   });
 
+  // Super (M5) was also added without a new schema version.
+  it("parses a document with a super account and maps it to a plan", () => {
+    const result = parsePlanDocument(readFixture("v1-super.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(planFromWire(result.document).household.people[0]?.superAccount).toStrictEqual({
+      balance: 180000,
+      returnRate: 0.065,
+      employerRate: 0.115,
+      salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2040 },
+      nonConcessional: { annual: 5000 },
+      earningsTaxRate: 0.12,
+    });
+  });
+
+  it("rejects a super contribution whose To year is before its From year", () => {
+    const document = readFixture("v1-super.json") as {
+      household: { people: { superAccount: { salarySacrifice: { toYear: number } } }[] };
+    };
+    const [person] = document.household.people;
+    if (person === undefined) throw new Error("fixture has no person");
+    person.superAccount.salarySacrifice.toYear = 2020;
+
+    expect(parsePlanDocument(document).ok).toBe(false);
+  });
+
   // A growth kind this version doesn't know is rejected rather than guessed at.
   it("rejects an unknown salary growth kind", () => {
     const document = readFixture("v1-salary.json") as {

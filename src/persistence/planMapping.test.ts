@@ -2,7 +2,13 @@ import { fc, test } from "@fast-check/vitest";
 import { describe, expect, it } from "vitest";
 
 import { createNewPlan } from "../plan/createNewPlan";
-import type { DatedExpense, Plan, RetirementSpending } from "../plan/types";
+import type {
+  DatedExpense,
+  Plan,
+  RetirementSpending,
+  SuperAccount,
+  SuperContribution,
+} from "../plan/types";
 import { fractionToPercent, percentToFraction, planFromWire, planToWire } from "./planMapping";
 
 // Tests for the Plan <-> PlanDocumentV1 mappers.
@@ -53,6 +59,46 @@ const datedExpenses: fc.Arbitrary<DatedExpense> = fc
     toYear: Math.min(fromYear + extraYears, 2200),
   }));
 
+/**
+ * A voluntary contribution with any subset of its fields set. A contribution
+ * with nothing set is left to the account generator to omit, because the
+ * stored form drops empty sections. Years stay in order.
+ */
+const superContributions: fc.Arbitrary<SuperContribution> = fc
+  .record({
+    annual: fc.option(dollars, { nil: undefined }),
+    fromYear: fc.option(years, { nil: undefined }),
+    extraYears: fc.integer({ min: 0, max: 50 }),
+    hasToYear: fc.boolean(),
+  })
+  .map(({ annual, fromYear, extraYears, hasToYear }) => ({
+    ...(annual !== undefined ? { annual } : {}),
+    ...(fromYear !== undefined ? { fromYear } : {}),
+    // Without a From year, any To year is valid; with one, it is never earlier.
+    ...(hasToYear ? { toYear: Math.min((fromYear ?? 2000) + extraYears, 2200) } : {}),
+  }))
+  .filter((contribution) => Object.keys(contribution).length > 0);
+
+/**
+ * Super accounts with any subset of fields set, or none at all (an absent
+ * account is how "nothing entered" is held, in memory and on the wire).
+ */
+const superAccounts: fc.Arbitrary<SuperAccount | undefined> = fc
+  .record({
+    balance: fc.option(dollars, { nil: undefined }),
+    returnRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
+    employerRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
+    salarySacrifice: fc.option(superContributions, { nil: undefined }),
+    nonConcessional: fc.option(superContributions, { nil: undefined }),
+    earningsTaxRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
+  })
+  .map((fields) => {
+    const account: SuperAccount = Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== undefined),
+    );
+    return Object.keys(account).length === 0 ? undefined : account;
+  });
+
 /** Arbitrary plans where every optional value may or may not be set. */
 const plans: fc.Arbitrary<Plan> = fc
   .record({
@@ -71,6 +117,7 @@ const plans: fc.Arbitrary<Plan> = fc
     expectedReturn: fc.option(wholeHundredthsFraction, { nil: undefined }),
     annualContribution: fc.option(dollars, { nil: undefined }),
     contributionsStopAge: fc.option(ages, { nil: undefined }),
+    superAccount: superAccounts,
     personLabel: fc.string(),
     portfolioName: fc.string(),
     projectionEndAge: fc.option(ages, { nil: undefined }),
@@ -92,6 +139,7 @@ const plans: fc.Arbitrary<Plan> = fc
           ...(generated.targetRetirementAge !== undefined
             ? { targetRetirementAge: generated.targetRetirementAge }
             : {}),
+          ...(generated.superAccount !== undefined ? { superAccount: generated.superAccount } : {}),
         },
       ],
     },
@@ -249,6 +297,58 @@ describe("salary mapping", () => {
   ] as const)("round-trips growth %j", (growth) => {
     const plan = planWithSalary({ annual: 1000, growth });
 
+    expect(planFromWire(planToWire(plan))).toStrictEqual(plan);
+  });
+});
+
+describe("super account mapping", () => {
+  /** A plan whose only person has the given super account. */
+  function planWithSuper(superAccount: SuperAccount | undefined): Plan {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    return { ...blank, household: { people: [{ ...person, superAccount }] } };
+  }
+
+  it("writes super with units in the names and rates as percents", () => {
+    const document = planToWire(
+      planWithSuper({
+        balance: 180000,
+        returnRate: 0.065,
+        employerRate: 0.115,
+        salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2040 },
+        nonConcessional: { annual: 5000 },
+        earningsTaxRate: 0.12,
+      }),
+    );
+
+    expect(document.household.people[0]?.superAccount).toStrictEqual({
+      balanceDollars: 180000,
+      returnPercent: 6.5,
+      employerRatePercent: 11.5,
+      salarySacrifice: { annualDollars: 10000, fromYear: 2027, toYear: 2040 },
+      nonConcessional: { annualDollars: 5000 },
+      earningsTaxPercent: 12,
+    });
+  });
+
+  it("omits the super section when nothing is set, and omits unset parts", () => {
+    expect(planToWire(planWithSuper(undefined)).household.people[0]).not.toHaveProperty(
+      "superAccount",
+    );
+    expect(planToWire(planWithSuper({})).household.people[0]).not.toHaveProperty("superAccount");
+    expect(
+      planToWire(planWithSuper({ balance: 1000 })).household.people[0]?.superAccount,
+    ).toStrictEqual({ balanceDollars: 1000 });
+  });
+
+  it("keeps 0% (set) distinct from unset for the employer rate", () => {
+    const plan = planWithSuper({ employerRate: 0 });
+
+    expect(planToWire(plan).household.people[0]?.superAccount).toStrictEqual({
+      employerRatePercent: 0,
+    });
     expect(planFromWire(planToWire(plan))).toStrictEqual(plan);
   });
 });

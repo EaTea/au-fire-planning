@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [
+      {
+        "id": "person-1",
+        "label": "Person 1",
+        "currentAgeYears": 34,
+        "targetRetirementAgeYears": 50,
+        "salary": { "annualDollars": 145000 },
+        "superAccount": {
+          "balanceDollars": 180000,
+          "returnPercent": 6.5,
+          "employerRatePercent": 11.5,
+          "salarySacrifice": { "annualDollars": 10000, "fromYear": 2027, "toYear": 2040 },
+          "nonConcessional": { "annualDollars": 5000 },
+          "earningsTaxPercent": 12
+        }
+      }
+    ]
+  },
+  "expenses": { "livingAnnualDollars": 64000 },
+  "assumptions": {},
+  "portfolios": [{ "id": "portfolio-1", "name": "Share portfolio", "valueDollars": 720000 }]
+}

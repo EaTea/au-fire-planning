@@ -2052,7 +2052,7 @@ No new dependencies.
 
 #### Step 7 · Super state and wire format
 
-- [ ] Done
+- [x] Done
 
 1. Reducer actions for each super field, including clearing back to the
    default. The contribution years keep `toYear ≥ fromYear`, as dated
@@ -2068,6 +2068,26 @@ No new dependencies.
    ones.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- Ten reducer actions: `setSuperBalance`, `setSuperReturn`, `setEmployerRate`,
+  `setEarningsTaxRate`, `setSalarySacrifice`, `setSalarySacrificeFromYear`,
+  `setSalarySacrificeToYear`, `setNonConcessional`,
+  `setNonConcessionalFromYear`, `setNonConcessionalToYear` (payloads `balance`,
+  `rate`, `annual` or `year`, all optional). Clearing the last field of a
+  contribution drops it, and clearing the last field of the account removes
+  `superAccount`, as for salary.
+- Years: raising From past To raises To; a To typed before From is raised to
+  From. With either year unset nothing is adjusted.
+- Wire limits (my judgement, step 8 should match): balance and contribution
+  amounts at least 0; return at least 0 (like the portfolio return); employer
+  and earnings tax rates 0 to 100%; years 1900 to 2200; a contribution whose
+  `toYear` is before `fromYear` is rejected when both are present.
+- The section is written only when something is set; empty contribution
+  objects are not written. So an in-memory `superAccount: {}` or
+  `salarySacrifice: {}` doesn't round-trip (it comes back absent); the reducer
+  never produces them, and the property test generates absent instead.
+
 
 #### Step 8 · Super on the Assets screen
 

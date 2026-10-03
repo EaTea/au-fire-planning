@@ -53,6 +53,27 @@ const growthRateSchema = z.discriminatedUnion("kind", [
 ]);
 
 /**
+ * A voluntary super contribution as stored (IN-23). The refinement keeps the
+ * years in order when both are given, like a dated expense.
+ */
+const superContributionSchema = z
+  .object({
+    annualDollars: z.number().nonnegative().optional(),
+    fromYear: calendarYearSchema.optional(),
+    toYear: calendarYearSchema.optional(),
+  })
+  .refine(
+    (contribution) =>
+      contribution.fromYear === undefined ||
+      contribution.toYear === undefined ||
+      contribution.toYear >= contribution.fromYear,
+    { message: "toYear must not be before fromYear", path: ["toYear"] },
+  );
+
+/** A rate stored as a percent from 0 to 100. */
+const percentRateSchema = z.number().min(0).max(100);
+
+/**
  * Zod schema for version 1 of the plan document. It is the single definition:
  * the TypeScript type below is inferred from it, and `parsePlanDocument`
  * (migrations.ts) validates stored data against it.
@@ -70,6 +91,16 @@ export const planDocumentV1Schema = z.object({
           .object({
             annualDollars: z.number().nonnegative().optional(),
             growth: growthRateSchema.optional(),
+          })
+          .optional(),
+        superAccount: z
+          .object({
+            balanceDollars: z.number().nonnegative().optional(),
+            returnPercent: z.number().nonnegative().optional(),
+            employerRatePercent: percentRateSchema.optional(),
+            salarySacrifice: superContributionSchema.optional(),
+            nonConcessional: superContributionSchema.optional(),
+            earningsTaxPercent: percentRateSchema.optional(),
           })
           .optional(),
       }),

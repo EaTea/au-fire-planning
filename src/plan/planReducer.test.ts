@@ -186,6 +186,91 @@ describe("planReducer", () => {
     expect(salaried.household.people[0]?.currentAge).toBe(34);
   });
 
+  // Each super field sets on, and clears from, the named person's super account.
+  it.each([
+    ["setSuperBalance", "balance", 180000, { balance: 180000 }],
+    ["setSuperReturn", "rate", 0.065, { returnRate: 0.065 }],
+    ["setEmployerRate", "rate", 0.115, { employerRate: 0.115 }],
+    ["setEarningsTaxRate", "rate", 0.12, { earningsTaxRate: 0.12 }],
+    ["setSalarySacrifice", "annual", 10000, { salarySacrifice: { annual: 10000 } }],
+    ["setSalarySacrificeFromYear", "year", 2030, { salarySacrifice: { fromYear: 2030 } }],
+    ["setSalarySacrificeToYear", "year", 2035, { salarySacrifice: { toYear: 2035 } }],
+    ["setNonConcessional", "annual", 5000, { nonConcessional: { annual: 5000 } }],
+    ["setNonConcessionalFromYear", "year", 2030, { nonConcessional: { fromYear: 2030 } }],
+    ["setNonConcessionalToYear", "year", 2035, { nonConcessional: { toYear: 2035 } }],
+  ] as const)("%s sets and clears its super field", (type, payloadKey, value, expectedAccount) => {
+    const set = planReducer(buildBlankPlan(), {
+      type,
+      personId: "person-1",
+      [payloadKey]: value,
+    });
+    expect(set.household.people[0]?.superAccount).toEqual(expectedAccount);
+
+    // Clearing the only field removes the whole account (and any empty contribution).
+    const cleared = planReducer(set, { type, personId: "person-1" });
+    expect(cleared.household.people[0]).not.toHaveProperty("superAccount");
+  });
+
+  // Clearing one field leaves the others, and an emptied contribution is dropped.
+  it("clears one super field without touching the rest", () => {
+    let plan = buildBlankPlan();
+    plan = planReducer(plan, { type: "setSuperBalance", personId: "person-1", balance: 1000 });
+    plan = planReducer(plan, { type: "setSalarySacrifice", personId: "person-1", annual: 500 });
+    plan = planReducer(plan, { type: "setSalarySacrifice", personId: "person-1" });
+
+    expect(plan.household.people[0]?.superAccount).toEqual({ balance: 1000 });
+  });
+
+  // Years stay in order, as for dated expenses, for both kinds of contribution.
+  it.each([
+    ["setSalarySacrificeFromYear", "setSalarySacrificeToYear", "salarySacrifice"],
+    ["setNonConcessionalFromYear", "setNonConcessionalToYear", "nonConcessional"],
+  ] as const)("%s moves the %s year up so it is never before From", (fromType, toType, field) => {
+    let plan = planReducer(buildBlankPlan(), { type: fromType, personId: "person-1", year: 2030 });
+    plan = planReducer(plan, { type: toType, personId: "person-1", year: 2035 });
+    expect(plan.household.people[0]?.superAccount?.[field]).toEqual({
+      fromYear: 2030,
+      toYear: 2035,
+    });
+
+    // From passes To: To follows.
+    const fromPassesTo = planReducer(plan, { type: fromType, personId: "person-1", year: 2040 });
+    expect(fromPassesTo.household.people[0]?.superAccount?.[field]).toEqual({
+      fromYear: 2040,
+      toYear: 2040,
+    });
+
+    // To typed before From: To is raised to From.
+    const toBeforeFrom = planReducer(plan, { type: toType, personId: "person-1", year: 2020 });
+    expect(toBeforeFrom.household.people[0]?.superAccount?.[field]).toEqual({
+      fromYear: 2030,
+      toYear: 2030,
+    });
+
+    // Clearing From leaves To alone: nothing to compare against.
+    const fromCleared = planReducer(plan, { type: fromType, personId: "person-1" });
+    expect(fromCleared.household.people[0]?.superAccount?.[field]).toEqual({ toYear: 2035 });
+  });
+
+  // An unknown person id changes nothing, and other person fields survive.
+  it("ignores super for a person that doesn't exist, and leaves other fields alone", () => {
+    const blank = buildBlankPlan();
+    expect(planReducer(blank, { type: "setSuperBalance", personId: "nobody", balance: 1 })).toBe(
+      blank,
+    );
+    expect(
+      planReducer(blank, { type: "setSalarySacrificeToYear", personId: "nobody", year: 2030 }),
+    ).toBe(blank);
+
+    const aged = planReducer(blank, { type: "setCurrentAge", personId: "person-1", age: 34 });
+    const withSuper = planReducer(aged, {
+      type: "setSuperBalance",
+      personId: "person-1",
+      balance: 1,
+    });
+    expect(withSuper.household.people[0]?.currentAge).toBe(34);
+  });
+
   // An unknown person id changes nothing.
   it("ignores an age for a person that doesn't exist", () => {
     const blank = buildBlankPlan();
