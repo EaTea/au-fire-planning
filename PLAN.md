@@ -1426,7 +1426,7 @@ Ages are whole numbers between 0 and 120.
 
 **Today's or nominal dollars (OUT-2):**
 - A `DollarsModeProvider` in `src/ui/dollarsMode.tsx` holds the mode:
-  `"today"` (the default) or `"nominal"`.
+  `"nominal"` (the default) or `"today"`.
 - `useMoneyFormatter()` returns `formatMoney(nominalValue, inflationIndex)`.
   It divides by the index in today's mode, then calls `formatDollars`.
 - `DollarsModeToggle` is a `SegmentedToggle` labelled "Show values in", with
