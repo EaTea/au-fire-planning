@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is implemented and awaiting verification. PR B (steps 8–10) is not started.
+**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is merged. PR B (steps 8–10) is implemented and awaiting verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A implemented, awaiting verification |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A merged, PR B awaiting verification |
 
 ## 1. Requirement ordering
 
@@ -1218,8 +1218,8 @@ Conventions settled while building M2, which later milestones rely on:
 
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
-**Status:** approved. PR A (steps 1 to 7) implemented, awaiting the owner's
-verification. PR B (steps 8 to 10) not started.
+**Status:** approved. PR A (steps 1 to 7) done, merged in PR #19. PR B
+(steps 8 to 10) is implemented and awaiting the owner's verification.
 
 **Kind:** behavior change.
 
@@ -1825,7 +1825,7 @@ the owner to verify.
 
 #### Step 8 · Engine: earliest feasible retirement age
 
-- [ ] Done
+- [x] Done
 
 1. Add `findEarliestRetirementAge(inputs, startYear)` in
    `src/engine/earliestRetirement.ts`, following the design decisions above.
@@ -1842,21 +1842,47 @@ the owner to verify.
    - a property test: the plan is solvent at the returned age, and not
      solvent at the age before it, unless that is below the current age.
 
+**As built:**
+- The search tries ages from the current age up to **end age − 1**, because
+  validation requires the retirement age to be before the plan-until age.
+  If none works the result is `notFeasible`, with one explanation line: the
+  failure at end age − 1.
+- Explanation lines: the last failing age ("Retiring at 42: runs short in
+  2085 (age 93)", valued at the shortfall), then "Retiring at 43: lasts to
+  age 95" (valued at investable net worth at the end), then "= Earliest
+  feasible retirement age" (unit `years`). The first two have no operator.
+  When the plan is solvent at the current age there is no failing line.
+- `EarliestRetirementInputs` is `ProjectionInputs` plus
+  `contributionsStopAgeFollowsRetirementAge`, true when the stop age's source
+  is "default", so each tried age is also the stop age. A stop age the user
+  entered is kept.
+
 **Check:** `npm run check` passes.
 
 #### Step 9 · Results: earliest retirement tile
 
-- [ ] Done
+- [x] Done
 
 1. Add the "Earliest retirement" tile, with its explanation, as described
    above. It sits after "FI reached".
 2. Tests for the feasible and not-feasible cases, using examples A and B.
 
+**As built:**
+- The tile sits after "FI reached" and before "Money lasts". Feasible: "Age
+  43", sub-line "2035 · your target is 50 (2042)", with the target age and
+  year from the projection summary (`retirementAge`, `retirementYear`).
+- Not feasible: "Not feasible by age {end age − 1}", sub-line "Even retiring
+  at {end age − 1}, the money runs short". It has the engine's one-line
+  explanation.
+- The contrast sweep's "every explanation open" passes already open every
+  "How is this" button, so the new tile's breakdown is covered without
+  changes.
+
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
 #### Step 10 · FIRE chart (a) (end of PR B)
 
-- [ ] Done
+- [x] Done
 
 1. Install `recharts` 3.10.1 and `react-is` 19.3.0 with `--save-exact`.
    Add a `ResizeObserver` stub to the Vitest setup.
@@ -1886,6 +1912,35 @@ the owner to verify.
    - Results shows "Earliest retirement: Age 43";
    - hovering the chart shows a tooltip with a year and two dollar values;
    - clicking a year opens Year by year with that row outlined.
+
+**As built:**
+- `recharts` 3.10.1 and `react-is` 19.3.0 are installed. The Vitest setup has
+  a `ResizeObserver` stub that never reports a size, so on Results in jsdom
+  the responsive chart draws nothing. `TimeSeriesChart` takes optional
+  `width`/`height` for tests.
+- `TimeSeriesChart` is the only file that imports Recharts. Its points are
+  `{ year, age, values }`, with a value per series key. Series colours come
+  from a class that sets `--series-colour` (`chart-series-investable`,
+  `chart-series-fi-number`), which both the line and the HTML legend swatch
+  read. The FI number is dashed and the markers are dotted, so lines differ by
+  more than colour. The chart is a `role="img"` with a name, followed by a
+  visually hidden data table (`<name>: data`).
+- `FireChartSection` puts `DollarsModeToggle` in the card header. `Card` gained
+  an optional `headerAction`. A click navigates to
+  `/year-by-year?year={year}`.
+- A band's x range is the shortfall years ± 0.5, clamped to the chart. If the
+  FI year and retirement year coincide, they share one marker, "FI reached ·
+  retirement".
+- New roles: `--colour-chart-primary` (gold), `--colour-chart-reference`
+  (white), `--colour-chart-band` (error pink, drawn at
+  `--chart-band-opacity: 0.2`). `tokens.test.ts` has a separate 3:1 list for
+  graphics (the three roles plus `--colour-border` for axes). The band label
+  uses `--colour-text`, not error pink: pink on the tinted band is only 4.2:1,
+  so a test checks the plain text colour on the blended band.
+- The hidden table repeats figures (the year-0 FI number, years), so tests and
+  specs that looked for those on Results by text now look inside the tile.
+- The contrast sweep has a Results-with-chart pass (example B: band, marker
+  and tooltip, both dollar modes).
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
 the chart reads clearly on the deep green page. **Open PR B** for the owner
@@ -1920,6 +1975,7 @@ to verify.
 - [x] Approve the M3 step-by-step plan.
 - [x] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
-- [ ] Owner verifies and merges M3 PR A.
-- [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
+- [x] Owner verifies and merges M3 PR A.
+- [x] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.
+- [ ] Owner verifies and merges M3 PR B.

@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { PlanProvider } from "../../plan/PlanProvider";
 import type { Plan } from "../../plan/types";
+import { DollarsModeProvider } from "../dollarsMode";
 import { blankPlan } from "../sections/sectionTestHelpers";
 import { ResultsScreen } from "./ResultsScreen";
 
@@ -63,15 +64,28 @@ const exampleB: Plan = {
 function renderResults(plan: Plan) {
   return render(
     <PlanProvider initialPlan={plan} startYear={2026}>
-      <MemoryRouter initialEntries={["/results"]}>
-        <Routes>
-          <Route path="/results" element={<ResultsScreen />} />
-          <Route path="/income-expenses" element={<p>Income and expenses page</p>} />
-          <Route path="/year-by-year" element={<p>Year by year page</p>} />
-        </Routes>
-      </MemoryRouter>
+      <DollarsModeProvider>
+        <MemoryRouter initialEntries={["/results"]}>
+          <Routes>
+            <Route path="/results" element={<ResultsScreen />} />
+            <Route path="/income-expenses" element={<p>Income and expenses page</p>} />
+            <Route path="/year-by-year" element={<p>Year by year page</p>} />
+          </Routes>
+        </MemoryRouter>
+      </DollarsModeProvider>
     </PlanProvider>,
   );
+}
+
+/**
+ * The text of every row of the open explanation panels, in order. The chart's
+ * visually hidden data table also has rows, so those are left out.
+ */
+function explanationRows(): (string | null)[] {
+  return screen
+    .getAllByRole("row")
+    .filter((row) => !row.closest(".time-series-chart"))
+    .map((row) => row.textContent);
 }
 
 describe("ResultsScreen", () => {
@@ -90,7 +104,7 @@ describe("ResultsScreen", () => {
 
     await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[0]!);
 
-    const rows = screen.getAllByRole("row").map((row) => row.textContent);
+    const rows = explanationRows();
     expect(rows).toEqual([
       "Retirement spending per year$64,000",
       "÷ Safe withdrawal rate (default)4%",
@@ -104,7 +118,7 @@ describe("ResultsScreen", () => {
 
     await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[1]!);
 
-    const rows = screen.getAllByRole("row").map((row) => row.textContent);
+    const rows = explanationRows();
     expect(rows).toEqual([
       "Investable amount$720,000",
       "÷ FI number$1,600,000",
@@ -168,7 +182,7 @@ describe("ResultsScreen", () => {
 
       await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[0]!);
 
-      const rows = screen.getAllByRole("row").map((row) => row.textContent);
+      const rows = explanationRows();
       expect(rows).toEqual([
         "Retirement spending per year$64,000",
         "÷ Safe withdrawal rate (default)4%",
@@ -183,11 +197,13 @@ describe("ResultsScreen", () => {
       renderResults(exampleA);
 
       expect(screen.getByText("FI reached")).toBeInTheDocument();
-      expect(screen.getByText("2038")).toBeInTheDocument();
+      // The chart's hidden table also has a 2038 cell, so look inside the tile.
+      const fiReachedTile = screen.getByText("FI reached").closest<HTMLElement>(".metric")!;
+      expect(within(fiReachedTile).getByText("2038")).toBeInTheDocument();
       expect(screen.getByText("Age 46")).toBeInTheDocument();
 
       await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[2]!);
-      expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
+      expect(explanationRows()).toEqual([
         "Balance at end of 2038 (age 46)$2,158,231",
         "− FI number in 2038$2,151,822",
         "= FI reached$6,409",
@@ -203,25 +219,63 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("$24,101,430 left in 2087 (nominal dollars)")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-      // Tiles in order: FI number, Progress, FI reached, Money lasts.
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
-      expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
+      // Tiles in order: FI number, Progress, FI reached, Earliest retirement, Money lasts.
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[4]!);
+      expect(explanationRows()).toEqual([
         "Cash at end of 2087 (age 95)$0",
         "+ Portfolio$24,101,430",
         "= Investable net worth$24,101,430",
       ]);
     });
 
+    it("shows the earliest retirement age against the target, with its breakdown (example A)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      expect(screen.getByText("Earliest retirement")).toBeInTheDocument();
+      expect(screen.getByText("Age 43")).toBeInTheDocument();
+      expect(screen.getByText("2035 · your target is 50 (2042)")).toBeInTheDocument();
+
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      const rows = explanationRows();
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toMatch(/^Retiring at 42: runs short in 2085 \(age 93\)\$/);
+      expect(rows[1]).toMatch(/^Retiring at 43: lasts to age 95\$/);
+      expect(rows[2]).toBe("= Earliest feasible retirement age43");
+    });
+
+    it("shows the earliest retirement age when it is after the target (example B)", () => {
+      renderResults(exampleB);
+
+      expect(screen.getByText("Age 61")).toBeInTheDocument();
+      expect(screen.getByText("2027 · your target is 60 (2026)")).toBeInTheDocument();
+    });
+
+    it("says when no retirement age is feasible", () => {
+      renderResults({
+        ...exampleB,
+        expenses: {
+          ...exampleB.expenses,
+          datedExpenses: [
+            { id: "big", name: "Huge", annual: 10_000_000, fromYear: 2028, toYear: 2028 },
+          ],
+        },
+      });
+
+      expect(screen.getByText("Not feasible by age 64")).toBeInTheDocument();
+      expect(screen.getByText("Even retiring at 64, the money runs short")).toBeInTheDocument();
+    });
+
     it("says when the money runs out, with the shortfall working (example B)", async () => {
       const user = userEvent.setup();
       renderResults(exampleB);
 
-      // FI isn't reached in example B, so its tile has no breakdown: Money lasts is the third.
+      // FI isn't reached in example B, so its tile has no breakdown: Earliest retirement is the third, Money lasts the fourth.
       expect(screen.getByText("Runs out at age 65")).toBeInTheDocument();
       expect(screen.getByText("2031 · 1 year can't be funded")).toBeInTheDocument();
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[2]!);
-      expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      expect(explanationRows()).toEqual([
         "Spending to fund in 2031$30,000",
         "− Cash and portfolio available$23,271",
         "= Shortfall$6,729",
@@ -290,6 +344,43 @@ describe("ResultsScreen", () => {
           name: "Plan until age must be after your current age → Household",
         }),
       ).toBeInTheDocument();
+    });
+  });
+  describe("the chart card", () => {
+    it("shows the chart's name, a dollars toggle and the figures as a hidden table", () => {
+      renderResults(exampleAWithCash);
+
+      expect(
+        screen.getByRole("heading", { name: "Investable net worth vs FI number" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "Show values in" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Investable net worth against the FI number, by year" }),
+      ).toBeInTheDocument();
+
+      // Nominal by default: 2027 is cash $20,800 + portfolio $800,400, against a $1,640,000 FI number.
+      expect(
+        screen.getByRole("row", { name: /^2027 35 \$821,200 \$1,640,000$/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("follows the dollars toggle", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      // $821,200 ÷ 1.025 and the unchanged FI number of $1,600,000.
+      expect(
+        screen.getByRole("row", { name: /^2027 35 \$801,171 \$1,600,000$/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(screen.queryByRole("heading", { name: /Investable net worth vs/ })).toBeNull();
+      expect(screen.queryByRole("img")).toBeNull();
     });
   });
 });

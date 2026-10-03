@@ -7,6 +7,7 @@ import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { FireChartSection } from "../sections/FireChartSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
 
 const step = steps.find((candidate) => candidate.id === "results")!;
@@ -51,8 +52,10 @@ export function ResultsScreen() {
             {summary.projection.status === "complete" ? (
               <>
                 <FiReachedTile projection={summary.projection} />
+                <EarliestRetirementTile projection={summary.projection} />
                 <MoneyLastsTile projection={summary.projection} />
                 <RunsOutBanner projection={summary.projection} />
+                <FireChartSection projection={summary.projection} />
               </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />
@@ -139,6 +142,40 @@ function FiReachedTile({
 
 /** The complete variant of the projection summary, as the solvency pieces receive it. */
 type CompleteProjection = Extract<CompleteSummary["projection"], { status: "complete" }>;
+
+/**
+ * The "Earliest retirement" tile (FIRE-3): the first age at which retiring
+ * still leaves the money lasting to the plan-until age, with the year and how
+ * it compares with the target retirement age (read from the projection
+ * summary). If no age works, says so; the last age tried is one before the
+ * plan-until age. Shown only when the projection is complete. The ages and
+ * years don't follow the dollars toggle.
+ */
+function EarliestRetirementTile({ projection }: { readonly projection: CompleteProjection }) {
+  const { earliestRetirement } = projection;
+
+  if (earliestRetirement.status === "notFeasible") {
+    const lastAgeTried = projection.endAge - 1;
+
+    return (
+      <MetricTile
+        label="Earliest retirement"
+        value={`Not feasible by age ${lastAgeTried}`}
+        subLine={`Even retiring at ${lastAgeTried}, the money runs short`}
+        explanation={earliestRetirement.explanation}
+      />
+    );
+  }
+
+  return (
+    <MetricTile
+      label="Earliest retirement"
+      value={`Age ${earliestRetirement.age}`}
+      subLine={`${earliestRetirement.year} · your target is ${projection.retirementAge} (${projection.retirementYear})`}
+      explanation={earliestRetirement.explanation}
+    />
+  );
+}
 
 /**
  * The "Money lasts" tile (OUT-3, OUT-4): whether cash and the portfolio fund

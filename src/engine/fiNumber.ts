@@ -19,8 +19,10 @@ import {
   findFiReached,
   projectPortfolio,
   type FiMilestone,
+  type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
+import { findEarliestRetirementAge, type EarliestRetirement } from "./earliestRetirement";
 import { assessSolvency, type Solvency } from "./solvency";
 
 /**
@@ -43,6 +45,8 @@ export type ProjectionSummary =
       readonly endAge: number;
       /** Whether the money lasts to the end age, or the first year it can't be funded. */
       readonly solvency: Solvency;
+      /** The first retirement age from today to the end age at which the money lasts (FIRE-3). */
+      readonly earliestRetirement: EarliestRetirement;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -265,29 +269,28 @@ function summariseProjection(
 
   const projectionInputs = inputs.projection.inputs;
 
-  const rows = projectPortfolio(
-    {
-      currentAge: projectionInputs.currentAge.value,
-      endAge: projectionInputs.endAge.value,
-      retirementAge: projectionInputs.targetRetirementAge.value,
-      expectedReturn: projectionInputs.expectedReturn.value,
-      interestRate: projectionInputs.interestRate.value,
-      inflationRate: projectionInputs.inflationRate.value,
-      annualContribution: projectionInputs.annualContribution.value,
-      contributionsStopAge: projectionInputs.contributionsStopAge.value,
-      portfolioOpening: sumValues(inputs.portfolios),
-      cashOpening: inputs.cashBalance.value,
-      livingAnnual: inputs.livingAnnual.value,
-      retirementSpendingAnnual,
-      datedExpenses: projectionInputs.datedExpenses.map((expense) => ({
-        annual: expense.annual.value,
-        fromYear: expense.fromYear,
-        toYear: expense.toYear,
-      })),
-      fiNumberToday: fiNumberToday.value,
-    },
-    startYear,
-  );
+  const projectionSettings: ProjectionInputs = {
+    currentAge: projectionInputs.currentAge.value,
+    endAge: projectionInputs.endAge.value,
+    retirementAge: projectionInputs.targetRetirementAge.value,
+    expectedReturn: projectionInputs.expectedReturn.value,
+    interestRate: projectionInputs.interestRate.value,
+    inflationRate: projectionInputs.inflationRate.value,
+    annualContribution: projectionInputs.annualContribution.value,
+    contributionsStopAge: projectionInputs.contributionsStopAge.value,
+    portfolioOpening: sumValues(inputs.portfolios),
+    cashOpening: inputs.cashBalance.value,
+    livingAnnual: inputs.livingAnnual.value,
+    retirementSpendingAnnual,
+    datedExpenses: projectionInputs.datedExpenses.map((expense) => ({
+      annual: expense.annual.value,
+      fromYear: expense.fromYear,
+      toYear: expense.toYear,
+    })),
+    fiNumberToday: fiNumberToday.value,
+  };
+
+  const rows = projectPortfolio(projectionSettings, startYear);
 
   const fiReached = findFiReached(rows);
   const retirementAge = projectionInputs.targetRetirementAge.value;
@@ -306,6 +309,15 @@ function summariseProjection(
     retirementYear: startYear + yearsUntilRetirement,
     endAge: projectionInputs.endAge.value,
     solvency: assessSolvency(rows),
+    earliestRetirement: findEarliestRetirementAge(
+      {
+        ...projectionSettings,
+        // A stop age the user left unset follows each retirement age the search tries.
+        contributionsStopAgeFollowsRetirementAge:
+          projectionInputs.contributionsStopAge.source === "default",
+      },
+      startYear,
+    ),
   };
 }
 

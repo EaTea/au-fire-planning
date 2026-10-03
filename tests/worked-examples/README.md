@@ -40,7 +40,8 @@ loads every file in this folder and checks the engine against it to the cent.
   expected row fields `cashInterest`, `cashClosing`, `spending`, `fromCash`,
   `fromPortfolio` and `shortfall`, `fiReached.investableClosing`, and a
   `solvency` answer (`lasts` with `investableClosing`, or `runsOut` with
-  `year`, `age`, `shortfallYears` and `shortfall`).
+  `year`, `age`, `shortfallYears` and `shortfall`), and an
+  `earliestRetirement` answer (`feasible` with `age` and `year`).
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.
