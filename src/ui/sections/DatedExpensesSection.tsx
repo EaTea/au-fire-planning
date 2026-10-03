@@ -10,7 +10,7 @@ import { formatDollars } from "../format";
 
 /**
  * Form section for EXP-3's dated and one-off expenses (a car in 2030, school
- * fees from 2032 to 2035). Each row is paid from cash, then the portfolio, in
+ * fees from 2032 to 2035). Each row is paid from the portfolio, then cash, in
  * its years, even before retirement. Amounts are in today's dollars and grow
  * with inflation. Used by the Income & expenses screen.
  *
@@ -127,8 +127,8 @@ export function DatedExpensesSection() {
       />
 
       <div className="hint">
-        In today&apos;s dollars, grown with inflation. Paid from cash and then the portfolio in
-        those years, even before you retire.
+        In today&apos;s dollars, grown with inflation. Paid from the portfolio, then cash, in those
+        years, even before you retire.
       </div>
     </Card>
   );

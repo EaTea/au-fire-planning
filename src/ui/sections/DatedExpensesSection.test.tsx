@@ -29,7 +29,7 @@ describe("DatedExpensesSection", () => {
     expect(screen.getByText("No dated expenses yet.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "In today's dollars, grown with inflation. Paid from cash and then the portfolio in those years, even before you retire.",
+        "In today's dollars, grown with inflation. Paid from the portfolio, then cash, in those years, even before you retire.",
       ),
     ).toBeInTheDocument();
   });

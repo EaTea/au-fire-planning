@@ -249,7 +249,7 @@ describe("YearByYearSection", () => {
 
     expect(bandRows.map((row) => row.textContent)).toEqual([
       "Working · contributing",
-      "Retired · spending drawn from cash, then the portfolio",
+      "Retired · spending drawn from the portfolio, then cash",
     ]);
 
     // The working band comes first (after the header), and the retired band sits before the 2043 row (age 51).

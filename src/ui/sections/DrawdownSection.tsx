@@ -27,7 +27,7 @@ export function DrawdownSection() {
 
       <p className="hint">
         Withdrawal in retirement: constant, inflation-adjusted. Each year&apos;s spending is drawn
-        from cash first, then the portfolio.
+        from the portfolio first, and from cash only once the portfolio is empty.
       </p>
     </Card>
   );
