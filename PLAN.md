@@ -1644,7 +1644,7 @@ changes to tests.
 
 #### Step 4 · Shared pieces: `YearField` and `EditableTable`
 
-- [ ] Done
+- [x] Done
 
 1. `YearField` in `src/ui/components/`: a `NumberField` for whole calendar
    years, with `min`/`max`. It needs `parseYear` in `format.ts`, and is
@@ -1671,6 +1671,19 @@ changes to tests.
      - Duplicate and Delete;
      - adding a row opens its first cell;
      - keyboard-only use.
+
+**As built:**
+- Extra props: `getRowId`, `getRowName` ("unnamed row" when empty),
+  `addNoun`, `emptyText`. `onAdd()` returns the new row's id, so the caller
+  generates ids.
+- Editors are plain `NumberField`/`TextField` and save through their own
+  `onChange`. On Enter, the table waits one tick, then closes the editor
+  only if the field isn't showing a validation error (`aria-invalid`).
+  Invalid text stays open for correction, and is discarded if focus leaves.
+- Escape sets a guard so the blur that some browsers fire when a field is
+  removed can't commit the cancelled text. jsdom doesn't fire that blur, so
+  step 5's E2E test covers Enter, invalid text and Escape in Chromium.
+- No new colour pairs: the table uses pairs already in `tokens.test.ts`.
 
 **Check:** `npm run check` passes.
 
@@ -1705,6 +1718,13 @@ changes to tests.
 7. Add Household's new field and the dated expenses table to the contrast
    sweep (`tests/e2e/contrast.spec.ts`). Valid and invalid passes cover the
    table with one row.
+8. E2E (`tests/e2e/datedExpenses.spec.ts`), in a real browser:
+   - add an expense, type a name and amount, and commit with Enter;
+   - type invalid text in the amount and press Enter: the editor stays open
+     with an error;
+   - press Escape on an edit: the old value stays;
+   - duplicate and delete a row with the keyboard only;
+   - after a reload, the remaining rows are still there.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 

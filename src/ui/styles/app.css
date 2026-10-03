@@ -418,3 +418,104 @@ button:focus-visible {
   background: var(--colour-surface-raised);
   font-weight: 700;
 }
+
+/* ---------- Editable table (cells edited in place, row menu) ---------- */
+
+.editable-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.editable-table-grid th,
+.editable-table-grid td {
+  border-bottom: 1px solid var(--colour-border-soft);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.editable-table-grid th {
+  font-weight: 700;
+  color: var(--colour-text-muted);
+  border-bottom-color: var(--colour-border);
+}
+
+/* A cell's value as a button: it reads as text, with an underline hinting that it can be edited. */
+.editable-cell {
+  min-width: 48px;
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px dashed var(--colour-border);
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.editable-cell:hover {
+  background: var(--colour-surface-raised);
+}
+
+.editable-cell-editor .field {
+  margin: 0;
+}
+
+.editable-table-empty {
+  color: var(--colour-text-muted);
+}
+
+.editable-table-add {
+  margin-top: var(--space-small);
+}
+
+.row-menu {
+  position: relative;
+}
+
+.row-menu-button {
+  padding: 2px 8px;
+  border: 1px solid var(--colour-border);
+  border-radius: 4px;
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-menu [role="menu"] {
+  position: absolute;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  border: 1px solid var(--colour-border-strong);
+  border-radius: 4px;
+  background: var(--colour-surface-raised);
+}
+
+.row-menu [role="menuitem"] {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-menu [role="menuitem"]:hover {
+  background: var(--colour-page-background);
+}
+
+/* Text for assistive technology only. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
