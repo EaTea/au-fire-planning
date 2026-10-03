@@ -15,8 +15,10 @@ import {
   DEFAULT_PROJECTION_END_AGE,
   DEFAULT_RETIREMENT_SPENDING,
   DEFAULT_SAFE_WITHDRAWAL_RATE,
+  DEFAULT_SALARY_ANNUAL,
+  DEFAULT_SALARY_GROWTH,
 } from "./defaults";
-import type { Plan, RetirementSpending, Sourced } from "./types";
+import type { Plan, RetirementSpending, SalaryGrowth, Sourced } from "./types";
 
 /** An input the user still has to provide. The UI maps `field` to the step where it is entered. */
 export interface MissingInput {
@@ -65,6 +67,10 @@ export interface ResolvedProjectionInputs {
   readonly interestRate: Sourced<number>;
   /** Dated and one-off expenses, in the order entered. */
   readonly datedExpenses: readonly ResolvedDatedExpense[];
+  /** Gross salary per year today (default $0). */
+  readonly salaryAnnual: Sourced<number>;
+  /** How the salary grows (default: with inflation). */
+  readonly salaryGrowth: Sourced<SalaryGrowth>;
 }
 
 /**
@@ -214,6 +220,8 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
         fromYear: expense.fromYear,
         toYear: expense.toYear,
       })),
+      salaryAnnual: sourceOrDefault(person?.salary?.annual, DEFAULT_SALARY_ANNUAL),
+      salaryGrowth: sourceOrDefault(person?.salary?.growth, DEFAULT_SALARY_GROWTH),
     },
   };
 }

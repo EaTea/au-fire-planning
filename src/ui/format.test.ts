@@ -65,6 +65,14 @@ describe("parseDollars", () => {
   });
 });
 
+describe("parsePercent with allowNegative", () => {
+  it("accepts a leading minus only when asked", () => {
+    expect(parsePercent("-10%", true)).toBeCloseTo(-0.1);
+    expect(parsePercent("−2.5", true)).toBeCloseTo(-0.025);
+    expect(parsePercent("-10%")).toBeNaN();
+  });
+});
+
 describe("parsePercent", () => {
   it("accepts a number with or without a percent sign and returns a fraction", () => {
     expect(parsePercent("4")).toBe(0.04);

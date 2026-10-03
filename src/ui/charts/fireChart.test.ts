@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bundledRuleSet } from "../../rules/bundledRuleSet";
 import { summarisePlan, type ProjectionSummary } from "../../engine/fiNumber";
 import type { Plan } from "../../plan/types";
 import { blankPlan } from "../sections/sectionTestHelpers";
@@ -7,7 +8,7 @@ import { buildFireChartSeries, FI_NUMBER_KEY, INVESTABLE_KEY } from "./fireChart
 
 /** The complete projection of a plan, started in 2026; fails the test if the plan is incomplete. */
 function completeProjection(plan: Plan): Extract<ProjectionSummary, { status: "complete" }> {
-  const summary = summarisePlan(plan, 2026);
+  const summary = summarisePlan(plan, 2026, bundledRuleSet);
   if (summary.status !== "complete" || summary.projection.status !== "complete") {
     throw new Error("the example plan should be complete");
   }

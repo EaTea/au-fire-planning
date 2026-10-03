@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bundledRuleSet } from "../../rules/bundledRuleSet";
 import { summarisePlan } from "../../engine/fiNumber";
 import type { CoastFire } from "../../engine/coastFire";
 import type { Plan } from "../../plan/types";
@@ -15,7 +16,7 @@ import {
 
 /** The Coast FIRE results of a plan, started in 2026; fails the test if the plan is incomplete. */
 function coastOf(plan: Plan): CoastFire {
-  const summary = summarisePlan(plan, 2026);
+  const summary = summarisePlan(plan, 2026, bundledRuleSet);
   if (summary.status !== "complete" || summary.projection.status !== "complete") {
     throw new Error("the example plan should be complete");
   }

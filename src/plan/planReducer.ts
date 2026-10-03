@@ -6,7 +6,15 @@
 // returns a new object, so React can detect the change and the engine's
 // derived summary can be recomputed from it.
 
-import type { DatedExpense, Person, Plan, Portfolio, RetirementSpending } from "./types";
+import type {
+  DatedExpense,
+  Person,
+  Plan,
+  Portfolio,
+  RetirementSpending,
+  Salary,
+  SalaryGrowth,
+} from "./types";
 
 /**
  * Every way the plan can change. Optional payload values mean "clear this
@@ -20,6 +28,8 @@ export type PlanAction =
   | { readonly type: "renamePortfolio"; readonly portfolioId: string; readonly name: string }
   | { readonly type: "setCurrentAge"; readonly personId: string; readonly age?: number }
   | { readonly type: "setTargetRetirementAge"; readonly personId: string; readonly age?: number }
+  | { readonly type: "setSalary"; readonly personId: string; readonly annual?: number }
+  | { readonly type: "setSalaryGrowth"; readonly personId: string; readonly growth?: SalaryGrowth }
   | { readonly type: "setInflationRate"; readonly rate?: number }
   | { readonly type: "setExpectedReturn"; readonly portfolioId: string; readonly rate?: number }
   | {
@@ -85,6 +95,12 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
 
     case "setTargetRetirementAge":
       return updatePerson(plan, action.personId, { targetRetirementAge: action.age });
+
+    case "setSalary":
+      return updateSalary(plan, action.personId, { annual: action.annual });
+
+    case "setSalaryGrowth":
+      return updateSalary(plan, action.personId, { growth: action.growth });
 
     case "setInflationRate":
       return { ...plan, assumptions: { ...plan.assumptions, inflationRate: action.rate } };
@@ -182,6 +198,39 @@ function updatePerson(plan: Plan, personId: string, changes: Partial<Person>): P
       ...plan.household,
       people: plan.household.people.map((person) =>
         person.id === personId ? { ...person, ...changes } : person,
+      ),
+    },
+  };
+}
+
+/**
+ * Returns the plan with the given salary fields changed on one person. A field
+ * set to `undefined` is cleared, and when both are cleared the person's
+ * `salary` is removed so an untouched salary stays absent. Used by the salary actions.
+ */
+function updateSalary(plan: Plan, personId: string, changes: Partial<Salary>): Plan {
+  const person = plan.household.people.find((candidate) => candidate.id === personId);
+  if (person === undefined) {
+    return plan;
+  }
+
+  const merged = { ...person.salary, ...changes };
+  const salary: Salary = {
+    ...(merged.annual !== undefined ? { annual: merged.annual } : {}),
+    ...(merged.growth !== undefined ? { growth: merged.growth } : {}),
+  };
+
+  const { salary: previousSalary, ...personWithoutSalary } = person;
+  void previousSalary;
+  const updatedPerson: Person =
+    Object.keys(salary).length === 0 ? personWithoutSalary : { ...personWithoutSalary, salary };
+
+  return {
+    ...plan,
+    household: {
+      ...plan.household,
+      people: plan.household.people.map((candidate) =>
+        candidate.id === personId ? updatedPerson : candidate,
       ),
     },
   };

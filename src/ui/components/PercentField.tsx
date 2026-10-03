@@ -13,6 +13,8 @@ interface PercentFieldProps {
   readonly hint?: string;
   readonly min?: number;
   readonly max?: number;
+  /** Accept a leading minus, e.g. "-5%". Off by default so other fields keep rejecting it. */
+  readonly allowNegative?: boolean;
 }
 
 /**
@@ -21,12 +23,12 @@ interface PercentFieldProps {
  * holds a fraction (0.045); the conversion lives in parsePercent and
  * formatPercent. A thin wrapper over NumberField, used by the input screens.
  */
-export function PercentField(props: PercentFieldProps) {
+export function PercentField({ allowNegative = false, ...props }: PercentFieldProps) {
   return (
     <NumberField
       {...props}
       formatValue={formatPercent}
-      parseText={parsePercent}
+      parseText={(text) => parsePercent(text, allowNegative)}
       exampleText="4.5"
     />
   );

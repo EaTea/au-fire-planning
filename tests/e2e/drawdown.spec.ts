@@ -86,7 +86,7 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
   await expect(yearByYearSection.getByRole("alert")).toHaveText("1 year can't be funded: 2031");
   expect((await rowCells(page, 2031)).at(-1)).toBe("Shortfall −$6,729");
   expect((await rowCells(page, 2030)).at(-1)).toBe("✓");
-  expect((await rowCells(page, 2027))[4]).toBe("$30,000");
+  expect((await rowCells(page, 2027))[5]).toBe("$30,000");
 
   // Add a $5,000 one-off in 2027 (a new row starts in the year after today).
   await page.goto("./#/income-expenses");
@@ -100,7 +100,7 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
 
   // 2027's spending is now $30,000 + $5,000, and the plan runs out sooner.
   await page.goto("./#/results");
-  expect((await rowCells(page, 2027))[4]).toBe("$35,000");
+  expect((await rowCells(page, 2027))[5]).toBe("$35,000");
   await expect(yearByYearSection.getByRole("alert")).toContainText("can't be funded");
 
   // Autosave waits 500 ms after the last edit; reload once the expense is stored.
@@ -108,7 +108,7 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
   await page.reload();
 
   // The saved plan loads after the page does, so wait for the projection to appear.
-  await expect.poll(async () => (await rowCells(page, 2027))[4]).toBe("$35,000");
+  await expect.poll(async () => (await rowCells(page, 2027))[5]).toBe("$35,000");
 
   await page.goto("./#/household");
   await expect(page.getByLabel("Plan until age")).toHaveValue("65");

@@ -14,6 +14,7 @@ import {
   type ResolvedPlanInputs,
 } from "../plan/resolvePlanInputs";
 import type { Plan, RetirementSpending, Sourced } from "../plan/types";
+import type { RuleSet } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
 import {
   findFiReached,
@@ -206,6 +207,9 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  * reads the clock (the UI gets it from the app's clock). It labels row 0 of
  * the projection.
  *
+ * `ruleSet` is the statutory rules data (NFR-3): `PlanProvider` passes the
+ * bundled set, tests may pass their own. The engine never imports the data.
+ *
  * On success it also returns the retirement spending and the resolved safe
  * withdrawal rate, so the UI can show them without digging into breakdown
  * lines.
@@ -214,7 +218,14 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  * required inputs are absent or retirement spending is not above $0. The investable amount is the sum of the
  * portfolios' values plus cash savings.
  */
-export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
+export function summarisePlan(
+  plan: Plan,
+  startYear: number,
+  // Nothing in the engine reads the rules yet; M5 step 5 (super) does. It is
+  // threaded through now so that change touches no callers.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ruleSet: RuleSet,
+): PlanSummary {
   const resolved = resolvePlanInputs(plan);
 
   if (resolved.status === "incomplete") {
@@ -291,6 +302,10 @@ function summariseProjection(
       toYear: expense.toYear,
     })),
     fiNumberToday: fiNumberToday.value,
+    salary: {
+      annual: projectionInputs.salaryAnnual.value,
+      growth: projectionInputs.salaryGrowth.value,
+    },
   };
 
   const rows = projectPortfolio(projectionSettings, startYear);

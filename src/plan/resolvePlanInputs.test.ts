@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createNewPlan } from "./createNewPlan";
 import { resolvePlanInputs } from "./resolvePlanInputs";
-import type { Plan } from "./types";
+import type { Person, Plan } from "./types";
 
 /** A blank plan with predictable IDs, for tests to build on. */
 function blankPlan(): Plan {
@@ -156,6 +156,8 @@ describe("resolvePlanInputs: projection inputs", () => {
       endAge: { value: 95, source: "default" },
       interestRate: { value: 0.04, source: "default" },
       datedExpenses: [],
+      salaryAnnual: { value: 0, source: "default" },
+      salaryGrowth: { value: { kind: "inflationPlus", margin: 0 }, source: "default" },
     });
   });
 
@@ -297,5 +299,45 @@ describe("resolvePlanInputs: drawdown inputs", () => {
       resolved(planWithDrawdownInputs({ targetRetirementAge: 89, projectionEndAge: 90 })).projection
         .status,
     ).toBe("complete");
+  });
+});
+
+// Tests for the salary inputs (IN-7).
+describe("resolvePlanInputs: salary", () => {
+  /** Resolves a plan with ages and the given salary, returning the projection inputs. */
+  function resolveWithSalary(salary: Person["salary"]) {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    const resolved = resolvePlanInputs({
+      ...blank,
+      household: {
+        people: [{ ...person, currentAge: 40, targetRetirementAge: 50, salary }],
+      },
+      expenses: { livingAnnual: 50000 },
+    });
+    if (resolved.status !== "complete" || resolved.inputs.projection.status !== "complete") {
+      throw new Error("expected a complete plan");
+    }
+
+    return resolved.inputs.projection.inputs;
+  }
+
+  it("defaults to no salary, growing with inflation", () => {
+    const inputs = resolveWithSalary(undefined);
+
+    expect(inputs.salaryAnnual).toEqual({ value: 0, source: "default" });
+    expect(inputs.salaryGrowth).toEqual({
+      value: { kind: "inflationPlus", margin: 0 },
+      source: "default",
+    });
+  });
+
+  it("uses the entered salary and growth", () => {
+    const inputs = resolveWithSalary({ annual: 145000, growth: { kind: "fixed", rate: 0.03 } });
+
+    expect(inputs.salaryAnnual).toEqual({ value: 145000, source: "input" });
+    expect(inputs.salaryGrowth).toEqual({ value: { kind: "fixed", rate: 0.03 }, source: "input" });
   });
 });

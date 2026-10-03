@@ -195,6 +195,11 @@ body {
   margin-bottom: var(--space-medium);
 }
 
+/* A field nested in a field (the percentage box under a growth dropdown). */
+.field > .field {
+  margin-top: var(--space-small);
+}
+
 .field label {
   display: block;
   font-size: 12px;
@@ -216,7 +221,8 @@ body {
   gap: var(--space-small);
 }
 
-.input input {
+.input input,
+.input select {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -225,6 +231,11 @@ body {
   font: inherit;
   color: inherit;
   outline: none;
+}
+
+/* A dropdown inside .input (GrowthRateField) keeps the box's own colours. */
+.input select {
+  cursor: pointer;
 }
 
 .input:focus-within {

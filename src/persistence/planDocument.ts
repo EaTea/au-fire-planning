@@ -43,6 +43,16 @@ const datedExpenseSchema = z
   });
 
 /**
+ * How a salary grows, as stored (IN-7): inflation plus a margin, a fixed rate or
+ * flat. Percents (can be negative) rather than fractions, like every stored rate.
+ */
+const growthRateSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("inflationPlus"), marginPercent: z.number().min(-100).max(100) }),
+  z.object({ kind: z.literal("fixed"), ratePercent: z.number().min(-100).max(100) }),
+  z.object({ kind: z.literal("none") }),
+]);
+
+/**
  * Zod schema for version 1 of the plan document. It is the single definition:
  * the TypeScript type below is inferred from it, and `parsePlanDocument`
  * (migrations.ts) validates stored data against it.
@@ -56,6 +66,12 @@ export const planDocumentV1Schema = z.object({
         label: z.string().optional(),
         currentAgeYears: ageYearsSchema.optional(),
         targetRetirementAgeYears: ageYearsSchema.optional(),
+        salary: z
+          .object({
+            annualDollars: z.number().nonnegative().optional(),
+            growth: growthRateSchema.optional(),
+          })
+          .optional(),
       }),
     ),
     projectionEndAgeYears: ageYearsSchema.optional(),

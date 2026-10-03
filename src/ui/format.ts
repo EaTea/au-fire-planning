@@ -58,22 +58,28 @@ export function parseDollars(text: string): number | undefined {
 // Digits with an optional decimal part, then an optional "%".
 const percentTextPattern = /^(\d+(\.\d+)?|\.\d+)\s*%?$/;
 
+// The same, with an optional leading "-" (or "−") for fields that allow negatives.
+const signedPercentTextPattern = /^[-−]?(\d+(\.\d+)?|\.\d+)\s*%?$/;
+
 /**
  * Reads the text a user typed into a PercentField. Accepts "4", "4.5" and
  * "4.5%" and returns a fraction (0.045), the form the plan stores. Returns
- * undefined for empty text and NaN for anything else.
+ * undefined for empty text and NaN for anything else. With
+ * `allowNegative` it also accepts a leading minus ("-10%"), for fields where a
+ * negative rate makes sense (a fixed growth rate); every other field leaves
+ * it off, so a stray minus stays an error there.
  */
-export function parsePercent(text: string): number | undefined {
+export function parsePercent(text: string, allowNegative = false): number | undefined {
   const trimmed = text.trim();
 
   if (trimmed === "") {
     return undefined;
   }
-  if (!percentTextPattern.test(trimmed)) {
+  if (!(allowNegative ? signedPercentTextPattern : percentTextPattern).test(trimmed)) {
     return NaN;
   }
 
-  const percentNumber = Number(trimmed.replace(/[%\s]/g, ""));
+  const percentNumber = Number(trimmed.replace(/[%\s]/g, "").replace("−", "-"));
 
   // Rounding removes binary floating-point noise from the division
   // (so 4.1% is 0.041, not 0.040999999999999995).

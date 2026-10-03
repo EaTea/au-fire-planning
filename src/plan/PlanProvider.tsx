@@ -18,6 +18,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { summarisePlan, type PlanSummary } from "../engine/fiNumber";
 import { currentCalendarYear } from "./clock";
 import { createNewPlan } from "./createNewPlan";
@@ -57,7 +58,10 @@ export function PlanProvider({ initialPlan, startYear, children }: PlanProviderP
 
   const resolvedStartYear = startYear ?? currentCalendarYear();
 
-  const summary = useMemo(() => summarisePlan(plan, resolvedStartYear), [plan, resolvedStartYear]);
+  const summary = useMemo(
+    () => summarisePlan(plan, resolvedStartYear, bundledRuleSet),
+    [plan, resolvedStartYear],
+  );
 
   return (
     <PlanDispatchContext.Provider value={dispatch}>

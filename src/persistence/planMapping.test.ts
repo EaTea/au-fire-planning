@@ -214,6 +214,45 @@ describe("planToWire: growth fields", () => {
   });
 });
 
+describe("salary mapping", () => {
+  /** A plan whose only person has the given salary. */
+  function planWithSalary(salary: Plan["household"]["people"][number]["salary"]): Plan {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    return { ...blank, household: { people: [{ ...person, salary }] } };
+  }
+
+  it("writes salary with units in the names and growth as percents", () => {
+    const document = planToWire(
+      planWithSalary({ annual: 145000, growth: { kind: "inflationPlus", margin: 0.01 } }),
+    );
+
+    expect(document.household.people[0]?.salary).toStrictEqual({
+      annualDollars: 145000,
+      growth: { kind: "inflationPlus", marginPercent: 1 },
+    });
+  });
+
+  it("omits salary when nothing is set, and omits unset parts", () => {
+    expect(planToWire(planWithSalary(undefined)).household.people[0]).not.toHaveProperty("salary");
+    expect(planToWire(planWithSalary({ annual: 50000 })).household.people[0]?.salary).toStrictEqual(
+      { annualDollars: 50000 },
+    );
+  });
+
+  it.each([
+    [{ kind: "inflationPlus", margin: -0.01 }],
+    [{ kind: "fixed", rate: 0.035 }],
+    [{ kind: "none" }],
+  ] as const)("round-trips growth %j", (growth) => {
+    const plan = planWithSalary({ annual: 1000, growth });
+
+    expect(planFromWire(planToWire(plan))).toStrictEqual(plan);
+  });
+});
+
 describe("planToWire: drawdown fields", () => {
   // Percent for the interest rate, dollars and years keep their values, units in the names.
   it("writes the drawdown fields with units in the field names", () => {
