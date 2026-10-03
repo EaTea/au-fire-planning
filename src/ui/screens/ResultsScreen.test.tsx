@@ -213,11 +213,12 @@ describe("ResultsScreen", () => {
       const user = userEvent.setup();
       renderResults(exampleA);
 
-      expect(screen.getByText("FI reached")).toBeInTheDocument();
-      // The chart's hidden table also has a 2038 cell, so look inside the tile.
-      const fiReachedTile = screen.getByText("FI reached").closest<HTMLElement>(".metric")!;
+      // The chart's hidden table and the Milestones card also show 2038 and age 46, so look inside the tile.
+      const fiReachedTile = screen
+        .getByText("FI reached", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
       expect(within(fiReachedTile).getByText("2038")).toBeInTheDocument();
-      expect(screen.getByText("Age 46")).toBeInTheDocument();
+      expect(within(fiReachedTile).getByText("Age 46")).toBeInTheDocument();
 
       await openExplanation(user, "FI reached");
       expect(explanationRows()).toEqual([
@@ -398,7 +399,9 @@ describe("ResultsScreen", () => {
 
     /** The Coast FIRE tile's element, for scoping assertions to it. */
     function coastTile(): HTMLElement {
-      return screen.getByText("Coast FIRE").closest<HTMLElement>(".metric")!;
+      return screen
+        .getByText("Coast FIRE", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
     }
 
     it("shows the number, the retirement-year figure and the year it is reached (example A)", () => {
@@ -499,6 +502,80 @@ describe("ResultsScreen", () => {
     });
   });
 
+  describe("the Milestones card", () => {
+    /** The text of each milestone, in the order the timeline shows them. */
+    function milestoneTexts(): (string | null)[] {
+      const card = screen.getByRole("heading", { name: "Milestones" }).closest("section")!;
+      return within(card)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent);
+    }
+
+    it("lists Coast FIRE, FI reached, retirement and money lasts in year order (example A)", () => {
+      renderResults(exampleAWithCash);
+
+      expect(milestoneTexts()).toEqual([
+        "2029Coast FIREAge 37Projected",
+        "2038FI reachedAge 46Projected",
+        "2042Retirement (your target)Age 50Projected",
+        "2087Money lasts to 95Projected",
+      ]);
+    });
+
+    it("marks a milestone reached today as reached (example D)", () => {
+      renderResults({
+        ...blankPlan,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 45, targetRetirementAge: 60 }],
+        },
+        expenses: { livingAnnual: 50000 },
+        portfolios: [
+          { id: "portfolio-1", name: "Share portfolio", value: 1_000_000, expectedReturn: 0.07 },
+        ],
+      });
+
+      expect(milestoneTexts()[0]).toBe("2026Coast FIREAge 45Reached");
+    });
+
+    it("puts milestones that never happen last, in words (examples E and B)", () => {
+      renderResults({
+        ...blankPlan,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 30, targetRetirementAge: 40 }],
+        },
+        expenses: { livingAnnual: 80000 },
+        assumptions: { inflationRate: 0.03 },
+        portfolios: [
+          {
+            id: "portfolio-1",
+            name: "Share portfolio",
+            value: 10_000,
+            expectedReturn: 0.05,
+            annualContribution: 1000,
+          },
+        ],
+      });
+
+      const texts = milestoneTexts();
+      expect(texts.slice(-2)).toEqual([
+        "Coast FIRE: not before retirementNot reached",
+        "FI reached: not by age 95Not reached",
+      ]);
+    });
+
+    it("says when the money runs out, with the year (example B)", () => {
+      renderResults(exampleB);
+
+      expect(milestoneTexts()).toContain("2031Money runs out at 65Projected");
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(screen.queryByRole("heading", { name: "Milestones" })).not.toBeInTheDocument();
+    });
+  });
+
   describe("the chart card", () => {
     it("shows the chart's name, a dollars toggle and the figures as a hidden table", () => {
       renderResults(exampleAWithCash);
@@ -570,6 +647,10 @@ describe("ResultsScreen", () => {
       renderResults(exampleA);
 
       const jumpLinks = screen.getByRole("navigation", { name: "On this page" });
+      expect(within(jumpLinks).getByRole("link", { name: "Milestones" })).toHaveAttribute(
+        "href",
+        "/results?view=milestones",
+      );
       expect(within(jumpLinks).getByRole("link", { name: "FIRE chart" })).toHaveAttribute(
         "href",
         "/results?view=fire-chart",

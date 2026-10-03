@@ -1696,7 +1696,18 @@ toggle, so they already cover the new tile.
 
 #### Step 3 · `MilestoneTimeline` and the Milestones card
 
-- [ ] Done
+- [x] Done
+
+**As built:** `MilestoneTimeline` (`src/ui/components/`) and
+`MilestonesSection` (`src/ui/sections/`, with `buildMilestoneItems`). The
+card has the id `milestones`, and "Milestones" is the first "On this page"
+link. Judgement calls: "Money lasts to {age}" is dated at the last
+projection year and "Money runs out" at the first unfunded year, both
+"projected"; items show a status word (Reached, Projected, Not reached) as
+well as the marker style; no new colour roles were needed, so the only
+`tokens.test.ts` addition is gold on the page background at 3:1. The FI
+reached tile test now scopes to its tile, since the card repeats the year
+and age.
 
 1. Add `MilestoneTimeline` in `src/ui/components/`, as described above.
    - Styles use role variables only. Reached items are solid, projected
