@@ -117,6 +117,40 @@ describe("calculateProgressToFi", () => {
     expect(calculateProgressToFi(dollars(0), dollars(1_600_000)).value).toBe(0);
   });
 
+  // The breakdown lists the parts of investable before dividing.
+  it("lists the investable lines, then the division", () => {
+    const investable = {
+      value: 925000,
+      unit: "dollars" as const,
+      lines: [
+        {
+          label: "Share portfolio",
+          value: 720000,
+          unit: "dollars" as const,
+          source: "input" as const,
+        },
+        {
+          label: "Super",
+          value: 205000,
+          unit: "dollars" as const,
+          operator: "+" as const,
+          source: "input" as const,
+        },
+        {
+          label: "Investable amount",
+          value: 925000,
+          unit: "dollars" as const,
+          operator: "=" as const,
+          source: "calculated" as const,
+        },
+      ],
+    };
+
+    expect(
+      calculateProgressToFi(investable, dollars(1_600_000)).lines.map((line) => line.label),
+    ).toEqual(["Share portfolio", "Super", "Investable amount", "FI number", "Progress to FI"]);
+  });
+
   // Progress is not capped: $2,000,000 of $1,600,000 is 125%.
   it("does not cap progress at 100%", () => {
     expect(calculateProgressToFi(dollars(2_000_000), dollars(1_600_000)).value).toBeCloseTo(

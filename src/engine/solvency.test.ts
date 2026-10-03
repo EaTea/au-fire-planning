@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
 import { assessSolvency } from "./solvency";
 
@@ -82,5 +83,83 @@ describe("assessSolvency", () => {
     );
 
     expect(assessSolvency(rows)).toMatchObject({ status: "runsOut", year: 2027, age: 61 });
+  });
+
+  // S4 (tests/worked-examples/m5-super.json): retired at 60 with only locked super.
+  describe("with super", () => {
+    const lockedSuperInputs: ProjectionInputs = {
+      ...runsOutInputs,
+      endAge: 67,
+      portfolioOpening: 0,
+      cashOpening: 0,
+      expectedReturn: 0.07,
+      interestRate: 0,
+      livingAnnual: 20000,
+      retirementSpendingAnnual: 20000,
+      fiNumberToday: 500000,
+      superAccount: {
+        opening: 500000,
+        returnRate: 0,
+        employerRate: 0,
+        earningsTaxRate: 0,
+        salarySacrifice: { annual: 0 },
+        nonConcessional: { annual: 0 },
+        ruleSet: bundledRuleSet,
+      },
+    };
+
+    it("notes the locked super in a shortfall year before 65", () => {
+      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026));
+
+      expect(result).toMatchObject({
+        status: "runsOut",
+        year: 2027,
+        shortfallYears: [2027, 2028, 2029, 2030],
+      });
+      if (result.status !== "runsOut") return;
+
+      expect(result.explanation.lines.map((line) => [line.label, line.value])).toEqual([
+        ["Spending to fund in 2027", 20000],
+        ["Cash and portfolio available", 0],
+        ["Shortfall", 20000],
+        ["Super (not accessible until 65)", 500000],
+      ]);
+    });
+
+    it("counts super drawn from 65 as available when the money then runs short", () => {
+      // $490,000 at 65 pays $20,000 a year for 24 years, then only $10,000 of the 25th (age 89).
+      const result = assessSolvency(
+        projectPortfolio(
+          {
+            ...lockedSuperInputs,
+            currentAge: 64,
+            retirementAge: 64,
+            endAge: 95,
+            superAccount: { ...lockedSuperInputs.superAccount!, opening: 490000 },
+          },
+          2026,
+        ),
+      );
+
+      expect(result.status).toBe("runsOut");
+      if (result.status !== "runsOut") return;
+
+      expect(result.age).toBe(89);
+      expect(result.explanation.lines.map((line) => [line.label, line.value])).toEqual([
+        ["Spending to fund in 2051", 20000],
+        ["Cash and portfolio available", 0],
+        ["Super available", 10000],
+        ["Shortfall", 10000],
+      ]);
+    });
+
+    it("adds super to the 'lasts' breakdown so the lines still sum", () => {
+      const result = assessSolvency(
+        projectPortfolio({ ...lockedSuperInputs, endAge: 61, retirementAge: 70 }, 2026),
+      );
+
+      expect(result.status).toBe("lasts");
+      expect(result.explanation.lines.map((line) => line.label)).toContain("Super");
+    });
   });
 });

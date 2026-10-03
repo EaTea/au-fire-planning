@@ -163,6 +163,17 @@ export interface ProjectionRow {
   readonly superClosing: number;
 }
 
+/**
+ * True when a year can't be fully funded while some super sits locked: the
+ * person is younger than the access age and has a super balance that could
+ * not be drawn. Used by the Year by year status and by the "Money runs out"
+ * breakdown, so both say the same thing about the same year. M6 replaces the
+ * fixed access age with the person's own.
+ */
+export function isShortfallWithSuperLocked(row: ProjectionRow): boolean {
+  return row.shortfall > 0 && row.age < DEFAULT_SUPER_ACCESS_AGE && row.superClosing > 0;
+}
+
 /** The year investable net worth first reaches the FI number, with the working behind it. */
 export interface FiMilestone {
   readonly yearIndex: number;

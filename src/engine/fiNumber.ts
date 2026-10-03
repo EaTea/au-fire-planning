@@ -170,7 +170,8 @@ export function calculateFiNumber(
 }
 
 /**
- * Progress to FI = investable amount ÷ FI number, as a fraction.
+ * Progress to FI = investable amount ÷ FI number, as a fraction. The
+ * breakdown lists the parts of the investable amount before dividing.
  *
  * Not capped at 100%, so 1.25 means 125%. Throws a `RangeError` if the FI
  * number isn't greater than 0 (e.g. spending of $0), since progress towards
@@ -185,11 +186,16 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
 
   const progress = investable.value / fiNumber.value;
 
+  // Show what investable is made of (each portfolio, cash, super, then the total) so a
+  // jump in progress can be traced; a single-line investable stays one line.
+  const investableLines =
+    investable.lines.length > 1 ? investable.lines : [summaryLine("Investable amount", investable)];
+
   return {
     value: progress,
     unit: "fraction",
     lines: [
-      summaryLine("Investable amount", investable),
+      ...investableLines,
       { ...summaryLine("FI number", fiNumber), operator: "÷" },
       {
         label: "Progress to FI",

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, startFresh, test } from "./fixtures";
+import { expect, startFresh, test, yearCell } from "./fixtures";
 
 // End-to-end test for IN-7 (salary): enter a salary that grows at "Inflation +
 // 1%" on Income & expenses, check Year by year shows the grown salary while
@@ -15,20 +15,10 @@ async function enter(page: Page, label: string, value: string): Promise<void> {
   await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
-/** The cell texts of the Year by year row for `year`. */
-async function rowCells(page: Page, year: number): Promise<string[]> {
-  const row = page
-    .getByRole("table", { name: "Year by year projection" })
-    .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
-
-  return row.getByRole("cell").allTextContents();
-}
-
-/** Checks the Salary column (the third cell) in the rows that matter. */
+/** Checks the Salary column in the rows that matter. */
 async function expectSalaries(page: Page, expected: Record<number, string>): Promise<void> {
   for (const [year, salary] of Object.entries(expected)) {
-    expect((await rowCells(page, Number(year)))[2], `salary in ${year}`).toBe(salary);
+    expect(await yearCell(page, Number(year), "Salary"), `salary in ${year}`).toBe(salary);
   }
 }
 

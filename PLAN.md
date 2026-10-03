@@ -2148,7 +2148,7 @@ No new dependencies.
 
 #### Step 9 · Super in the outputs
 
-- [ ] Done
+- [x] Done
 
 1. Year by year:
    - "Contributions" becomes "Into portfolio";
@@ -2165,6 +2165,31 @@ No new dependencies.
    - the breakdowns' super lines.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+**As built:**
+- Year by year: "Contributions" is now "Into portfolio"; "Into super" is
+  employer + salary sacrifice − contributions tax + non-concessional; "Super"
+  is the closing balance, after "Portfolio". Example A's 2027 row reads
+  salary $150,075, into super $23,808, super $219,815.
+- Status for a locked shortfall year reads "Shortfall −$X · super locked until
+  65". The test is `isShortfallWithSuperLocked(row)` in `projection.ts` (a
+  shortfall, age under `DEFAULT_SUPER_ACCESS_AGE`, super balance above $0),
+  shared by the table and the "Money runs out" breakdown.
+- "Money runs out": a locked year adds a note line "Super (not accessible
+  until 65)" with the balance, after "= Shortfall" and with no operator, so
+  the sum above it is untouched. When the first shortfall is at 65 or later,
+  super drawn that year is a "− Super available" line, so the sum stays true.
+  Not in the plan: the "Money lasts" breakdown gains "+ Super" when there is
+  any, because investable now includes it and the lines must still add up.
+- Progress to FI's breakdown now lists what investable is made of before the
+  division: each portfolio, "+ Cash savings", "+ Super" (both always shown,
+  even at $0, as in the engine), "= Investable amount", then "÷ FI number" and
+  "= Progress to FI". `calculateProgressToFi` reuses the investable
+  explanation's lines (a single-line investable stays one line); no
+  ExplainPanel change was needed.
+- The "Not yet modelled" banner reads as the plan says.
+- E2E specs (growth, drawdown, salary) find cells by column header.
+
 
 #### Step 10 · E2E, README and wrap-up (end of PR B)
 
