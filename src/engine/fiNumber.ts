@@ -12,7 +12,9 @@ import {
   resolvePlanInputs,
   type MissingInput,
   type ResolvedPlanInputs,
+  type ResolvedSuperContribution,
 } from "../plan/resolvePlanInputs";
+import { DEFAULT_SUPER_BALANCE } from "../plan/defaults";
 import type { Plan, RetirementSpending, Sourced } from "../plan/types";
 import type { RuleSet } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
@@ -21,6 +23,7 @@ import {
   projectPortfolio,
   type FiMilestone,
   type ProjectionInputs,
+  type ProjectionSuperContribution,
   type ProjectionRow,
 } from "./projection";
 import { calculateCoastFire, type CoastFire } from "./coastFire";
@@ -216,16 +219,9 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  *
  * Returns `incomplete` (naming what is missing) rather than guessing when
  * required inputs are absent or retirement spending is not above $0. The investable amount is the sum of the
- * portfolios' values plus cash savings.
+ * portfolios' values, cash savings and super.
  */
-export function summarisePlan(
-  plan: Plan,
-  startYear: number,
-  // Nothing in the engine reads the rules yet; M5 step 5 (super) does. It is
-  // threaded through now so that change touches no callers.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ruleSet: RuleSet,
-): PlanSummary {
+export function summarisePlan(plan: Plan, startYear: number, ruleSet: RuleSet): PlanSummary {
   const resolved = resolvePlanInputs(plan);
 
   if (resolved.status === "incomplete") {
@@ -250,7 +246,13 @@ export function summarisePlan(
     inputs.safeWithdrawalRate.value,
     inputs.safeWithdrawalRate.source,
   );
-  const investable = sumInvestable(inputs.portfolios, inputs.cashBalance);
+  const investable = sumInvestable(
+    inputs.portfolios,
+    inputs.cashBalance,
+    inputs.projection.status === "complete"
+      ? inputs.projection.inputs.superAccount.balance
+      : { value: DEFAULT_SUPER_BALANCE, source: "default" },
+  );
   const progressToFi = calculateProgressToFi(investable, fiNumber);
 
   return {
@@ -260,7 +262,7 @@ export function summarisePlan(
     investable,
     retirementSpending: spending,
     safeWithdrawalRate: inputs.safeWithdrawalRate.value,
-    projection: summariseProjection(inputs, fiNumber, spending.value, startYear),
+    projection: summariseProjection(inputs, fiNumber, spending.value, startYear, ruleSet),
   };
 }
 
@@ -276,12 +278,14 @@ function summariseProjection(
   fiNumberToday: Explained,
   retirementSpendingAnnual: number,
   startYear: number,
+  ruleSet: RuleSet,
 ): ProjectionSummary {
   if (inputs.projection.status === "incomplete") {
     return { status: "incomplete", missing: inputs.projection.missing };
   }
 
   const projectionInputs = inputs.projection.inputs;
+  const { superAccount } = projectionInputs;
 
   const projectionSettings: ProjectionInputs = {
     currentAge: projectionInputs.currentAge.value,
@@ -305,6 +309,19 @@ function summariseProjection(
     salary: {
       annual: projectionInputs.salaryAnnual.value,
       growth: projectionInputs.salaryGrowth.value,
+    },
+    superAccount: {
+      opening: superAccount.balance.value,
+      returnRate: superAccount.returnRate.value,
+      ...(superAccount.employerRate.value !== undefined
+        ? { employerRate: superAccount.employerRate.value }
+        : {}),
+      ...(superAccount.earningsTaxRate.value !== undefined
+        ? { earningsTaxRate: superAccount.earningsTaxRate.value }
+        : {}),
+      salarySacrifice: projectionContributionFrom(superAccount.salarySacrifice),
+      nonConcessional: projectionContributionFrom(superAccount.nonConcessional),
+      ruleSet,
     },
   };
 
@@ -337,6 +354,17 @@ function summariseProjection(
       },
       startYear,
     ),
+  };
+}
+
+/** Maps a resolved voluntary super contribution to the projection's form (amount plus optional years). */
+function projectionContributionFrom(
+  contribution: ResolvedSuperContribution,
+): ProjectionSuperContribution {
+  return {
+    annual: contribution.annual.value,
+    ...(contribution.fromYear !== undefined ? { fromYear: contribution.fromYear } : {}),
+    ...(contribution.toYear !== undefined ? { toYear: contribution.toYear } : {}),
   };
 }
 
@@ -384,15 +412,16 @@ function sumValues(portfolios: readonly { value: Sourced<number> }[]): number {
 }
 
 /**
- * Adds up the portfolios and cash savings into one investable amount (cash +
- * portfolio), listing each portfolio and the cash as a line, then a total.
+ * Adds up the portfolios, cash savings and super into one investable amount (cash +
+ * portfolio + super), listing each portfolio and the cash as a line, then a total.
  * Called by `summarisePlan`; this is the figure progress to FI measures.
  */
 function sumInvestable(
   portfolios: readonly { name: string; value: Sourced<number> }[],
   cashBalance: Sourced<number>,
+  superBalance: Sourced<number>,
 ): Explained {
-  const total = sumValues(portfolios) + cashBalance.value;
+  const total = sumValues(portfolios) + cashBalance.value + superBalance.value;
 
   const portfolioLines = portfolios.map((portfolio, index): ExplanationLine => ({
     label: portfolio.name,
@@ -411,6 +440,14 @@ function sumInvestable(
     source: cashBalance.source,
   };
 
+  const superLine: ExplanationLine = {
+    label: "Super",
+    value: superBalance.value,
+    unit: "dollars",
+    operator: "+",
+    source: superBalance.source,
+  };
+
   const totalLine: ExplanationLine = {
     label: "Investable amount",
     value: total,
@@ -419,7 +456,11 @@ function sumInvestable(
     source: "calculated",
   };
 
-  return { value: total, unit: "dollars", lines: [...portfolioLines, cashLine, totalLine] };
+  return {
+    value: total,
+    unit: "dollars",
+    lines: [...portfolioLines, cashLine, superLine, totalLine],
+  };
 }
 
 /**

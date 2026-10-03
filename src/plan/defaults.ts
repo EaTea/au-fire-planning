@@ -40,6 +40,22 @@ export const DEFAULT_SALARY_ANNUAL = 0;
 /** Salary growth: with inflation (a margin of 0). */
 export const DEFAULT_SALARY_GROWTH: SalaryGrowth = { kind: "inflationPlus", margin: 0 };
 
+/** Super balance: $0. */
+export const DEFAULT_SUPER_BALANCE = 0;
+
+/** Super return, net of fees: 7% a year (a fraction). */
+export const DEFAULT_SUPER_RETURN = 0.07;
+
+/** Voluntary super contributions (salary sacrifice, non-concessional): $0 a year. */
+export const DEFAULT_SUPER_CONTRIBUTION_ANNUAL = 0;
+
+/**
+ * The age from which super can be drawn (IN-5's default). M5 draws super only
+ * from this age; M6 makes it an input and adds the bridge check, replacing
+ * this constant's use in the engine with the person's own access age.
+ */
+export const DEFAULT_SUPER_ACCESS_AGE = 65;
+
 /** Cash savings: $0. */
 export const DEFAULT_CASH_BALANCE = 0;
 

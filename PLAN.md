@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is implemented and awaiting the owner's verification; PR B (super) is not started.
+**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is merged; PR B (super) is in progress.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A awaiting verification, PR B not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A merged, PR B in progress |
 
 ## 1. Requirement ordering
 
@@ -1378,8 +1378,8 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** approved (PR #25). PR A (steps 1 to 4) is implemented and
-awaiting the owner's verification. PR B (steps 5 to 10) is not started.
+**Status:** approved (PR #25). PR A (steps 1 to 4) is done, merged in PR
+#26. PR B (steps 5 to 10) is in progress, one step at a time.
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -1913,7 +1913,7 @@ No new dependencies.
 
 #### Step 5 · Engine: super accumulation and access
 
-- [ ] Done
+- [x] Done
 
 1. Add `superAccount?: SuperAccount` to `Person`, with the fields and
    defaults above. Resolve it, with the employer rate's source as `"rule"`
@@ -1947,6 +1947,33 @@ No new dependencies.
      - more starting super never creates a shortfall.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `Person.superAccount` (`SuperAccount`, `SuperContribution`) in
+  `src/plan/types.ts`. Defaults in `defaults.ts`, including
+  `DEFAULT_SUPER_ACCESS_AGE = 65` (M6 makes it an input).
+  `resolvePlanInputs` gives `ResolvedProjectionInputs.superAccount`. An unset
+  employer rate or earnings tax rate resolves to `{ value: undefined, source:
+  "rule" }`, and the engine reads that year's rate from `rulesForYear`.
+- `ProjectionInputs.superAccount` (`ProjectionSuper`) is optional and carries
+  the `RuleSet`, so `projectPortfolio`'s signature is unchanged. Absent means
+  no super. `summarisePlan` always passes one.
+- Unset contribution years: no start means from the first projected year, and
+  no end means to the retirement year. The end is left open (not resolved to a
+  calendar year) so the earliest-retirement search moves it with the age it
+  tries, as it does for the portfolio stop age.
+- Progress to FI's investable always has a "Super" line, even at $0, like
+  Cash.
+- Fixture checks: S1 to S4 and A pass to the cent, with C's row 1, FI
+  reached (2041, 49), earliest retirement (47) and FI number at retirement.
+  S2 is run with a $0 balance and 0% return, as its figures imply. S4's
+  extras are by hand: FI reached in row 0 (super $500,000 = FI number), the
+  money runs out from 2027 (shortfalls 2027 to 2030), and the earliest
+  retirement age is 64 (spending then starts at 65). `fiReached.fiNumber` in
+  the fixture format is now optional (C's FI-year number isn't in the plan).
+- Coast FIRE is untouched, so with super it is not yet right (it compares
+  investable including super with a portfolio-only number). Step 6 fixes it.
+  The A and C Coast figures are not in the fixtures yet.
 
 #### Step 6 · Engine: Coast FIRE with super
 
@@ -2007,7 +2034,11 @@ No new dependencies.
      less because of the 10% rate on long-held gains and franking credits.
      Enter your fund's rate if you know it."
 3. Add the card, with Advanced open, to the contrast sweep.
-4. Tests for each field: entering, clearing to default, limits, and the
+4. **Carried from PR A's review:** relabel `GrowthRateField`'s percentage box
+   to match the chosen option: "Above inflation by", "Below inflation by" or
+   "Fixed rate", instead of "{label} percentage". Update the tests and E2E
+   locators that use the old name.
+5. Tests for each field: entering, clearing to default, limits, and the
    years.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
@@ -2101,6 +2132,6 @@ No new dependencies.
 - [x] Approve the M5 step-by-step plan.
 - [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
-- [ ] Owner verifies and merges M5 PR A.
+- [x] Owner verifies and merges M5 PR A.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.

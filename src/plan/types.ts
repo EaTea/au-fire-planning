@@ -31,6 +31,35 @@ export interface Salary {
   readonly growth?: SalaryGrowth;
 }
 
+/**
+ * A voluntary super contribution (IN-23): salary sacrifice or
+ * non-concessional. Every field is optional; unset means the default.
+ */
+export interface SuperContribution {
+  /** Dollars per year (not indexed). `undefined` means default ($0). */
+  readonly annual?: number;
+  /** First calendar year it is paid. `undefined` means from next year. */
+  readonly fromYear?: number;
+  /** Last calendar year it is paid (inclusive). `undefined` means to the retirement year. */
+  readonly toYear?: number;
+}
+
+/** A person's super account (IN-21 to IN-23). Every field is optional; unset means the default. */
+export interface SuperAccount {
+  /** Balance today. `undefined` means default ($0). */
+  readonly balance?: number;
+  /** Return net of fees as a fraction. `undefined` means default (7%). */
+  readonly returnRate?: number;
+  /** Employer contribution rate as a fraction. `undefined` means the legislated rate each year. */
+  readonly employerRate?: number;
+  /** Concessional contributions out of salary; paid only while working. */
+  readonly salarySacrifice?: SuperContribution;
+  /** After-tax contributions; paid in their years whether working or not. */
+  readonly nonConcessional?: SuperContribution;
+  /** Tax on earnings as a fraction. `undefined` means the legislated rate. */
+  readonly earningsTaxRate?: number;
+}
+
 /** One person in the household. M1 has exactly one; couples arrive in M7. */
 export interface Person {
   readonly id: string;
@@ -42,6 +71,8 @@ export interface Person {
   readonly targetRetirementAge?: number;
   /** Gross salary (IN-7). `undefined` means none entered (default $0). */
   readonly salary?: Salary;
+  /** Super account (IN-21 to IN-23). `undefined` means none entered (balance $0). */
+  readonly superAccount?: SuperAccount;
 }
 
 /** One share portfolio. M1 has exactly one; several arrive in later milestones. */

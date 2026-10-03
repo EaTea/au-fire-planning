@@ -382,10 +382,19 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     fromCash: 0,
     fromPortfolio: 0,
     shortfall: 0,
+    fromSuper: 0,
     investableClosing,
     livingExpenses: 0,
     fiNumber,
     salary: 0,
+    employerContribution: 0,
+    salarySacrifice: 0,
+    nonConcessional: 0,
+    contributionsTax: 0,
+    superOpening: 0,
+    superEarnings: 0,
+    superEarningsTax: 0,
+    superClosing: 0,
   };
 }
 

@@ -347,6 +347,7 @@ describe("summarisePlan: cash and solvency", () => {
     expect(summary.investable.lines.map((line) => line.label)).toEqual([
       "Share portfolio",
       "Cash savings",
+      "Super",
       "Investable amount",
     ]);
     expect(summary.investable.lines[1]).toMatchObject({

@@ -158,6 +158,14 @@ describe("resolvePlanInputs: projection inputs", () => {
       datedExpenses: [],
       salaryAnnual: { value: 0, source: "default" },
       salaryGrowth: { value: { kind: "inflationPlus", margin: 0 }, source: "default" },
+      superAccount: {
+        balance: { value: 0, source: "default" },
+        returnRate: { value: 0.07, source: "default" },
+        employerRate: { value: undefined, source: "rule" },
+        salarySacrifice: { annual: { value: 0, source: "default" } },
+        nonConcessional: { annual: { value: 0, source: "default" } },
+        earningsTaxRate: { value: undefined, source: "rule" },
+      },
     });
   });
 
@@ -339,5 +347,65 @@ describe("resolvePlanInputs: salary", () => {
 
     expect(inputs.salaryAnnual).toEqual({ value: 145000, source: "input" });
     expect(inputs.salaryGrowth).toEqual({ value: { kind: "fixed", rate: 0.03 }, source: "input" });
+  });
+});
+
+// Tests for the super account inputs (IN-21 to IN-23).
+describe("resolvePlanInputs: super account", () => {
+  /** Resolves a plan with ages and the given super account, returning the resolved account. */
+  function resolveWithSuper(superAccount: Person["superAccount"]) {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    const resolvedPlan = resolvePlanInputs({
+      ...blank,
+      household: {
+        people: [{ ...person, currentAge: 40, targetRetirementAge: 50, superAccount }],
+      },
+      expenses: { livingAnnual: 50000 },
+    });
+    if (
+      resolvedPlan.status !== "complete" ||
+      resolvedPlan.inputs.projection.status !== "complete"
+    ) {
+      throw new Error("expected a complete plan");
+    }
+
+    return resolvedPlan.inputs.projection.inputs.superAccount;
+  }
+
+  it("defaults: $0, 7% net of fees, and the employer and earnings tax rates left to the law", () => {
+    const account = resolveWithSuper(undefined);
+
+    expect(account.balance).toEqual({ value: 0, source: "default" });
+    expect(account.returnRate).toEqual({ value: 0.07, source: "default" });
+    expect(account.employerRate).toEqual({ value: undefined, source: "rule" });
+    expect(account.earningsTaxRate).toEqual({ value: undefined, source: "rule" });
+    expect(account.salarySacrifice.annual).toEqual({ value: 0, source: "default" });
+    expect(account.salarySacrifice.fromYear).toBeUndefined();
+    expect(account.nonConcessional.toYear).toBeUndefined();
+  });
+
+  it("uses what was entered, with source input, and keeps the years", () => {
+    const account = resolveWithSuper({
+      balance: 185000,
+      returnRate: 0.06,
+      employerRate: 0.1,
+      earningsTaxRate: 0.1,
+      salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2042 },
+      nonConcessional: { annual: 5000 },
+    });
+
+    expect(account.balance).toEqual({ value: 185000, source: "input" });
+    expect(account.returnRate).toEqual({ value: 0.06, source: "input" });
+    expect(account.employerRate).toEqual({ value: 0.1, source: "input" });
+    expect(account.earningsTaxRate).toEqual({ value: 0.1, source: "input" });
+    expect(account.salarySacrifice).toEqual({
+      annual: { value: 10000, source: "input" },
+      fromYear: 2027,
+      toYear: 2042,
+    });
+    expect(account.nonConcessional).toEqual({ annual: { value: 5000, source: "input" } });
   });
 });

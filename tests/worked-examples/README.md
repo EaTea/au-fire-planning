@@ -51,8 +51,14 @@ loads every file in this folder and checks the engine against it to the cent.
 
 - M5 fixtures (`m5-super.json`) add inputs `salaryAnnual` and `salaryGrowth`
   (an internal `SalaryGrowth`, e.g. `{ "kind": "inflationPlus", "margin": 0.01 }`)
-  and `expected.salaryRows` (`yearIndex`, `salary`). Super figures are added
-  in M5 step 5.
+  and `expected.salaryRows` (`yearIndex`, `salary`). Step 5 adds the input
+  `superAccount` (an internal `SuperAccount`: `balance`, `returnRate`,
+  `employerRate`, `salarySacrifice` and `nonConcessional` with `annual`,
+  `fromYear`, `toYear`, `earningsTaxRate`) and `expected.superRows`
+  (`yearIndex` plus any of `salary`, `employerContribution`,
+  `salarySacrifice`, `nonConcessional`, `superEarnings`, `superEarningsTax`,
+  `contributionsTax`, `fromSuper`, `shortfall`, `superClosing`,
+  `investableClosing`). `fiReached.fiNumber` is optional.
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.

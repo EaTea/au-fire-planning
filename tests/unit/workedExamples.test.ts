@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { summarisePlan } from "../../src/engine/fiNumber";
 import { bundledRuleSet } from "../../src/rules/bundledRuleSet";
 import { createNewPlan } from "../../src/plan/createNewPlan";
-import type { DatedExpense, Plan, RetirementSpending, SalaryGrowth } from "../../src/plan/types";
+import type {
+  DatedExpense,
+  Plan,
+  RetirementSpending,
+  SalaryGrowth,
+  SuperAccount,
+} from "../../src/plan/types";
 
 // Checks the engine against the independently worked examples in
 // tests/worked-examples/ (NFR-6). Every *.json file there is picked up, so a
@@ -41,6 +47,8 @@ interface WorkedScenario {
     // M5 onwards; absent means "left unset".
     readonly salaryAnnual?: number | null;
     readonly salaryGrowth?: SalaryGrowth | null;
+    /** The super account as entered (M5 step 5 onwards); absent means none. */
+    readonly superAccount?: SuperAccount | null;
   };
   /** M1 figures: present in M1 fixtures only. */
   readonly expected: {
@@ -60,7 +68,25 @@ interface WorkedScenario {
     readonly coast?: ExpectedCoast;
     /** M5 figures: salary in the listed rows. */
     readonly salaryRows?: readonly { readonly yearIndex: number; readonly salary: number }[];
+    /** M5 figures: super (and salary, shortfall, investable) in the listed rows. */
+    readonly superRows?: readonly ExpectedSuperRow[];
   };
+}
+
+/** The super figures checked for one projection row; unlisted fields aren't checked. */
+interface ExpectedSuperRow {
+  readonly yearIndex: number;
+  readonly salary?: number;
+  readonly employerContribution?: number;
+  readonly salarySacrifice?: number;
+  readonly nonConcessional?: number;
+  readonly superEarnings?: number;
+  readonly superEarningsTax?: number;
+  readonly contributionsTax?: number;
+  readonly fromSuper?: number;
+  readonly shortfall?: number;
+  readonly superClosing?: number;
+  readonly investableClosing?: number;
 }
 
 /** The expected Coast FIRE figures. Only the listed fields are checked. */
@@ -135,7 +161,8 @@ interface ExpectedFiReached {
   readonly portfolioClosing?: number;
   /** Cash plus portfolio (M3 fixtures). */
   readonly investableClosing?: number;
-  readonly fiNumber: number;
+  /** The FI number in that year; checked only when listed. */
+  readonly fiNumber?: number;
 }
 
 const fixtureFiles = import.meta.glob<WorkedExampleFile>("../worked-examples/*.json", {
@@ -164,6 +191,7 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
             annual: inputs.salaryAnnual ?? undefined,
             growth: inputs.salaryGrowth ?? undefined,
           },
+          superAccount: inputs.superAccount ?? undefined,
         },
       ],
       projectionEndAge: inputs.projectionEndAge ?? undefined,
@@ -279,7 +307,9 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     if (expected.fiReached.investableClosing !== undefined) {
       expectToTheCent(row?.investableClosing ?? Number.NaN, expected.fiReached.investableClosing);
     }
-    expectToTheCent(row?.fiNumber ?? Number.NaN, expected.fiReached.fiNumber);
+    if (expected.fiReached.fiNumber !== undefined) {
+      expectToTheCent(row?.fiNumber ?? Number.NaN, expected.fiReached.fiNumber);
+    }
   }
 
   if (expected.fiNumberAtRetirement !== undefined) {
@@ -349,6 +379,44 @@ function checkSalaryFigures(summary: CompleteSummary, expected: WorkedScenario["
   }
 }
 
+/** Checks the listed super figures in the listed rows (M5 step 5). */
+function checkSuperFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.superRows === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+
+  for (const expectedRow of expected.superRows) {
+    const row = summary.projection.rows[expectedRow.yearIndex];
+    expect(row).toBeDefined();
+    if (row === undefined) continue;
+
+    const checks = [
+      ["salary", row.salary, expectedRow.salary],
+      ["employerContribution", row.employerContribution, expectedRow.employerContribution],
+      ["salarySacrifice", row.salarySacrifice, expectedRow.salarySacrifice],
+      ["nonConcessional", row.nonConcessional, expectedRow.nonConcessional],
+      ["superEarnings", row.superEarnings, expectedRow.superEarnings],
+      ["superEarningsTax", row.superEarningsTax, expectedRow.superEarningsTax],
+      ["contributionsTax", row.contributionsTax, expectedRow.contributionsTax],
+      ["fromSuper", row.fromSuper, expectedRow.fromSuper],
+      ["shortfall", row.shortfall, expectedRow.shortfall],
+      ["superClosing", row.superClosing, expectedRow.superClosing],
+      ["investableClosing", row.investableClosing, expectedRow.investableClosing],
+    ] as const;
+
+    for (const [field, actual, expectedValue] of checks) {
+      if (expectedValue === undefined) continue;
+
+      // Name the field and year in a failure, since a bare number difference doesn't say which.
+      expect(
+        Math.abs(actual - expectedValue),
+        `${field} in row ${expectedRow.yearIndex}: got ${actual}, expected ${expectedValue}`,
+      ).toBeLessThan(0.005);
+    }
+  }
+}
+
 /** Checks the "does the money last?" answer against a fixture, field by field. */
 function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
   expect(actual.status).toBe(expected.status);
@@ -399,6 +467,7 @@ describe("worked examples", () => {
           checkProjectionFigures(summary, scenario.expected);
           checkCoastFigures(summary, scenario.expected);
           checkSalaryFigures(summary, scenario.expected);
+          checkSuperFigures(summary, scenario.expected);
         },
       );
     });
