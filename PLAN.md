@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is merged; PR B (super) is in progress.
+**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is merged; PR B (super) is implemented and awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A merged, PR B in progress |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A merged, PR B implemented, awaiting the owner's verification |
 
 ## 1. Requirement ordering
 
@@ -1378,8 +1378,8 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** approved (PR #25). PR A (steps 1 to 4) is done, merged in PR
-#26. PR B (steps 5 to 10) is in progress, one step at a time.
+**Status:** implemented, awaiting the owner's verification of PR B. PR A
+(steps 1 to 4) is merged in PR #26. PR B (steps 5 to 10) is done.
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -2193,7 +2193,7 @@ No new dependencies.
 
 #### Step 10 · E2E, README and wrap-up (end of PR B)
 
-- [ ] Done
+- [x] Done
 
 1. E2E (`tests/e2e/super.spec.ts`), with the clock fixed in 2026:
    - **Example A:**
@@ -2208,6 +2208,17 @@ No new dependencies.
    and "As built" notes.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR B.**
+
+**As built:**
+- `tests/e2e/super.spec.ts` has two tests. Example A is entered through the
+  screens (FI 2033 at 41, earliest retirement 40, Coast FIRE "Reached:
+  contributions are now optional", 2027 row salary $150,075 and super
+  $219,815) and the super inputs are checked after a reload. Example S4
+  checks 2027 to 2030 read "Shortfall −$20,000 · super locked until 65" and
+  2031 reads "✓" with super at $480,000.
+- The reload poll waits for the saved super balance and the salary sacrifice
+  amount. The sacrifice from and to years aren't stored in example A, because
+  2027 and 2042 are the defaults (first year, retirement year).
 
 #### Follow-ups
 
@@ -2261,5 +2272,6 @@ No new dependencies.
 - [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
 - [x] Owner verifies and merges M5 PR A.
-- [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
+- [x] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.
+- [ ] Owner verifies and merges M5 PR B.

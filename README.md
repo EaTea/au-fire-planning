@@ -17,8 +17,16 @@ Everything is calculated in your browser and saved only on your device.
 - **Income & expenses, salary:** your gross (before-tax) salary and how it
   grows (with inflation, inflation plus or minus a margin, a fixed rate, or not
   at all). It stops at your target retirement age and shows in Year by year;
-  it sets your employer super contributions once super is added, but doesn't
-  pay for living expenses until tax is modelled.
+  it sets your employer super contributions, but doesn't pay for living
+  expenses until tax is modelled.
+- **Assets, super:** your super balance, its return net of fees, the employer
+  contribution rate (the legislated rate unless you change it), and optional
+  salary sacrifice and after-tax (non-concessional) contributions with start
+  and end years. Contributions are taxed 15% going in and earnings at 15%
+  (or a lower effective rate you enter). Super counts towards investable net
+  worth and is drawn on only from age 65; a year before then that only super
+  could fund shows as a shortfall in Year by year. Employer contributions stop
+  at retirement. The statutory rates live in dated data files, not in code.
 - **Results:** your FI number (in today's dollars, and in nominal dollars at
   your retirement age), your progress to it, the year you reach FI, and
   whether your money lasts to the age you plan until (or the age it runs out),
