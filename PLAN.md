@@ -2067,6 +2067,72 @@ No new dependencies.
   - write back migrated records once the first migration exists;
   - two tabs on an empty database (M16).
 
+### Salary growth defaults to "No growth": step-by-step plan
+
+**Kind:** behavior change. **Status:** plan awaiting the owner's approval.
+
+**Why.** The owner isn't convinced salaries keep pace with inflation, so a
+plan shouldn't assume they do unless the user says so. Salary growth is
+already configurable per person (the "Grows at" dropdown from M5 PR A);
+only the default changes. The owner chose "No growth" as the new default.
+
+**What changes for the user:**
+- A new salary, with "Grows at" left alone, stays at the same dollar
+  amount every working year. "No growth" is shown as the default choice
+  (the grey "default" style), and "Inflation" moves to an ordinary choice.
+- In today's dollars (the default display), a flat salary shrinks a little
+  each year, because prices rise and the salary doesn't. That is the point
+  of the change, not a bug.
+- Employer super (M5 PR B) follows the salary, so untouched plans will show
+  less super than under the old default.
+
+**What doesn't change:** the growth options, the internal type
+(`SalaryGrowth`), the wire format, the projection maths
+(`salaryGrowthRate`), and every plan where the user picked an option.
+
+**Saved plans.** An untouched dropdown is stored as "not set", so a plan
+saved before this change that left salary growth at its default will switch
+from inflation to no growth when it next loads. No migration is planned:
+salary shipped only in M5 PR A, the app has one user, and the dropdown makes
+the old behaviour one click away. The alternative, a schema version 2
+migration that writes "Inflation" into every saved salary without a growth,
+is rejected unless the owner wants existing plans kept as they were.
+
+**Requirements wording.** IN-11 currently says inflation applies to "salary
+growth (unless overridden)". It becomes "salary growth (when the user
+chooses it)". IN-7 gains "default: no growth". The M5 design decision above
+("The default is 'Inflation'") is updated to match.
+
+#### Step 1 · Default to no growth (one PR)
+
+1. `src/plan/defaults.ts`: `DEFAULT_SALARY_GROWTH = { kind: "none" }`,
+   with its comment saying why.
+2. `GrowthRateField` already handles any default: choosing the default's
+   own option ("No growth") clears the value to "not set", and choosing
+   "Inflation" stores a margin of 0. No change expected; its tests gain a
+   case with "No growth" as the default if one is missing.
+3. `SalarySection` passes the new default unchanged. Update its tests:
+   - "starts empty, with growth showing the default (no growth)";
+   - "goes back to the default growth by choosing No growth";
+   - choosing "Inflation" stores `{ kind: "inflationPlus", margin: 0 }`.
+4. `resolvePlanInputs` tests: the defaulted salary growth is
+   `{ kind: "none" }` with source "default".
+5. E2E (`tests/e2e/salary.spec.ts`): add a flow where a salary is entered
+   without touching "Grows at", and Year by year (nominal dollars) shows
+   the same salary in every working row.
+6. Worked examples: any example that relies on the default salary growth
+   sets its growth explicitly instead, so the examples don't depend on
+   defaults. M5 PR B's example C ("a $120,000 salary growing at
+   inflation") must set `salaryGrowth` to inflation explicitly.
+7. Requirements and plan text: IN-7 and IN-11 as above, the M5 salary
+   design decision, and this section marked done.
+
+**Checks:** `npm run check` and the E2E
+suite all pass.
+
+**Merge point:** after step 1. It is small and independent of M5 PR B, so
+it can merge before or after it.
+
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
@@ -2103,4 +2169,7 @@ No new dependencies.
       it for verification.
 - [ ] Owner verifies and merges M5 PR A.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
+      verification.
+- [ ] Approve the salary growth default plan.
+- [ ] Implement the salary growth default (step 1), then open it for
       verification.
