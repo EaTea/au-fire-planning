@@ -157,7 +157,7 @@ describe("resolvePlanInputs: projection inputs", () => {
       interestRate: { value: 0.04, source: "default" },
       datedExpenses: [],
       salaryAnnual: { value: 0, source: "default" },
-      salaryGrowth: { value: { kind: "inflationPlus", margin: 0 }, source: "default" },
+      salaryGrowth: { value: { kind: "none" }, source: "default" },
     });
   });
 
@@ -324,14 +324,11 @@ describe("resolvePlanInputs: salary", () => {
     return resolved.inputs.projection.inputs;
   }
 
-  it("defaults to no salary, growing with inflation", () => {
+  it("defaults to no salary, with no growth", () => {
     const inputs = resolveWithSalary(undefined);
 
     expect(inputs.salaryAnnual).toEqual({ value: 0, source: "default" });
-    expect(inputs.salaryGrowth).toEqual({
-      value: { kind: "inflationPlus", margin: 0 },
-      source: "default",
-    });
+    expect(inputs.salaryGrowth).toEqual({ value: { kind: "none" }, source: "default" });
   });
 
   it("uses the entered salary and growth", () => {
