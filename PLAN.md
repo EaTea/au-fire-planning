@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M3, the colour scheme and the one-page Results are done. M4 is implemented, awaiting the owner's verification.
+**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 plan drafted, awaiting approval.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 and one-page Results done. M4 implemented, awaiting the owner's verification |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 plan in review |
 
 ## 1. Requirement ordering
 
@@ -195,7 +195,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 | 3 | **IN-21** Super balance and return | Must | all |
 | 4 | **IN-22** Employer contribution rate (SG) | Must | all |
 | 5 | **IN-23** Voluntary super contributions | Must | all |
-| 6 | **IN-24** Employer contributions stop at retirement | Must | all |
+| 6 | **IN-24** Employer contributions stop at retirement | Must | part: stop at retirement (the override comes with IN-9 in M23) |
 | 7 | **SUPER-2** Contributions tax | Must | all |
 | 8 | **SUPER-5** Accumulation earnings tax | Must | all |
 
@@ -454,9 +454,10 @@ and the [desktop mockups](requirements/mockups/README.md).
 | # | Requirement | Priority | Scope in this milestone |
 | --- | --- | --- | --- |
 | 1 | **IN-9** Part-time income after retirement | Could | all |
-| 2 | **IN-25** Concessional carry-forward amounts | Could | all |
-| 3 | **SUPER-10** Transition to retirement | Could | all |
-| 4 | **SUPER-11** Downsizer contribution | Could | all |
+| 2 | **IN-24** Employer contributions stop at retirement | Must | rest: the override, for income after retirement |
+| 3 | **IN-25** Concessional carry-forward amounts | Could | all |
+| 4 | **SUPER-10** Transition to retirement | Could | all |
+| 5 | **SUPER-11** Downsizer contribution | Could | all |
 
 ### M24 · Tax extras
 
@@ -530,7 +531,7 @@ is split, it is finished in the last milestone listed.
 | **IN-21** Super balance and return | Must | M5 |
 | **IN-22** Employer contribution rate (SG) | Must | M5 |
 | **IN-23** Voluntary super contributions | Must | M5 |
-| **IN-24** Employer contributions stop at retirement | Must | M5 |
+| **IN-24** Employer contributions stop at retirement | Must | M5 → M23 |
 | **IN-25** Concessional carry-forward amounts | Could | M23 |
 | **IN-26** Cash savings | Must | M3 |
 | **IN-27** Other debts | Should | M18 |
@@ -894,7 +895,7 @@ uses, and covered by React Testing Library tests.
 | `AppShell` + `StepNav` | Header, step navigation, plan picker and export slots | all | M0 | every milestone |
 | `StepPage` | Page title, intro, content and Back/Next footer | 01–06 | M0 | every input step |
 | `Card`, `Banner` | Grouping and notices: disclaimer, "not yet modelled", hints | all | M1 | every milestone |
-| `AssetSidebar` | Asset list grouped by kind, with net worth and investable totals | 03a–03d | M5 | M9, M12–M14, M18 |
+| `AssetSidebar` | Asset list grouped by kind, with net worth and investable totals | 03a–03d | M9 | M12–M14, M18 |
 | `InputsPanel` | Drop-down panel that edits any input without leaving the page | 05b | M16 | all result screens |
 
 **Inputs**
@@ -945,9 +946,11 @@ uses, and covered by React Testing Library tests.
   table input (dated expenses) and first chart are built from column and
   series configuration, with the hover and click behaviour in one place,
   because almost every later milestone adds a table or a chart.
-- **M5: `PerPersonFields` and `AssetSidebar` built for many.** M5 still has
-  one person, but building these for N people and N assets is what makes
-  couples (M7) and more portfolios (M9) an addition rather than a rework.
+- **M5: `PerPersonFields` and per-person data built for many.** M5 still
+  has one person, but storing salary and super per person, and rendering
+  fields per person, is what makes couples (M7) an addition rather than a
+  rework. `AssetSidebar` follows in M9, built for many assets, when more
+  portfolios arrive.
 - **M16: `InputsPanel` is assembly.** If the M1 rule above holds, the panel
   is mostly tabs around existing form sections, plus undo from the
   reducer.
@@ -1330,473 +1333,646 @@ Conventions every later milestone follows:
 - **`YearByYearSection`** renders only when the projection is complete.
   The page shows one missing-inputs banner, at the top.
 
-### M4 · Coast FIRE: step-by-step plan
+### M4 · Coast FIRE: done
 
-**Status:** implemented, awaiting the owner's verification. Steps 1 to 5 are
-done; they build on the one-page Results (PR #23).
+Delivered in PR #24 (plan in PR #22):
+- the Coast FIRE number and when it's reached;
+- a Milestones section;
+- the "When could you stop contributing?" chart.
+
+The full step-by-step plan is in git history.
+
+Conventions settled while building M4, which later milestones rely on:
+
+- **Coast FIRE** (`src/engine/coastFire.ts`):
+  - `coast(k)` = the assets whose path doesn't depend on the contributions
+    you'd stop (cash so far), plus the portfolio needed. That portfolio
+    amount has a closed form: what reaches the FI number at retirement,
+    after covering any dated expenses those assets can't pay.
+  - **"Reached at row k"** means exactly: stop contributing after year *k*
+    and you still reach FI by retirement. A property test checks this
+    against the real projection. Keep it true when adding assets.
+  - The "no more contributions" path is `projectPortfolio` with
+    contributions switched off. Never a copy of its rules.
+  - Coast FIRE comes no later than FI only when every asset grows at
+    least as fast as inflation.
+- **Milestones:** `MilestoneTimeline` (`src/ui/components/`) is generic over
+  `{ year?, label, detail?, status }`. Later milestones add items in
+  `buildMilestoneItems` (`src/ui/sections/MilestonesSection.tsx`).
+- **Charts:**
+  - `TimeSeriesChart` series take
+    `strokeStyle: "solid" | "dashed" | "dotted"`. Lines on one chart
+    differ by style as well as colour.
+  - The chart's right margin leaves room for a marker label on the last
+    year.
+  - Each chart's E2E spec asserts its series' rendered strokes, and flow
+    specs don't repeat that.
+- **Tests on a busy Results page:**
+  - Unit tests open a tile's breakdown by its label (`openExplanation`),
+    never by position.
+  - Text queries are scoped to a tile or card, because sections repeat
+    figures.
+- **Local E2E caveat:** `reuseExistingServer` is on outside CI, so a local
+  run can test a stale preview build. Restart the preview server after
+  pulling or editing before trusting a local failure. CI is unaffected.
+
+### M5 · Superannuation: accumulation: step-by-step plan
+
+**Status:** draft, awaiting the owner's approval. Do not implement yet.
 
 **Kind:** behavior change.
+- PR A's first step adds the rules-as-data foundation (NFR-3), which
+  changes nothing the user sees on its own.
 
-**Goal:** answer "when could I stop contributing?". Coast FIRE is the point
-where what you've already saved, left to grow with no further
-contributions, would reach your FI number by your target retirement age.
-From then on, contributions are optional. Results shows:
-- the Coast FIRE number;
-- whether you've reached it, and if not, when you will on your current
-  contributions;
-- a chart of how that plays out;
-- a milestones timeline with the key years so far.
+**Goal:** super becomes part of the plan. Salary drives employer
+contributions. Super grows with contributions and earnings, both taxed as
+the law says. It counts towards investable net worth, and is drawn on once
+it's accessible. From this milestone, statutory rates live in dated data
+files, not in code.
 
 **Requirements in scope:**
-- COAST-1 the Coast FIRE number, in today's dollars and in the dollars of
-  the retirement year;
-- COAST-2 whether Coast FIRE is reached, and when;
-- COAST-6 charts (a) and (b): savings growing with no further
-  contributions against the FI number, the Coast FIRE number over time,
-  and the point it's reached;
-- OUT-4, part: the Coast FIRE year, shown with the FI year, retirement and
-  "money lasts" on a milestones timeline (`MilestoneTimeline`, moved here
-  from M3).
+- NFR-3 rules stored as dated data: the foundation, starting with the super
+  rules;
+- IN-7 salary and its growth;
+- IN-21 super balance and return, net of fees;
+- IN-22 the employer contribution rate (SG), defaulting to the legislated
+  rate;
+- IN-23 voluntary concessional (salary sacrifice) and non-concessional
+  contributions, each with start and end years;
+- IN-24 employer contributions stop at retirement (the default behaviour;
+  see the decisions for the override);
+- SUPER-2 the 15% contributions tax on concessional contributions;
+- SUPER-5 the accumulation earnings tax.
 
 **Out of scope (later milestones):**
-- Coast FIRE separately for super and outside super (COAST-3, chart (c)),
-  in M6, once super exists;
-- the minimum income needed while coasting (COAST-4), and comparing
-  "keep, reduce or stop contributing" (COAST-7), in M17;
-- employer contributions continuing while coasting (COAST-5), in M5 and M17.
+- **M6:**
+  - a configurable super access age, preservation (SUPER-1), the bridge
+    check (FIRE-4) and chart (b);
+  - Coast FIRE split into super and outside super (COAST-3). M5 draws
+    super only from 65, the default access age.
+- **M7:** a second person. M5 builds per-person data but shows one person.
+- **M8:** tax on salary, and salary paying for living expenses.
+  Contributions to the portfolio are still entered directly.
+- **M10:** retirement phase (SUPER-6), when earnings become tax-free.
+  Until then, earnings stay taxed at 15% after retirement, which is
+  conservative.
+- **M11, M20 and M23:**
+  - contribution caps (SUPER-4, M11 and M20);
+  - Division 293 (SUPER-3, M20);
+  - carry-forward (IN-25, M23).
+- **M23:** IN-24's override (employer contributions after retirement),
+  which only matters once there is income after retirement (IN-9, M23).
+  This moves part of a Must requirement into a later milestone, so it's
+  called out for review.
+- **M9 (moved from M5):** `AssetSidebar`. Assets has three cards (super,
+  portfolio and cash), which still read fine as a page. Part 2's
+  component map is updated in this PR.
 
-**One PR**, five steps. It's smaller than M3, and each step leaves the app
-working.
-
-**Builds on the one-page Results page** (done, PR #23; see its summary
-above). Everything M4 adds is a section of that page:
-- **Order:** the tiles, the milestones, chart (a), the Coast FIRE chart,
-  then Year by year.
-- **Dollars:** the page's single dollars toggle covers it all.
-- **Navigation:** chart clicks jump to rows on the same page.
-- **"On this page" links:** each new section adds one.
+**Two PRs:**
+- **PR A, rules as data and salary (steps 1 to 4).** It adds the dated
+  rules files and the code that loads them, then salary with its growth.
+  Salary shows in Year by year. It affects nothing else until PR B,
+  which the hint says.
+- **PR B, super (steps 5 to 10).** Super accounts, contributions and taxes,
+  drawing super from 65, investable net worth including super, Coast FIRE
+  with super, and the outputs.
 
 **Definition of done:**
 
-- Results has a **Coast FIRE** tile. For worked example A it shows:
-  - $811,877 today, and $1,205,235 in 2042 dollars;
-  - "Reached in 2029, at age 37", with a breakdown.
-- Results has a **When could you stop contributing?** chart. It runs from
-  today to the target retirement year and has four lines:
-  - your savings on your current contributions;
-  - today's savings with no further contributions;
-  - the Coast FIRE number;
-  - the FI number.
-
-  It marks the Coast FIRE year and retirement, and follows the
-  today's/nominal toggle.
-- Results has a **Milestones** card: Coast FIRE, FI reached, retirement,
-  and whether the money lasts, in year order.
+- `src/rules/data/fy2025-26.json` holds the FY2025–26 super rules, each with
+  its source link. The engine reads every statutory rate from it.
+- Income & expenses has a Salary card: the gross salary, and how it grows.
+- Assets has a Super card:
+  - the balance, and the return net of fees;
+  - the employer rate (dashed when following the law);
+  - salary sacrifice and non-concessional contributions, each with years;
+  - an advanced "tax on earnings" field.
+- Year by year shows salary, money into super, and the super balance.
+  Investable includes super.
+- Results:
+  - progress to FI, FI reached, Coast FIRE, the earliest retirement age
+    and the charts all count super;
+  - the breakdowns show it as its own line.
+- Super is drawn only from age 65, after cash and the portfolio. Years
+  before that which only super could fund are flagged as shortfalls.
 - With the worked examples below, the figures match to the cent.
+- Plans saved by M1 to M4 still load.
 - `npm run check` and `npm run test:e2e` pass, and CI is green.
 
-#### Design decisions for M4
+#### Design decisions for M5
 
-**Each asset grows at its own rate while coasting.** Cash earns the
-general interest rate (`g`). The portfolio earns its expected return
-(`r`). Nothing assumes one rate for all savings (see "Applies to every
-milestone").
-
-**Why only the portfolio needs solving.** Contributions go only into the
-portfolio (M2), and dated expenses are paid from cash first (M3). So cash
-follows the same path whether you keep contributing or stop. Only the
-portfolio's part changes, and it has a closed form.
-
-**The Coast FIRE number over time.** Let row *k* be a year up to the target
-retirement year (row *n*, where `n = retirement age − current age`). From
-row *k*, with no more contributions:
+**Rules as data (NFR-3)** (`src/rules/`):
 
 ```
-  cash:      starts at cash(k), grows at g, pays dated expenses first.
-             At row n it has cashLeft(k). Any dated expense it can't pay
-             in full "spills" to the portfolio: spill(j) in row j.
-
-                       FI number at retirement (nominal)
-                     − cashLeft(k)
-                     + Σ spill(j) × (1 + r)^(n − j)     for j = k+1 … n
-  portfolioNeeded(k) = ─────────────────────────────────────────────── , and at least 0
-                                  (1 + r)^(n − k)
-
-  coast(k) = cash(k) + portfolioNeeded(k)
+  src/rules/data/fy2025-26.json  ──parse (Zod)──►  RulesFile (wire)
+                                                      │ ruleSetFromWire
+                                                      ▼
+                                   RuleSet: snapshots sorted by effective date
+                                                      │ rulesForYear(ruleSet, year, inflation)
+                                                      ▼
+                                   YearRules: the rates and thresholds for one row
 ```
 
-- `cash(k)` is the cash on your current path in row *k* (the M3
-  projection's `cashClosing`). `coast(k)` is nominal, in year *k*'s
-  dollars. In today's dollars, divide by that row's inflation index, as
-  everywhere else.
-- **The Coast FIRE number** (COAST-1) is `coast(0)`: your cash today plus
-  the portfolio you'd need today. Row 0 is today, so its nominal and
-  today's values are the same.
-- **"In 2042 dollars"** (COAST-1's nominal figure, as in mockup 05) is
-  `coast(0) × (1+i)^n`: the same amount expressed in the retirement year's
-  dollars.
-- **At retirement,** `coast(n)` is at least the FI number. It is exactly
-  the FI number unless cash alone already exceeds it.
-- **Dated expenses before retirement count.** Since M3 they come out of
-  savings, so money set aside to coast has to cover them too. A $100,000
-  car in 2030 raises the Coast FIRE number. Dated expenses after
-  retirement are already part of whether the money lasts, so they aren't
-  added here.
-- **If cash alone reaches the FI number,** `portfolioNeeded` is 0 and the
-  Coast FIRE number is just your cash.
+- **One JSON file per financial year,** for example:
 
-**Coast FIRE reached** (COAST-2) is the first row *k* from 0 to *n* where
-investable net worth on your current path (`investableClosing`) is at
-least `coast(k)`.
-- The cash parts are identical, so this is the same as the portfolio
-  being at least `portfolioNeeded(k)`. That in turn means exactly: **if you
-  stopped contributing after year k, you would still reach the FI number by
-  retirement.** A property test checks this against the real projection
-  with contributions stopped.
-- **Row 0** means you've already reached it.
-- **If no row up to retirement reaches it,** it's "Not before retirement
-  at {age}".
-- **Explanation lines** (like FI reached):
-  - "Investable at end of {year} (age {age})";
-  - "− Coast FIRE number in {year}";
-  - "= Coast FIRE reached", valued at the margin.
+  ```json
+  {
+    "schemaVersion": 1,
+    "financialYear": "2025-26",
+    "effectiveFrom": "2025-07-01",
+    "superannuation": {
+      "guaranteeRatePercent": 12,
+      "maximumContributionBaseQuarterlyDollars": 62500,
+      "contributionsTaxPercent": 15,
+      "earningsTaxPercent": 15,
+      "discountedCapitalGainsTaxPercent": 10
+    },
+    "sources": { "guaranteeRatePercent": "https://www.ato.gov.au/…", "…": "…" }
+  }
+  ```
 
-**Checked against the real projection.** In each example, stopping
-contributions in the year Coast FIRE is reached still reaches FI.
-Stopping a year earlier doesn't:
-- **A:** stopping at 37 gives $2,395,439.84, and at 36 gives
-  $2,323,144.49, against $2,375,208.99.
-- **B:** stopping at 46 gives $502,025.62, and at 45 gives $487,384.62,
-  against $500,000.
-- **C:** stopping at 41 gives $2,406,954.94, and at 40 gives
-  $2,351,801.17, against $2,375,208.99.
+  Every value has a source link. **The implementer checks each value against
+  its source.** If any differs from this plan, they stop and ask. The 10%
+  capital gains rate is stored now for M9, but not used yet.
+- **Wire and internal types are separate** (CLAUDE.md rule 6):
+  `RulesFile` (Zod) is mapped to the `RuleSet` internal type by
+  `ruleSetFromWire`. Percentages become fractions, and the quarterly base
+  becomes an annual amount (× 4).
+- **The rules ship with the app:** imported as JSON and parsed once at
+  start-up. A unit test parses every file in `src/rules/data/`, so a bad
+  file fails the build, not the user.
+- **Which rules a row uses:** row *k* (calendar year *Y*) uses the rules in
+  effect on **1 January *Y***, which is the financial year that began the
+  July before.
+  - Rows are 12-month steps, not financial years, so this is the closest
+    single choice.
+  - A row before the earliest file uses the earliest file.
+- **Years after the latest file** use the latest file's rates. Its dollar
+  thresholds (the maximum contribution base) grow with the plan's
+  inflation, one year at a time from that file's year.
+  - The real thresholds are indexed to wages in $2,500 steps. Inflation
+    is the closest thing the plan models, and it keeps "today's dollars"
+    meaningful.
+  - Adding next year's file later simply replaces the estimate.
+- **The engine takes the rule set as a parameter:**
+  `summarisePlan(plan, startYear, ruleSet)`, as Part 2 intended. The
+  engine never imports the data files. `PlanProvider` passes the bundled
+  set, and tests can pass their own.
+- **A new value source:** `Sourced` gains `"rule"`, so a value that comes
+  from the law (the employer rate) says "FY2025–26 rules" in breakdowns,
+  rather than "default".
 
-**Today's savings with no further contributions** (chart (a)) is the M3
-projection run with contributions switched off: `projectPortfolio` with a
-contribution of $0, up to retirement. Cash and portfolio grow at their own
-rates, and dated expenses are paid. It reaches the FI number at retirement
-exactly when Coast FIRE is already reached today, so the chart and the tile
-agree.
+**Salary** (IN-7), per person:
+- **Fields:** the gross (pre-tax) salary per year (default $0), and how it
+  grows.
+  - **Growth options:** "Inflation", "Inflation + …%", "Inflation − …%",
+    "Fixed …%" or "No growth". The default is "Inflation".
+  - **Internal type:**
+    `SalaryGrowth = { kind: "inflationPlus"; margin } | { kind: "fixed"; rate } | { kind: "none" }`.
+    "Inflation" is `inflationPlus` with a margin of 0.
+- **Timing:** row *k* pays `salary × (1 + growth)^k` while
+  `age ≤ retirement age`, and nothing after. This matches M2's "one index
+  per row" rule: like living expenses, the first projected year's salary is
+  already one year's growth on today's.
+- **What salary does in M5:** it sets employer contributions. It doesn't
+  pay for living expenses until tax arrives in M8, so the field's hint
+  says: "Before tax. Sets your employer super contributions; tax and
+  take-home pay come in a later version."
+- **UI pieces:**
+  - `GrowthRateField`, a dropdown that becomes a percentage field for the
+    custom options (Part 2's component map, introduced here);
+  - `PerPersonFields`, which renders a field once per person. With one
+    person it adds no name. Couples use it in M7.
 
-**Engine shape.** `src/engine/coastFire.ts`:
+**The super account** (IN-21 to IN-24), one per person. Every field is
+optional:
 
-```ts
-interface CoastFire {
-  number: Explained;                     // coast(0), today's dollars, with its breakdown
-  numberInRetirementYearDollars: number; // coast(0) × (1+i)^n
-  path: readonly CoastPathPoint[];       // rows 0..n
-  reached?: CoastMilestone;              // undefined: not before retirement
-}
-interface CoastPathPoint {
-  yearIndex; calendarYear; age; inflationIndex;
-  coastNumber: number;                   // coast(k) = cash(k) + portfolioNeeded(k), nominal
-  portfolioNeeded: number;               // nominal
-  investable: number;                    // current path, nominal
-  withoutContributions: number;          // today's savings, no contributions, nominal
-  fiNumber: number;                      // nominal
-}
-interface CoastMilestone { yearIndex; calendarYear; age; explanation: Explained }
+| Field | Default |
+| --- | --- |
+| Balance | $0 |
+| Return, net of fees | 7% |
+| Employer contribution rate | the legislated rate each year (12% in FY2025–26), shown dashed as "12% (legislated)" |
+| Salary sacrifice | $0. When set: from next year to the retirement year |
+| Non-concessional contributions | $0. When set: from next year to the retirement year |
+| Tax on earnings (advanced) | the legislated rate (15%) |
+
+- **Employer contributions stop at retirement** (IN-24): they follow
+  salary, which stops then. The override (contributions continuing after
+  retirement) only matters once there's income after retirement (IN-9), so
+  it comes with that in M23. Until then there's nothing after retirement
+  for employer contributions to be paid on.
+- **Salary sacrifice is paid only while working,** because it comes out of
+  salary. **Non-concessional contributions follow their years,** whether
+  working or not.
+
+**Super each year** (row *k*, in this order):
+
+```
+  salary(k)        = as above
+  employer(k)      = employer rate × min(salary(k), maximum contribution base(k))
+  sacrifice(k)     = salary sacrifice, if working and in its years
+  concessional(k)  = employer(k) + sacrifice(k)
+  contributions tax= concessional(k) × 15%                     (SUPER-2)
+  earnings(k)      = super opening × return (net of fees)
+  earnings tax     = earnings(k) × tax on earnings (15%)       (SUPER-5)
+  super available  = opening + earnings − earnings tax
+                   + concessional − contributions tax
+                   + non-concessional(k)
 ```
 
-- **`calculateCoastFire(rows, inputs)`** takes the M3 projection rows plus
-  the return, the interest rate, the retirement row and the dated
-  expenses. The "without contributions" path calls `projectPortfolio`
-  with a $0 contribution. Everything else is worked out from the rows, so
-  it never copies the projection's rules.
-- **`ProjectionSummary`'s `complete` variant gains `coast: CoastFire`.**
-  Coast FIRE needs the ages, so it lives with the projection.
-- **Retirement age equal to the current age:** `n = 0`, so the Coast FIRE
-  number is today's cash plus whatever the portfolio must add to reach the
-  FI number now. It is reached only if FI is.
+- **Employer contributions are worked out on salary before salary
+  sacrifice,** as the law has required since 2020. They're capped at the
+  maximum contribution base ($250,000 a year in FY2025–26).
+- **Non-concessional contributions aren't taxed on entry.**
+- **Where the money for voluntary contributions comes from** (take-home
+  pay) isn't modelled until M8. The hint says so.
 
-**The Coast FIRE number's breakdown,** for example A:
-- "FI number at age 50 (2042)": $2,375,208.99;
-- "− Your cash, growing at 4% to 2042": $37,459.62. With dated expenses, it
-  reads "after paying the dated expenses it can";
-- "+ Dated expenses the portfolio would pay, grown to 2042": shown only
-  when there are any;
-- "÷ Portfolio growth at 7% over 16 years", as a `factor`: 2.9522;
-- "= Portfolio needed today": $791,876.59;
-- "+ Your cash today": $20,000.00;
-- "= Coast FIRE number": $811,876.59.
+**Tax on super earnings** (SUPER-5): the default applies 15% to all
+earnings. This is the most the law charges (the "up to 15%" in SUPER-5),
+so it errs on the conservative side.
+- **Real funds pay less overall**, typically: capital gains on assets held
+  over a year are taxed at 10%, and franking credits offset tax.
+- **The mix depends on the fund,** so it's an advanced, per-account field
+  ("Tax on earnings"). It shows the legislated 15% as its default, dashed.
+  A user who knows their fund's effective rate can enter it.
+- This follows the "each asset grows its own way" principle.
 
-**The Coast FIRE tile** (Results, after "FI number" and "Progress to FI",
-as in mockup 05):
-- **Value:** the Coast FIRE number in today's dollars. It is a figure for
-  today (row 0), so it reads the same whichever way the page's dollars
-  toggle is set.
-- **Sub-lines:**
-  - "{amount} in {retirement year} dollars";
-  - then one of: "Reached: contributions are now optional", "Reached in
-    {year}, at age {age}", or "Not before retirement at {age}".
-- **Explanation:** the number's lines, then the reached lines (or, if not
-  reached, the retirement-year row: investable against the Coast FIRE
-  number).
+**Drawing on super.** In M5, super is drawn only from **age 65** (IN-5's
+default access age), and only after cash and the portfolio. The order
+each year is cash, then the portfolio, then super if the person is 65 or
+over.
+- **Before 65,** a year that only super could fund is a shortfall, and the
+  shortfall banner explains why.
+- **M6** makes the access age an input, and adds the bridge check that
+  explains these years properly.
 
-**The Coast FIRE chart** ("When could you stop contributing?", mockup 05,
-COAST-6 (a) and (b)):
-- **Years:** today to the target retirement year. After that, coasting no
-  longer means anything.
-- **Lines**, distinguished by style as well as colour:
-  - "Your savings, current contributions": gold, solid;
-  - "Today's savings, no more contributions": muted green-white, solid;
-  - "Coast FIRE number": white, dashed;
-  - "FI number": white, dotted.
-- **Markers:** "Coast FIRE" (if reached before retirement) and
-  "Retirement".
-- **Caption under the chart:** "With no more contributions from today,
-  your savings reach {amount} by {year}, against an FI number of
-  {amount}". It's in nominal dollars, and says so.
-- **Mode:** the chart follows the Results page's dollars toggle, like
-  everything else on the page. It has no toggle of its own.
-- **Interaction:** clicking a year jumps to that year's row in the Year by
-  year section (`#/results?year={year}`), as chart (a) does.
-- **Changes to the wrapper:**
-  - `TimeSeriesChart`'s `dashed?: boolean` becomes
-    `strokeStyle?: "solid" | "dashed" | "dotted"`. Chart (a) keeps its look:
-    its FI number line becomes `dashed`.
-  - Add the new role `--colour-chart-secondary` (muted green-white), with a
-    graphics pair at 3:1.
+**Investable net worth = cash + portfolio + super.**
+- **What it feeds:** progress to FI, FI reached, the charts and the
+  earliest retirement search all use it. That's the usual Australian FIRE
+  definition.
+- **Why super can't be spent early:** the access rule above stops locked
+  super being spent, so "money lasts" stays honest.
+- **Breakdowns** show super as its own line.
 
-**The Milestones card** (`MilestoneTimeline`, OUT-4):
-- It is generic over items `{ year?, label, detail?, status: "reached" |
-  "projected" | "notReached" }`.
-- **Rendering:** one horizontal line, with dated items in year order.
-  Undated items ("not before …") come last, in words.
-- **Accessibility:** it is an ordered list in the DOM, so a screen reader
-  reads it as a list.
-- **M4's items:**
-  - Coast FIRE;
-  - FI reached;
-  - retirement (the target);
-  - "Money lasts to {age}" or "Money runs out at {age}".
-- **Later milestones add their own items:** super access (M6), the mortgage
-  paid off (M13) and so on.
-- **Placement:** below the tiles, above the charts, as in mockup 05. It
-  gets a "Milestones" entry in the page's "On this page" links.
+**Coast FIRE with super.** M4's rule extends naturally.
+- **What stops when you coast:** coasting means you stop the
+  contributions you choose to make: the portfolio, salary sacrifice and
+  non-concessional. Employer contributions continue, because you're still
+  working until retirement.
+- **The formula:** cash, and super on that "employer contributions only"
+  path, join the "assets that follow their own path" part of M4's formula.
+  The portfolio needed covers the rest:
+
+  ```
+  coast(k) = cash(k) + super(k) + portfolioNeeded(k)
+      where portfolioNeeded uses cashLeft(k) and superLeft(k), super grown
+      from row k with employer contributions only
+  ```
+
+- **"Reached at row k" still means exactly** "stop your voluntary
+  contributions after year k and still reach FI by retirement". The
+  property test now stops portfolio and voluntary super contributions
+  together.
+- **In the breakdown,** "Your super, growing at {return} net of fees and
+  tax, with employer contributions, to {year}" is a new line.
+- **COAST-3 (M6)** later shows super and outside super separately.
+- **COAST-5's intent** (employer contributions continuing while coasting)
+  is covered here for the default case.
+
+**Outputs:**
+- **Year by year columns:**
+  - "Salary" (PR A);
+  - "Into super" (contributions after contributions tax);
+  - "Super" (balance).
+
+  "Contributions" becomes "Into portfolio". "Investable" includes super.
+  The table already scrolls sideways inside its own box.
+- **Breakdowns:**
+  - progress to FI's investable lines gain "Super";
+  - the Coast FIRE breakdown gains the super line;
+  - "Money runs out" in a locked year adds the line "Super (not accessible
+    until 65)".
+- **The "Not yet modelled" banner** becomes: "super is only drawn from 65
+  (M6 lets you change this and checks the years before), tax (M8),
+  property (M12) and more."
 
 #### Worked examples
 
 These were checked with an independent script, not the app's code. Each
-becomes a fixture in `tests/worked-examples/m4-coast.json`. The start year
-is 2026.
+becomes a fixture in `tests/worked-examples/m5-super.json`. The start year
+is 2026. The FY2025–26 rules are 12% SG, a $250,000 annual base grown with
+inflation, and 15% contributions and earnings tax.
 
-| | Inputs | Coast FIRE number (today) | In retirement-year dollars | Reached |
-| --- | --- | --- | --- | --- |
-| **A: headline** | M3's example A (age 34, retire 50, $720,000 at 7% + $30,000/yr, $20,000 cash at 4%, 2.5% inflation, $64,000, 4%) | $811,876.59 ($20,000 cash + $791,876.59 portfolio) | $1,205,235.36 (2042) | **2029, age 37**: investable $1,000,975.24 vs $992,580.16 |
-| **B: by hand** | Age 40, retire 50, $150,000 at 10% + $10,000/yr, no cash, 0% inflation, $20,000, 4% | $192,771.64 (= $500,000 ÷ 1.1¹⁰) | $192,771.64 (2036) | **2032, age 46**: $342,890.25 vs $341,506.73 |
-| **C: dated expense** | A, plus a $100,000 one-off in 2030 | $890,925.23 | $1,322,583.51 (2042) | **2033, age 41**: $1,309,224.01 vs $1,291,956.32 |
-| **D: already coasting** | Age 45, retire 60, $1,000,000 at 7%, no contributions, 2.5%, $50,000, 4% | $656,162.38 | $950,318.77 (2041) | **already** (2026, age 45) |
-| **E: never** | Age 30, retire 40, $10,000 at 5% + $1,000/yr, 3% inflation, $80,000, 4% | $1,650,096.15 | $2,217,591.25 (2036) | **not before retirement at 40** |
-| **F: lots of cash** | Age 40, retire 55, $300,000 at 7% + $20,000/yr, $300,000 cash at 3%, 2.5% inflation, $50,000, 4% | $786,758.66 ($300,000 cash + $486,758.66 portfolio) | $1,139,461.12 (2041) | **not before retirement at 55** |
+**S1: super by hand.** Age 40, retire at 42, plan until 44. Salary $100,000.
+0% inflation. Super $50,000 at 8% net of fees.
 
-Example F is why cash has its own rate. Treating its cash as earning 7%
-would have given $656,162.38, understating what's needed by about
-$130,000.
+| Year | Age | Salary | Employer | Earnings | Earnings tax | Contributions tax | Super |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2027 | 41 | $100,000 | $12,000 | $4,000.00 | $600.00 | $1,800.00 | $63,600.00 |
+| 2028 | 42 | $100,000 | $12,000 | $5,088.00 | $763.20 | $1,800.00 | $78,124.80 |
+| 2029 | 43 | — | — | $6,249.98 | $937.50 | — | $83,437.29 |
+| 2030 | 44 | — | — | $6,674.98 | $1,001.25 | — | $89,111.02 |
 
-Example B's rows, for checking by hand:
+**S2: the cap on employer contributions.** S1 with a $300,000 salary, one
+year:
+- employer contributions are $30,000 (12% of $250,000), not $36,000;
+- contributions tax is $4,500;
+- super ends at $25,500.
 
-| Year | Age | Investable | Coast FIRE number |
-| --- | --- | --- | --- |
-| 2026 | 40 | $150,000.00 | $192,771.64 |
-| 2027 | 41 | $175,000.00 | $212,048.81 |
-| 2028 | 42 | $202,500.00 | $233,253.69 |
-| 2029 | 43 | $232,750.00 | $256,579.06 |
-| 2030 | 44 | $266,025.00 | $282,236.97 |
-| 2031 | 45 | $302,627.50 | $310,460.66 |
-| **2032** | **46** | **$342,890.25** | **$341,506.73** |
-| 2036 | 50 | $548,435.62 | $500,000.00 (= FI number) |
+**S3: voluntary contributions with years.** S1 with a $0 balance and 0%
+return. $10,000 salary sacrifice from 2027 to 2030, and $20,000
+non-concessional in 2028 only.
+
+| Year | Age | Employer | Sacrifice | Non-concessional | Contributions tax | Super |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2027 | 41 | $12,000 | $10,000 | — | $3,300.00 | $18,700.00 |
+| 2028 | 42 | $12,000 | $10,000 | $20,000 | $3,300.00 | $57,400.00 |
+| 2029 | 43 | — | — (retired) | — | — | $57,400.00 |
+
+**S4: super locked until 65.**
+- **Inputs:** age 60, retired, plan until 67. Only super: $500,000 at 0%.
+  0% inflation, $20,000 spending.
+- **2027 to 2030 (ages 61 to 64):** each is a $20,000 shortfall, and super
+  stays at $500,000.
+- **From 2031 (age 65):** spending is drawn from super, which ends 2031
+  to 2033 at $480,000, $460,000 and $440,000.
+
+**A: headline.** M4's example A, plus:
+- super of $185,000 at 7% net of fees;
+- a salary of $145,000 growing at inflation + 1%;
+- $10,000 of salary sacrifice a year from 2027 to 2042.
+
+Results:
+- **Row 1 (2027):**
+  - salary $150,075.00, employer $18,009.00, sacrifice $10,000;
+  - earnings $12,950.00, earnings tax $1,942.50, contributions tax
+    $4,201.35;
+  - super $219,815.15, investable $1,041,015.15.
+- **2042 (age 50):** salary $251,427.98, employer $30,171.36, super
+  $1,175,633.85.
+- **FI reached:** **2033, age 41**: $1,932,046.19 against $1,901,897.21
+  (M4 without super: 2038, age 46).
+- **Money lasts:** to 95 (2087).
+- **Earliest retirement:** age **40**.
+- **Coast FIRE:** $672,262.87 (cash $20,000 + super $185,000 + portfolio
+  $467,262.87), **already reached**.
+
+**C: Coast FIRE later.** A, with a $300,000 portfolio, a $120,000 salary
+growing at inflation, and $100,000 of super. Salary sacrifice is still
+$10,000 from 2027 to 2042.
+- **Row 1 (2027):** salary $123,000.00, employer $14,760.00, contributions
+  tax $3,714.00, super $126,996.00, investable $498,796.00.
+- **Coast FIRE:** $698,765.82 (cash $20,000 + super $100,000 + portfolio
+  $578,765.82), reached in **2037, at age 45**. Checked against the real
+  projection, with the FI number at retirement $2,375,208.99:
+  - stopping voluntary contributions after 45 gives $2,385,819.60;
+  - stopping after 44 gives $2,332,394.93.
+- **FI reached:** **2041, age 49**.
+- **Earliest retirement:** age **47**.
 
 #### Pinned versions
 
 No new dependencies.
 
-#### Step 1 · Engine: Coast FIRE
+---
 
-- [x] Done
+**PR A · Rules as data and salary**
 
-1. Add `src/engine/coastFire.ts` with the types above and
-   `calculateCoastFire`, following the design decisions exactly.
-2. Add `coast` to `ProjectionSummary`'s `complete` variant, built in
-   `summariseProjection` from the rows it already has.
-4. Tests:
-   - unit tests for `coast(k)`, including:
-     - with and without dated expenses;
-     - a dated expense after retirement (ignored);
-     - `n = 0`;
-   - fixture `tests/worked-examples/m4-coast.json` with examples A to F.
-     `tests/unit/workedExamples.test.ts` checks the Coast FIRE number, the
-     retirement-year figure, the reached row (or none) and example B's rows,
-     to the cent;
-   - property tests:
-     - `coast(n)` equals the FI number at retirement;
-     - with `r ≥ i` and no dated expenses, Coast FIRE is reached no later
-       than FI;
-     - a higher return never raises the Coast FIRE number;
-     - larger contributions never make Coast FIRE later;
-     - "without contributions" at row *n* is at least the FI number exactly
-       when Coast FIRE is reached at row 0;
-     - **reached means stoppable:** if Coast FIRE is reached at row *k* (*k*
-       > 0), the real projection with contributions stopping after year *k*
-       reaches the FI number by retirement. Stopping a year earlier doesn't;
-     - moving savings from the portfolio into cash at a lower rate never
-       lowers the Coast FIRE number.
+#### Step 1 · Rules as data (NFR-3)
+
+- [ ] Done
+
+1. Add `src/rules/`:
+   - `rulesFile.ts`: the Zod schema for one file (above);
+   - `ruleSet.ts`: the `RuleSet`, `RuleSnapshot` and `YearRules` internal
+     types, `ruleSetFromWire`, and
+     `rulesForYear(ruleSet, calendarYear, inflationRate)`;
+   - `data/fy2025-26.json`, with a source link for each value. **Check each
+     value against its source.** If any differs from this plan, stop and
+     ask;
+   - `bundledRuleSet.ts`: imports every data file and builds the rule set
+     once.
+2. Add `"rule"` to `ValueSource`.
+3. Tests:
+   - every file in `src/rules/data/` parses;
+   - a file missing a field, or with a negative rate, is rejected;
+   - percent → fraction, and quarterly → annual;
+   - `rulesForYear` picks by 1 January, uses the earliest file for earlier
+     years, and grows dollar thresholds with inflation after the latest
+     file (e.g. $250,000 → $256,250 for 2027 at 2.5%);
+   - two snapshots: the later one replaces the earlier one from its date.
+4. Document `src/rules/` in the README's project layout. Add a short "How
+   to add next year's rules" section.
+
+**Kind:** behaviour-neutral foundation. Nothing reads the rules yet.
 
 **Check:** `npm run check` passes.
 
-**As built:**
-- `calculateCoastFire(rows, inputs)` takes the full `ProjectionInputs` (the
-  same object the projection was run with), and reads the start year from
-  row 0. It reads each pre-retirement row's `spending` for dated expenses,
-  which is only dated expenses before the retirement row, instead of
-  recomputing them.
-- The breakdown's dated-expense line shows whenever a dated expense falls
-  between today and retirement, even if cash pays it in full (the line is
-  then $0.00). The cash line then reads "Your cash, growing at 4% to 2042,
-  after paying the dated expenses it can".
-- Worked examples A to F match the plan's figures to the cent, including
-  example B's rows. The fixture adds an `expected.coast` block
-  (`number`, `numberInRetirementYearDollars`, `reached` or `null`, `rows`).
-- Property-test judgement calls:
-  - "Coast FIRE reached no later than FI" needs the interest rate on cash
-    to be at least inflation as well as `r ≥ i`. Otherwise cash that loses
-    value against the rising FI number can make Coast FIRE later than FI.
-    The generator raises both rates to at least inflation.
-  - "`coast(n)` equals the FI number" is tested as `max(FI number, cash at
-    retirement)`, because cash above the FI number makes it larger (as the
-    design says).
-  - "Reached means stoppable" uses its own generator, tuned so Coast FIRE
-    is reached after today in about 40% of runs. With the general
-    generator it was reached in about 7%, so the test mostly skipped.
-  - Comparisons use a relative tolerance of 1e-6 for floating-point noise.
+#### Step 2 · Engine: salary
 
-#### Step 2 · Results: Coast FIRE tile
+- [ ] Done
 
-- [x] Done
+1. Add `salary?: { annual?: number; growth?: SalaryGrowth }` to `Person`,
+   with defaults ($0, inflation). Resolve it in `resolvePlanInputs`.
+2. `summarisePlan(plan, startYear, ruleSet)`: thread the rule set through,
+   and update every caller. `PlanProvider` passes the bundled set.
+3. `ProjectionRow` gains `salary`, following the timing rule above.
+4. Tests:
+   - each growth kind;
+   - no salary after retirement;
+   - fixture `tests/worked-examples/m5-super.json`, starting with example
+     A's salary in 2027 ($150,075.00) and 2042 ($251,427.98);
+   - a property test: "No growth" keeps salary flat while working.
 
-**As built:** the tile is `CoastFireTile` in `ResultsScreen.tsx`, between
-"Progress to FI" and "FI reached", and only when the projection is
-complete. When Coast FIRE isn't reached, the breakdown ends with the
-retirement-year row, in the same three-line shape as the reached lines:
-"Investable at end of {year} (age {age})", "− Coast FIRE number in
-{year}", and "= Short of Coast FIRE", valued at the margin (negative). The
-plan didn't name that last label, so it's a judgement call. Existing
-Results tests now open a tile's breakdown by its label (`openExplanation`)
-instead of by button index. The contrast sweeps click every "How is this"
-toggle, so they already cover the new tile.
+**Check:** `npm run check` passes. Every earlier figure is unchanged.
 
-1. Add the Coast FIRE tile, as described above, after "Progress to FI".
-2. Tests:
-   - examples A, D and E, one for each status;
-   - example A's breakdown shows the cash and portfolio lines;
-   - example C's breakdown includes the dated-expense line.
+#### Step 3 · Salary state, wire format and shared fields
 
-**Check:** `npm run check` and `npm run test:e2e` pass.
+- [ ] Done
 
-#### Step 3 · `MilestoneTimeline` and the Milestones card
+1. Reducer actions:
+   - `setSalary { personId, annual? }`;
+   - `setSalaryGrowth { personId, growth? }`.
+2. Wire: `people[].salary { annualDollars?, growth? }`, where growth is
+   `{ kind: "inflationPlus", marginPercent }`,
+   `{ kind: "fixed", ratePercent }` or `{ kind: "none" }`. Add the fixture
+   `v1-salary.json`. Older fixtures still load.
+3. `GrowthRateField` and `PerPersonFields` in `src/ui/components/`, with
+   tests:
+   - every option;
+   - switching from a custom option back to "Inflation" clears the number;
+   - limits (−10% to +15%);
+   - keyboard use.
 
-- [x] Done
+**Check:** `npm run check` passes.
 
-**As built:** `MilestoneTimeline` (`src/ui/components/`) and
-`MilestonesSection` (`src/ui/sections/`, with `buildMilestoneItems`). The
-card has the id `milestones`, and "Milestones" is the first "On this page"
-link. Judgement calls: "Money lasts to {age}" is dated at the last
-projection year and "Money runs out" at the first unfunded year, both
-"projected"; items show a status word (Reached, Projected, Not reached) as
-well as the marker style; no new colour roles were needed, so the only
-`tokens.test.ts` addition is gold on the page background at 3:1. The FI
-reached tile test now scopes to its tile, since the card repeats the year
-and age.
+#### Step 4 · Salary on screen (end of PR A)
 
-1. Add `MilestoneTimeline` in `src/ui/components/`, as described above.
-   - Styles use role variables only. Reached items are solid, projected
-     items are outlined, so status never relies on colour alone.
-   - Add any new pairs to `tokens.test.ts`.
-2. Add a `MilestonesSection` on Results, built from the summary, between
-   the tiles and chart (a). It shows only when the projection is complete,
-   and adds "Milestones" to the "On this page" links.
+- [ ] Done
+
+1. Income & expenses: a "Salary" card, first on the page as in mockup 02,
+   with "Gross salary per year" and "Grows at". Use the hint above.
+2. Year by year: a "Salary" column after "Age".
+3. Add the card to the contrast sweep.
+4. E2E (`tests/e2e/salary.spec.ts`):
+   - enter a salary and "Inflation + 1%";
+   - Year by year shows the grown salary until retirement, and "—" after;
+   - after a reload, it's still there.
+5. README "What it does": add salary.
+
+**Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A.**
+
+---
+
+**PR B · Super**
+
+#### Step 5 · Engine: super accumulation and access
+
+- [ ] Done
+
+1. Add `superAccount?: SuperAccount` to `Person`, with the fields and
+   defaults above. Resolve it, with the employer rate's source as `"rule"`
+   when it's left to the law.
+2. In `projectPortfolio`, apply the "super each year" rules and the
+   drawing order (cash, portfolio, then super from 65). `ProjectionRow`
+   gains:
+   - `employerContribution`, `salarySacrifice`, `nonConcessional`;
+   - `superEarnings`, `superEarningsTax`, `contributionsTax`;
+   - `superOpening`, `superClosing`, `fromSuper`.
+
+   `investableClosing` includes super.
+3. Progress to FI's investable gains a "Super" line.
+4. Tests:
+   - unit tests for each rule, including:
+     - the cap;
+     - salary sacrifice only while working;
+     - non-concessional after retirement;
+     - no drawing before 65;
+     - drawing from 65;
+   - fixtures S1 to S4, A and C: the rows above, FI reached, money lasts
+     and the earliest retirement age, to the cent. Coast FIRE is added in
+     step 6;
+   - every M1 to M4 fixture still passes (no super, no salary, so
+     unchanged);
+   - property tests:
+     - super each row: opening + earnings − earnings tax + concessional −
+       contributions tax + non-concessional − drawn = closing;
+     - employer contributions ≤ rate × the maximum contribution base;
+     - super is never drawn before 65;
+     - more starting super never creates a shortfall.
+
+**Check:** `npm run check` passes.
+
+#### Step 6 · Engine: Coast FIRE with super
+
+- [ ] Done
+
+1. Extend `calculateCoastFire` as described above. Super's "employer
+   contributions only" path from each row comes from `projectPortfolio`
+   with voluntary contributions switched off from that row. Don't copy its
+   rules.
+2. Add the super line to the Coast FIRE breakdown.
 3. Tests:
-   - ordering by year;
-   - undated items last;
-   - each status's text;
-   - the list semantics;
-   - example A's items: Coast FIRE 2029, FI reached 2038, retirement 2042,
-     money lasts to 95.
+   - examples A (already reached, $672,262.87) and C (2037, age 45,
+     $698,765.82);
+   - the M4 fixtures still pass;
+   - the "reached means stoppable" property stops portfolio and voluntary
+     super contributions together.
+
+**Check:** `npm run check` passes.
+
+#### Step 7 · Super state and wire format
+
+- [ ] Done
+
+1. Reducer actions for each super field, including clearing back to the
+   default. The contribution years keep `toYear ≥ fromYear`, as dated
+   expenses do.
+2. Wire: `people[].superAccount`, with:
+   - `balanceDollars?`, `returnPercent?`, `employerRatePercent?`;
+   - `salarySacrifice? { annualDollars?, fromYear?, toYear? }`;
+   - `nonConcessional? { annualDollars?, fromYear?, toYear? }`;
+   - `earningsTaxPercent?`.
+
+   Add the fixture `v1-super.json`. Older fixtures still load.
+3. The round-trip property test generates super accounts, including empty
+   ones.
+
+**Check:** `npm run check` passes.
+
+#### Step 8 · Super on the Assets screen
+
+- [ ] Done
+
+1. Add a "Super" card, first on Assets as in mockup 03d, with:
+   - "Super balance";
+   - "Return, net of fees";
+   - "Employer contribution rate", dashed as "12% (legislated)" when
+     following the law;
+   - "Salary sacrifice per year", with From and To years;
+   - "Non-concessional contributions per year", with From and To years;
+   - an "Advanced" disclosure holding "Tax on earnings".
+2. **Hints:**
+   - **Return:** "After fees, before tax. The app takes off the tax on
+     earnings."
+   - **Salary sacrifice:** "Before tax, from your salary while you work.
+     Taxed 15% going in."
+   - **Non-concessional:** "From after-tax money. Not taxed going in."
+   - **Tax on earnings:** "15% is the most the law charges. Funds often pay
+     less because of the 10% rate on long-held gains and franking credits.
+     Enter your fund's rate if you know it."
+3. Add the card, with Advanced open, to the contrast sweep.
+4. Tests for each field: entering, clearing to default, limits, and the
+   years.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 4 · Coast FIRE chart
+#### Step 9 · Super in the outputs
 
-- [x] Done
+- [ ] Done
 
-**As built:** `strokeStyle` replaces `dashed` (dotted is round dots,
-`0.1 6` with round caps, so it can't be mistaken for the labelled vertical
-dashed markers); `--colour-chart-secondary` is the green-white with a 3:1
-pair; `buildCoastChartSeries` and `describeCoastChartEnd` are in
-`src/ui/charts/coastChart.ts`; the card is `CoastChartSection` (id
-`coast-chart`, link "Coast FIRE chart"). Judgement calls: no "Coast FIRE"
-marker when it's reached today (it would sit on the axis; the tile and
-Milestones say so); a shared "Coast FIRE · retirement" marker if both fall
-in the retirement year; the caption adds "(nominal dollars)"; the chart's
-right margin grew from 16 to 64px so the "Retirement" label on the last
-year isn't clipped (this applies to chart (a) too). The new
-`tests/e2e/coastChart.spec.ts` asserts the four strokes and dash styles; a
-new contrast sweep test covers the page with this chart, and chart (a)'s
-sweep now scopes its marker and band counts to `#fire-chart`.
+1. Year by year:
+   - "Contributions" becomes "Into portfolio";
+   - add "Into super" (after contributions tax) and "Super";
+   - "Investable" includes super;
+   - a shortfall year before 65 says "Super not accessible until 65" in
+     its status detail.
+2. Results: the breakdown lines described above, and the new "Not yet
+   modelled" wording. The charts need no change: they already plot
+   investable.
+3. Tests:
+   - example A's 2027 row;
+   - example S4's locked years and its first year drawing from super;
+   - the breakdowns' super lines.
 
-1. Change `TimeSeriesChart`'s `dashed` to `strokeStyle`, and update chart
-   (a). Chart (a) must look the same: check its E2E stroke assertions still
-   pass.
-2. Add `--colour-chart-secondary` and its 3:1 graphics pair.
-3. Add `buildCoastChartSeries(coast, dollarsMode)` in
-   `src/ui/charts/coastChart.ts`, with unit tests for examples A and E in
-   both modes.
-4. Add `CoastChartSection` on Results, after chart (a), with the caption and
-   no toggle of its own (it follows the page's toggle). Clicking a year
-   jumps to that row in the Year by year section. Add "Coast FIRE chart"
-   to the "On this page" links.
-5. Add the Results page with this chart to the contrast sweep.
+**Check:** `npm run check` and `npm run test:e2e` pass.
 
-**Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
-the four lines are easy to tell apart on the deep green page.
+#### Step 10 · E2E, README and wrap-up (end of PR B)
 
-#### Step 5 · E2E, README and wrap-up
+- [ ] Done
 
-- [x] Done
-
-**As built:** `tests/e2e/coast.spec.ts` follows the user's flow (tile,
-Milestones order, marker, four-value hover, example E's inputs, reload) and
-leaves stroke colours and dashes to `coastChart.spec.ts`. README's "What it
-does" now covers Coast FIRE, the milestones and the second chart.
-
-1. E2E (`tests/e2e/coast.spec.ts`), with the clock fixed in 2026:
+1. E2E (`tests/e2e/super.spec.ts`), with the clock fixed in 2026:
    - **Example A:**
      - enter it through the screens;
-     - Results shows "$811,877" and "Reached in 2029, at age 37";
-     - Milestones lists Coast FIRE 2029 before FI reached 2038;
-     - the Coast FIRE chart shows its four lines with the right strokes,
-       and a "Coast FIRE" marker;
-     - hovering shows four values;
-   - **Example E:** change to it, and the tile says "Not before retirement
-     at 40";
-   - **Reload:** the tile is unchanged.
-2. Update README's "What it does" for Coast FIRE and the milestones.
-3. Update PLAN.md: the M4 status, Next steps, and an "As built" note under
-   each step that needed one.
+     - Results shows FI reached 2033, age 41;
+     - earliest retirement age 40;
+     - Coast FIRE "Reached: contributions are now optional";
+     - Year by year's 2027 row shows salary $150,075 and super $219,815;
+   - **Example S4:** shortfalls from 2027 to 2030, then none;
+   - **Reload:** the super inputs are still there.
+2. README "What it does": add super. PLAN.md: the M5 status, Next steps,
+   and "As built" notes.
 
-**Check:** `npm run check` and `npm run test:e2e` pass. **Open the M4 PR**
-for the owner to verify.
+**Check:** `npm run check` and `npm run test:e2e` pass. **Open PR B.**
 
 #### Follow-ups
 
 - **Remember the today's/nominal choice** in `meta` between visits (from
   M2).
-- **Advanced growth options per asset** (owner's request, not yet
-  scheduled). Every asset already has its own rate. Later, an advanced
-  option could let an asset grow in other ways, for example a different
-  rate for different periods, or growth split into capital growth and
-  income. It needs a requirement (a backlog entry in REQUIREMENTS.md)
-  before it's planned.
+- **Advanced growth options per asset** (from M4's review). Needs a
+  backlog requirement.
+- **The FY2026–27 rules file,** once the ATO publishes it, replaces the
+  inflation estimate for the maximum contribution base.
 - **Carried from M1:**
   - flush unsaved edits when the tab closes;
   - write back migrated records once the first migration exists;
@@ -1832,4 +2008,9 @@ for the owner to verify.
 - [x] Owner verifies and merges the one-page Results PR.
 - [x] Approve the M4 step-by-step plan.
 - [x] Implement M4 (steps 1 to 5), then open the M4 PR for verification.
-- [ ] Owner verifies and merges the M4 PR.
+- [x] Owner verifies and merges the M4 PR.
+- [ ] Approve the M5 step-by-step plan (this PR).
+- [ ] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
+      it for verification.
+- [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
+      verification.
