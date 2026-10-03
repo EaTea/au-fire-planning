@@ -8,17 +8,22 @@ what it should do and [PLAN.md](PLAN.md) for how it is being built.
 
 Everything is calculated in your browser and saved only on your device.
 
-- **Household:** enter your current age and target retirement age.
+- **Household:** enter your current age, target retirement age and the age the
+  plan runs until.
 - **Income & expenses, Assets, Assumptions:** enter your living expenses, how
-  much you spend in retirement, your portfolio (value, expected return and
-  yearly contributions), inflation and your safe withdrawal rate.
+  much you spend in retirement, dated and one-off expenses (a car, school
+  fees), your portfolio (value, expected return and yearly contributions), cash
+  savings, inflation, the interest rate on cash and your safe withdrawal rate.
 - **Results:** your FI number (in today's dollars, and in nominal dollars at
-  your retirement age), your progress to it, and the year you reach FI, each
-  with a "How is this calculated?" breakdown.
-- **Year by year:** the portfolio's projection, one row per year, in today's or
-  nominal dollars, with the year FI is reached highlighted.
+  your retirement age), your progress to it, the year you reach FI, and
+  whether your money lasts to the age you plan until (or the age it runs out),
+  each with a "How is this calculated?" breakdown.
+- **Year by year:** the projection of cash and the portfolio, one row per year
+  to the plan-until age, in today's or nominal dollars. Retirement spending is
+  drawn from cash first, then the portfolio. The year FI is reached is
+  highlighted, and years that can't be funded are flagged.
 
-Withdrawals in retirement, super, tax and property aren't modelled yet; see
+Super, tax and property aren't modelled yet; see
 [PLAN.md](PLAN.md) for what comes next.
 
 ## Prerequisites

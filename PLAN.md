@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1 and the colour scheme are done and deployed. M2 plan drafted, awaiting approval.
+**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is implemented and awaiting verification. PR B (steps 8–10) is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 and M1 done. M2 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A implemented, awaiting verification |
 
 ## 1. Requirement ordering
 
@@ -1218,7 +1218,8 @@ Conventions settled while building M2, which later milestones rely on:
 
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
-**Status:** approved. PR A (steps 1 to 7) in progress, one step at a time.
+**Status:** approved. PR A (steps 1 to 7) implemented, awaiting the owner's
+verification. PR B (steps 8 to 10) not started.
 
 **Kind:** behavior change.
 
@@ -1788,7 +1789,7 @@ changes to tests.
 
 #### Step 7 · Results: does the money last? (end of PR A)
 
-- [ ] Done
+- [x] Done
 
 1. Add the "Money lasts" tile, with its explanation, as described above.
 2. When the projection runs out, show a `Banner` on Results linking to Year
@@ -1804,6 +1805,16 @@ changes to tests.
    - add a dated expense in Income & expenses, and check Year by year's
      spending changes for that year;
    - after a reload, the cash, end age and dated expense are still there.
+
+**As built:**
+- The tile reads "To age 95 ✓" with "{investable} left in {year} (nominal
+  dollars)", or "Runs out at age 65" with "2031 · 1 year can't be funded". The
+  amount is nominal and doesn't follow the toggle, like the FI number at
+  retirement, so the sub-line says so.
+- The FI reached tile's sub-line when FI isn't reached is now "With today's
+  inputs".
+- The warning banner is shown on Results only when the money runs out.
+- README's "What it does" now covers M3.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A** for
 the owner to verify.
@@ -1907,7 +1918,8 @@ to verify.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [x] Owner verifies and merges the M2 PR.
 - [x] Approve the M3 step-by-step plan.
-- [ ] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
+- [x] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
+- [ ] Owner verifies and merges M3 PR A.
 - [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.

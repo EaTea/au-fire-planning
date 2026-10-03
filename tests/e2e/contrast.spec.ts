@@ -275,7 +275,7 @@ test("the year by year table has readable text in both dollar modes, including t
   }
 });
 
-test("the year by year table has readable text with a shortfall, its banner and an outlined row", async ({
+test("the results and year by year pages have readable text with a shortfall, its banners and an outlined row", async ({
   page,
 }) => {
   // Fix "now" so the shortfall year (2031) and the ?year= row are the same on any day.
@@ -299,6 +299,15 @@ test("the year by year table has readable text with a shortfall, its banner and 
     await page.getByLabel(label).fill(value);
     await page.getByLabel(label).press("Tab");
   }
+
+  // Results with the "Money lasts" tile, the runs-out banner and every explanation open.
+  await page.goto("#/results");
+  await expect(page.getByRole("alert")).toContainText("Your money runs out at age 65");
+  for (const explainToggle of await page.getByRole("button", { name: /How is this/ }).all()) {
+    await explainToggle.click();
+  }
+  expect(await findLowContrastText(page), "results with a shortfall").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "results with a shortfall").toEqual([]);
 
   // Opening with ?year= outlines that row for a few seconds, so check it straight away.
   await page.goto("#/year-by-year?year=2029");
