@@ -1638,7 +1638,8 @@ files, not in code.
 - **Fields:** the gross (pre-tax) salary per year (default $0), and how it
   grows.
   - **Growth options:** "Inflation", "Inflation + …%", "Inflation − …%",
-    "Fixed …%" or "No growth". The default is "Inflation".
+    "Fixed …%" or "No growth". The default is "No growth" (changed from
+    "Inflation" after PR A; see the salary growth default plan below).
   - **Internal type:**
     `SalaryGrowth = { kind: "inflationPlus"; margin } | { kind: "fixed"; rate } | { kind: "none" }`.
     "Inflation" is `inflationPlus` with a margin of 0.
@@ -1830,7 +1831,7 @@ Results:
   $467,262.87), **already reached**.
 
 **C: Coast FIRE later.** A, with a $300,000 portfolio, a $120,000 salary
-growing at inflation, and $100,000 of super. Salary sacrifice is still
+growing at inflation (set explicitly, since the default is no growth), and $100,000 of super. Salary sacrifice is still
 $10,000 from 2027 to 2042.
 - **Row 1 (2027):** salary $123,000.00, employer $14,760.00, contributions
   tax $3,714.00, super $126,996.00, investable $498,796.00.
@@ -2180,7 +2181,8 @@ No new dependencies.
 
 ### Salary growth defaults to "No growth": step-by-step plan
 
-**Kind:** behavior change. **Status:** plan awaiting the owner's approval.
+**Kind:** behavior change. **Status:** plan approved (PR #28); step 1
+implemented and awaiting the owner's verification.
 
 **Why.** The owner isn't convinced salaries keep pace with inflation, so a
 plan shouldn't assume they do unless the user says so. Salary growth is
@@ -2285,6 +2287,7 @@ it can merge before or after it.
 - [ ] Owner verifies and merges the cash drawn last PR.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.
-- [ ] Approve the salary growth default plan.
-- [ ] Implement the salary growth default (step 1), then open it for
+- [x] Approve the salary growth default plan.
+- [x] Implement the salary growth default (step 1), then open it for
       verification.
+- [ ] Owner verifies and merges the salary growth default PR.
