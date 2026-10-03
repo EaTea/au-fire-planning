@@ -22,6 +22,15 @@ Everything is calculated in your browser and saved only on your device.
   against the FI number, in today's or nominal dollars, marks the FI year and
   retirement and shades any years that can't be funded; hover for the values,
   or click a year to jump to it in the table below.
+- **Results, Coast FIRE:** the savings you need today so that, with no more
+  contributions, you still reach your FI number by retirement (in today's
+  dollars and in the retirement year's dollars), and whether you've reached it
+  or the year you will on your current contributions. A Milestones timeline
+  lists Coast FIRE, FI reached, retirement and whether the money lasts, in
+  year order. A second chart, "When could you stop contributing?", plots your
+  savings on current contributions, today's savings with no more
+  contributions, the Coast FIRE number and the FI number up to retirement;
+  hover for the values, or click a year to jump to it in the table.
 - **Results, year by year:** at the bottom of Results, the projection of cash
   and the portfolio, one row per year to the plan-until age. Retirement
   spending is drawn from cash first, then the portfolio. The year FI is

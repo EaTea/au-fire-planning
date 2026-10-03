@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M3, the colour scheme and the one-page Results are done. M4 is in progress.
+**Current status:** M0 to M3, the colour scheme and the one-page Results are done. M4 is implemented, awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 and one-page Results done. M4 in progress |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 and one-page Results done. M4 implemented, awaiting the owner's verification |
 
 ## 1. Requirement ordering
 
@@ -1332,9 +1332,8 @@ Conventions every later milestone follows:
 
 ### M4 · Coast FIRE: step-by-step plan
 
-**Status:** approved (PR #22). Implementation in progress, one step at a
-time. Step 1 is done. Steps 2 to 5 build on the one-page Results, which
-is now merged (PR #23).
+**Status:** implemented, awaiting the owner's verification. Steps 1 to 5 are
+done; they build on the one-page Results (PR #23).
 
 **Kind:** behavior change.
 
@@ -1763,7 +1762,12 @@ the four lines are easy to tell apart on the deep green page.
 
 #### Step 5 · E2E, README and wrap-up
 
-- [ ] Done
+- [x] Done
+
+**As built:** `tests/e2e/coast.spec.ts` follows the user's flow (tile,
+Milestones order, marker, four-value hover, example E's inputs, reload) and
+leaves stroke colours and dashes to `coastChart.spec.ts`. README's "What it
+does" now covers Coast FIRE, the milestones and the second chart.
 
 1. E2E (`tests/e2e/coast.spec.ts`), with the clock fixed in 2026:
    - **Example A:**
@@ -1827,4 +1831,5 @@ for the owner to verify.
       verification.
 - [x] Owner verifies and merges the one-page Results PR.
 - [x] Approve the M4 step-by-step plan.
-- [ ] Implement M4 (steps 1 to 5), then open the M4 PR for verification.
+- [x] Implement M4 (steps 1 to 5), then open the M4 PR for verification.
+- [ ] Owner verifies and merges the M4 PR.
