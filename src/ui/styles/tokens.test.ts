@@ -49,6 +49,7 @@ const minimumGraphicsContrast = 3;
 const graphicOnBackgroundPairs: ReadonlyArray<readonly [graphic: string, background: string]> = [
   ["--colour-chart-primary", "--colour-page-background"],
   ["--colour-chart-reference", "--colour-page-background"],
+  ["--colour-chart-secondary", "--colour-page-background"],
   ["--colour-chart-band", "--colour-page-background"],
   ["--colour-border", "--colour-page-background"],
   // The Milestones markers: solid or outlined gold, drawn on the card.

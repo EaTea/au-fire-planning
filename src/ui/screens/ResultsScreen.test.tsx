@@ -576,6 +576,82 @@ describe("ResultsScreen", () => {
     });
   });
 
+  describe("the Coast FIRE chart card", () => {
+    /** The chart card's element. */
+    function coastChartCard(): HTMLElement {
+      return screen
+        .getByRole("heading", { name: "When could you stop contributing?" })
+        .closest("section")!;
+    }
+
+    it("sits after chart (a) and before the Year by year section, with no toggle of its own", () => {
+      renderResults(exampleAWithCash);
+
+      const fireHeading = screen.getByRole("heading", {
+        name: "Investable net worth vs FI number",
+      });
+      const coastHeading = screen.getByRole("heading", {
+        name: "When could you stop contributing?",
+      });
+      const tableHeading = screen.getByRole("heading", { level: 2, name: "Year by year" });
+
+      expect(
+        fireHeading.compareDocumentPosition(coastHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        coastHeading.compareDocumentPosition(tableHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(within(coastChartCard()).queryByRole("group")).toBeNull();
+    });
+
+    it("has a caption in nominal dollars that says so", () => {
+      renderResults(exampleAWithCash);
+
+      expect(
+        within(coastChartCard()).getByText(/With no more contributions from today/),
+      ).toHaveTextContent(
+        /^With no more contributions from today, your savings reach \$[\d,]+ by 2042, against an FI number of \$2,375,209 \(nominal dollars\)\.$/,
+      );
+    });
+
+    it("follows the page's dollars toggle, with the same caption", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      const card = within(coastChartCard());
+      // Nominal: the Coast FIRE number in 2042 equals the nominal FI number.
+      expect(
+        card.getByRole("row", { name: /^2042 50 \$[\d,]+ \$[\d,]+ \$2,375,209 \$2,375,209$/ }),
+      ).toBeInTheDocument();
+      const caption = card.getByText(/With no more contributions/).textContent;
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      expect(
+        card.getByRole("row", { name: /^2042 50 \$[\d,]+ \$[\d,]+ \$1,600,000 \$1,600,000$/ }),
+      ).toBeInTheDocument();
+      expect(card.getByText(/With no more contributions/).textContent).toBe(caption);
+    });
+
+    it("links to it from the top of the page", () => {
+      renderResults(exampleA);
+
+      const jumpLinks = screen.getByRole("navigation", { name: "On this page" });
+      expect(within(jumpLinks).getByRole("link", { name: "Coast FIRE chart" })).toHaveAttribute(
+        "href",
+        "/results?view=coast-chart",
+      );
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(
+        screen.queryByRole("heading", { name: "When could you stop contributing?" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("the chart card", () => {
     it("shows the chart's name, a dollars toggle and the figures as a hidden table", () => {
       renderResults(exampleAWithCash);

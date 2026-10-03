@@ -35,6 +35,17 @@ export interface TimeSeriesPoint {
   readonly values: Readonly<Record<string, number>>;
 }
 
+/** How a series' line is drawn. */
+export type StrokeStyle = "solid" | "dashed" | "dotted";
+
+/** The SVG `stroke-dasharray` for each stroke style; `undefined` draws a solid line. */
+const strokeDashArrays: Record<StrokeStyle, string | undefined> = {
+  solid: undefined,
+  dashed: "8 5",
+  // Near-zero dashes with round caps (see `strokeLinecap` below) render as dots.
+  dotted: "0.1 6",
+};
+
 /** One line on the chart. */
 export interface TimeSeriesSeries {
   /** Which entry of each point's `values` this line draws. */
@@ -43,8 +54,12 @@ export interface TimeSeriesSeries {
   readonly label: string;
   /** CSS class that sets the line's colour (see app.css); never an inline colour. */
   readonly className: string;
-  /** Draws the line dashed, so two lines differ by more than colour. */
-  readonly dashed?: boolean;
+  /**
+   * How the line is drawn, so lines differ by more than colour. Defaults to
+   * solid. Dotted is round dots, so it can't be mistaken for the vertical
+   * markers, which are short dashes and labelled.
+   */
+  readonly strokeStyle?: StrokeStyle;
 }
 
 /** A vertical line at one year, with a label (e.g. "FI reached"). */
@@ -100,7 +115,7 @@ function formatAxisDollars(value: number): string {
  * renders a legend and a visually hidden table of the same figures, so the
  * numbers are available to screen readers and not only in the picture.
  * Hovering shows the year, age and each series' value; clicking calls
- * `onSelectYear`. Used by FireChartSection on Results.
+ * `onSelectYear`. Used by FireChartSection and CoastChartSection on Results.
  */
 export function TimeSeriesChart({
   label,
@@ -182,7 +197,8 @@ export function TimeSeriesChart({
           dataKey={(point: TimeSeriesPoint) => point.values[oneSeries.key]}
           name={oneSeries.label}
           className={oneSeries.className}
-          strokeDasharray={oneSeries.dashed === true ? "8 5" : undefined}
+          strokeDasharray={strokeDashArrays[oneSeries.strokeStyle ?? "solid"]}
+          strokeLinecap={oneSeries.strokeStyle === "dotted" ? "round" : undefined}
           dot={false}
           activeDot={false}
           isAnimationActive={false}
@@ -191,7 +207,8 @@ export function TimeSeriesChart({
     </>
   );
 
-  const chartMargin = { top: 28, right: 16, bottom: 4, left: 0 };
+  // The right margin leaves room for a label right of a marker on the last year ("Retirement").
+  const chartMargin = { top: 28, right: 64, bottom: 4, left: 0 };
 
   return (
     <figure className="time-series-chart">
@@ -199,9 +216,7 @@ export function TimeSeriesChart({
         {series.map((oneSeries) => (
           <li key={oneSeries.key} className={oneSeries.className}>
             <span
-              className={
-                oneSeries.dashed === true ? "chart-swatch chart-swatch-dashed" : "chart-swatch"
-              }
+              className={`chart-swatch chart-swatch-${oneSeries.strokeStyle ?? "solid"}`}
               aria-hidden="true"
             />
             {oneSeries.label}

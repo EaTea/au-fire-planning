@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TimeSeriesChart, type TimeSeriesPoint } from "./TimeSeriesChart";
+import { TimeSeriesChart, type TimeSeriesPoint, type TimeSeriesSeries } from "./TimeSeriesChart";
 
 const points: TimeSeriesPoint[] = [
   { year: 2026, age: 34, values: { mine: 100, goal: 500 } },
@@ -9,9 +9,9 @@ const points: TimeSeriesPoint[] = [
   { year: 2028, age: 36, values: { mine: 600, goal: 540 } },
 ];
 
-const series = [
+const series: TimeSeriesSeries[] = [
   { key: "mine", label: "My money", className: "chart-series-investable" },
-  { key: "goal", label: "The goal", className: "chart-series-fi-number", dashed: true },
+  { key: "goal", label: "The goal", className: "chart-series-fi-number", strokeStyle: "dashed" },
 ];
 
 /** Renders the chart at a fixed size (jsdom has no layout) with a marker and a band. */
@@ -46,6 +46,25 @@ describe("TimeSeriesChart", () => {
     expect(container.querySelectorAll(".recharts-line")).toHaveLength(2);
     expect(container.querySelector(".recharts-line.chart-series-investable")).not.toBeNull();
     expect(container.querySelector(".recharts-line.chart-series-fi-number")).not.toBeNull();
+  });
+
+  it("draws solid, dashed and dotted lines differently, and mirrors that in the legend", () => {
+    const styled: TimeSeriesSeries[] = [
+      { key: "mine", label: "Solid", className: "chart-series-investable" },
+      { key: "goal", label: "Dashed", className: "chart-series-fi-number", strokeStyle: "dashed" },
+      { key: "mine", label: "Dotted", className: "chart-series-savings", strokeStyle: "dotted" },
+    ];
+    const { container } = render(
+      <TimeSeriesChart label="Styles" points={points} series={styled} width={600} height={300} />,
+    );
+
+    const dashArrays = Array.from(container.querySelectorAll(".recharts-line-curve")).map((line) =>
+      line.getAttribute("stroke-dasharray"),
+    );
+    expect(dashArrays).toEqual([null, "8 5", "0.1 6"]);
+    expect(container.querySelector(".chart-swatch-solid")).not.toBeNull();
+    expect(container.querySelector(".chart-swatch-dashed")).not.toBeNull();
+    expect(container.querySelector(".chart-swatch-dotted")).not.toBeNull();
   });
 
   it("draws the marker and the band with their labels", () => {

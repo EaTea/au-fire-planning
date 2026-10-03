@@ -9,6 +9,7 @@ import { StepPage } from "../components/StepPage";
 import { DollarsModeToggle } from "../dollarsMode";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { COAST_CHART_SECTION_ID, CoastChartSection } from "../sections/CoastChartSection";
 import { FIRE_CHART_SECTION_ID, FireChartSection } from "../sections/FireChartSection";
 import { MILESTONES_SECTION_ID, MilestonesSection } from "../sections/MilestonesSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
@@ -28,7 +29,7 @@ function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explaine
 
 /**
  * The Results step: the headline tiles (FIRE-1 – FIRE-3, OUT-3, OUT-4), each
- * with its breakdown, the milestones, the FIRE chart, and then every year of the plan in the
+ * with its breakdown, the milestones, the FIRE chart, the Coast FIRE chart, and then every year of the plan in the
  * Year by year section (OUT-1), all following the one dollars toggle in the
  * page header (OUT-2). If the plan is incomplete it lists what's still
  * missing instead, linked to the steps where it is entered. Always shows what
@@ -72,6 +73,7 @@ export function ResultsScreen() {
                 <RunsOutBanner projection={summary.projection} />
                 <MilestonesSection projection={summary.projection} />
                 <FireChartSection projection={summary.projection} />
+                <CoastChartSection projection={summary.projection} />
               </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />
@@ -93,7 +95,7 @@ export function ResultsScreen() {
 
 /**
  * The "On this page" links under the title: Results is long once it ends
- * with the table, so these jump to the milestones, the chart and the table. They set
+ * with the table, so these jump to the milestones, the charts and the table. They set
  * `?view=`, which useScrollToRequestedSection acts on. Shown only when the
  * projection is complete, since both targets need it.
  */
@@ -103,6 +105,7 @@ function JumpLinks() {
       <span>On this page:</span>
       <Link to={`${step.path}?view=${MILESTONES_SECTION_ID}`}>Milestones</Link>
       <Link to={`${step.path}?view=${FIRE_CHART_SECTION_ID}`}>FIRE chart</Link>
+      <Link to={`${step.path}?view=${COAST_CHART_SECTION_ID}`}>Coast FIRE chart</Link>
       <Link to={`${step.path}?view=${YEAR_BY_YEAR_SECTION_ID}`}>Year by year ↓</Link>
     </nav>
   );

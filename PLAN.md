@@ -1728,7 +1728,22 @@ and age.
 
 #### Step 4 · Coast FIRE chart
 
-- [ ] Done
+- [x] Done
+
+**As built:** `strokeStyle` replaces `dashed` (dotted is round dots,
+`0.1 6` with round caps, so it can't be mistaken for the labelled vertical
+dashed markers); `--colour-chart-secondary` is the green-white with a 3:1
+pair; `buildCoastChartSeries` and `describeCoastChartEnd` are in
+`src/ui/charts/coastChart.ts`; the card is `CoastChartSection` (id
+`coast-chart`, link "Coast FIRE chart"). Judgement calls: no "Coast FIRE"
+marker when it's reached today (it would sit on the axis; the tile and
+Milestones say so); a shared "Coast FIRE · retirement" marker if both fall
+in the retirement year; the caption adds "(nominal dollars)"; the chart's
+right margin grew from 16 to 64px so the "Retirement" label on the last
+year isn't clipped (this applies to chart (a) too). The new
+`tests/e2e/coastChart.spec.ts` asserts the four strokes and dash styles; a
+new contrast sweep test covers the page with this chart, and chart (a)'s
+sweep now scopes its marker and band counts to `#fire-chart`.
 
 1. Change `TimeSeriesChart`'s `dashed` to `strokeStyle`, and update chart
    (a). Chart (a) must look the same: check its E2E stroke assertions still

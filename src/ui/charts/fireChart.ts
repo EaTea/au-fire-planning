@@ -59,7 +59,12 @@ export function buildFireChartSeries(
 
   const series: TimeSeriesSeries[] = [
     { key: INVESTABLE_KEY, label: "Investable net worth", className: "chart-series-investable" },
-    { key: FI_NUMBER_KEY, label: "FI number", className: "chart-series-fi-number", dashed: true },
+    {
+      key: FI_NUMBER_KEY,
+      label: "FI number",
+      className: "chart-series-fi-number",
+      strokeStyle: "dashed",
+    },
   ];
 
   return { points, series, markers: buildMarkers(projection), bands: buildBands(projection) };

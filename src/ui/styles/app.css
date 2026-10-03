@@ -629,6 +629,21 @@ button:focus-visible {
   --series-colour: var(--colour-chart-reference);
 }
 
+/* The Coast FIRE chart's lines: gold for your savings, muted green-white for
+   today's savings, white (dashed) for the Coast FIRE number. The FI number
+   keeps chart (a)'s white class (dotted here). */
+.chart-series-savings {
+  --series-colour: var(--colour-chart-primary);
+}
+
+.chart-series-no-contributions {
+  --series-colour: var(--colour-chart-secondary);
+}
+
+.chart-series-coast-number {
+  --series-colour: var(--colour-chart-reference);
+}
+
 .time-series-chart .recharts-line-curve {
   stroke: var(--series-colour);
   stroke-width: 2.5px;
@@ -660,6 +675,10 @@ button:focus-visible {
 
 .chart-swatch-dashed {
   border-top-style: dashed;
+}
+
+.chart-swatch-dotted {
+  border-top-style: dotted;
 }
 
 /* The picture's text and strokes. SVG attributes can't use var(), so it's all set here. */

@@ -89,6 +89,8 @@
    */
   --colour-chart-primary: var(--aus-gold);
   --colour-chart-reference: var(--white);
+  /* Muted green-white: "today's savings, no more contributions" on the Coast FIRE chart. */
+  --colour-chart-secondary: var(--green-white);
   --colour-chart-band: var(--error-pink);
   --chart-band-opacity: 0.2;
 
