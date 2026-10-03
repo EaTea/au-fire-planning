@@ -13,8 +13,12 @@
 //       retirement spending × index    (only if age > retirement age)
 //     + dated expenses for this year × index
 //
-//   take it from: 1. cash available   2. portfolio available
+//   take it from: 1. portfolio available   2. cash available
 //   anything left over = shortfall for this year (cash and portfolio end at $0)
+//
+// Cash is drawn last so it acts as a buffer: it is only touched once the
+// portfolio is empty. That holds in working years too, so a dated expense
+// before retirement is paid from the portfolio and the cash is left alone.
 //
 // Every value in row k shares one inflation index, (1+i)^k, so converting any
 // of them to today's dollars divides by that single number.
@@ -95,10 +99,10 @@ export interface ProjectionRow {
   readonly portfolioClosing: number;
   /** Spending to fund this year: retirement spending plus dated expenses. */
   readonly spending: number;
-  /** The part of spending paid from cash. */
-  readonly fromCash: number;
-  /** The part of spending paid from the portfolio, after cash. */
+  /** The part of spending paid from the portfolio, which is drawn first. */
   readonly fromPortfolio: number;
+  /** The part of spending paid from cash, once the portfolio is empty. */
+  readonly fromCash: number;
   /** The part of spending that couldn't be funded; 0 in a funded year. */
   readonly shortfall: number;
   /** Cash plus portfolio at the end of the year. */
@@ -182,10 +186,11 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       sumDatedExpensesInYear(inputs.datedExpenses, calendarYear) * inflationIndex;
     const spending = retirementSpending + datedSpending;
 
-    // Cash is drawn first, then the portfolio; whatever is left over is the shortfall.
-    const fromCash = Math.min(spending, cashAvailable);
-    const fromPortfolio = Math.min(spending - fromCash, portfolioAvailable);
-    const shortfall = spending - fromCash - fromPortfolio;
+    // The portfolio is drawn first and cash last, so cash stays as a buffer
+    // until the portfolio is empty; whatever is left over is the shortfall.
+    const fromPortfolio = Math.min(spending, portfolioAvailable);
+    const fromCash = Math.min(spending - fromPortfolio, cashAvailable);
+    const shortfall = spending - fromPortfolio - fromCash;
 
     cash = cashAvailable - fromCash;
     portfolio = portfolioAvailable - fromPortfolio;

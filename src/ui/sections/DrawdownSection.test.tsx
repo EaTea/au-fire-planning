@@ -57,7 +57,7 @@ describe("DrawdownSection", () => {
 
     expect(
       screen.getByText(
-        "Withdrawal in retirement: constant, inflation-adjusted. Each year's spending is drawn from cash first, then the portfolio.",
+        "Withdrawal in retirement: constant, inflation-adjusted. Each year's spending is drawn from the portfolio first, and from cash only once the portfolio is empty.",
       ),
     ).toBeInTheDocument();
   });

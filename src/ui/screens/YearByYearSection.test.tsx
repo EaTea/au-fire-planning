@@ -249,7 +249,7 @@ describe("YearByYearSection", () => {
 
     expect(bandRows.map((row) => row.textContent)).toEqual([
       "Working · contributing",
-      "Retired · spending drawn from cash, then the portfolio",
+      "Retired · spending drawn from the portfolio, then cash",
     ]);
 
     // The working band comes first (after the header), and the retired band sits before the 2043 row (age 51).
@@ -269,31 +269,31 @@ describe("YearByYearSection", () => {
       "$0",
       "$10,500",
       "$30,000",
-      "$0",
-      "$90,500",
+      "$10,500",
+      "$80,000",
       "$90,500",
       "$750,000",
       "✓",
     ]);
-    expect(rowFor(2028).slice(4, 8)).toEqual(["$9,050", "$30,000", "$0", "$69,550"]);
-    expect(rowFor(2029)[7]).toBe("$46,505");
-    expect(rowFor(2030)[7]).toBe("$21,156");
+    expect(rowFor(2028).slice(4, 8)).toEqual(["$8,525", "$30,000", "$11,025", "$58,000"]);
+    expect(rowFor(2029)[7]).toBe("$33,800");
+    expect(rowFor(2030)[7]).toBe("$7,180");
 
-    // 2031: $23,271 available against $30,000 spending, so $6,729 is unfunded and everything ends at $0.
+    // 2031: the portfolio's $7,898 and cash's $12,763 against $30,000 spending, so $9,339 is unfunded and everything ends at $0.
     expect(rowFor(2031)).toEqual([
       "2031",
       "65",
       "—",
       "$0",
-      "$2,116",
+      "$1,326",
       "$30,000",
       "$0",
       "$0",
       "$0",
       "$750,000",
-      "Shortfall −$6,729",
+      "Shortfall −$9,339",
     ]);
-    expect(screen.getByText("Shortfall −$6,729")).toHaveClass("projection-shortfall");
+    expect(screen.getByText("Shortfall −$9,339")).toHaveClass("projection-shortfall");
     expect(screen.getAllByText("Shortfall", { exact: false })).toHaveLength(1);
   });
 

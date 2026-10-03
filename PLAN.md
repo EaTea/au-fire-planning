@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is approved and comes before M5 PR B (super), which is not started.
+**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is implemented and awaiting verification; it comes before M5 PR B (super), which is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last approved. M5 PR B not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last awaiting verification. M5 PR B not started |
 
 ## 1. Requirement ordering
 
@@ -1380,7 +1380,8 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### Cash drawn last: step-by-step plan
 
-**Status:** approved by the owner. It lands before M5 PR B,
+**Status:** approved by the owner and implemented, awaiting the owner's
+verification. It lands before M5 PR B,
 because PR B adds super to the same drawing order.
 
 **Kind:** behavior change. One PR.
@@ -1455,7 +1456,7 @@ expense in 2029):
 
 #### Step 1 · Engine: cash drawn last
 
-- [ ] Done
+- [x] Done
 
 1. In `projectPortfolio`, draw spending from the portfolio, then cash.
    Update the diagram and the doc comments for `fromCash` and
@@ -1469,7 +1470,8 @@ expense in 2029):
      from cash; a dated expense while working leaving cash alone;
    - a fixture with the sample plan above, to the dollar;
    - M3 and M4 worked-example fixtures recomputed where cash and the
-     portfolio are both drawn; the changes listed in the PR;
+     portfolio are both drawn; the changes listed in the PR. Done with an
+     independent script: M3 A and B and M4 C change, the sample is M3 D;
    - the existing property tests (balances never negative, Coast FIRE's
      "reached at row k") still pass.
 
@@ -1477,11 +1479,12 @@ expense in 2029):
 
 #### Step 2 · Wording and E2E (end of PR)
 
-- [ ] Done
+- [x] Done
 
 1. Change the hints and labels that name the order (Drawdown, Dated
    expenses, Year by year retired phase).
-2. Update the E2E specs that assert that text, and any figures they check.
+2. Update the E2E specs that assert that text, and any figures they check
+   (only figures changed: the 2031 shortfall in example B, done in step 1).
 3. Update M5's design decisions, step 5 and worked examples A and C to
    the new order, so PR B builds on it.
 
@@ -1565,8 +1568,9 @@ files, not in code.
   - progress to FI, FI reached, Coast FIRE, the earliest retirement age
     and the charts all count super;
   - the breakdowns show it as its own line.
-- Super is drawn only from age 65, after cash and the portfolio. Years
-  before that which only super could fund are flagged as shortfalls.
+- Super is drawn only from age 65, after the portfolio and before cash
+  (cash is drawn last). Years before that which only super could fund
+  are flagged as shortfalls.
 - With the worked examples below, the figures match to the cent.
 - Plans saved by M1 to M4 still load.
 - `npm run check` and `npm run test:e2e` pass, and CI is green.
@@ -1711,9 +1715,9 @@ so it errs on the conservative side.
 - This follows the "each asset grows its own way" principle.
 
 **Drawing on super.** In M5, super is drawn only from **age 65** (IN-5's
-default access age), and only after cash and the portfolio. The order
-each year is cash, then the portfolio, then super if the person is 65 or
-over.
+default access age), and only after the portfolio. The order each year
+is the portfolio, then super if the person is 65 or over, then cash (see
+"Cash drawn last").
 - **Before 65,** a year that only super could fund is a shortfall, and the
   shortfall banner explains why.
 - **M6** makes the access age an input, and adds the bridge check that
@@ -1809,6 +1813,11 @@ non-concessional in 2028 only.
   stays at $500,000.
 - **From 2031 (age 65):** spending is drawn from super, which ends 2031
   to 2033 at $480,000, $460,000 and $440,000.
+
+Examples A and C were worked out with cash drawn first. Their FI reached
+and Coast FIRE figures don't depend on the order (nothing is drawn before
+retirement and there are no dated expenses), but "money lasts" and the
+earliest retirement age must be recomputed in step 5 with the new order.
 
 **A: headline.** M4's example A, plus:
 - super of $185,000 at 7% net of fees;
@@ -2031,7 +2040,7 @@ No new dependencies.
    defaults above. Resolve it, with the employer rate's source as `"rule"`
    when it's left to the law.
 2. In `projectPortfolio`, apply the "super each year" rules and the
-   drawing order (cash, portfolio, then super from 65). `ProjectionRow`
+   drawing order (portfolio, super from 65, then cash). `ProjectionRow`
    gains:
    - `employerContribution`, `salarySacrifice`, `nonConcessional`;
    - `superEarnings`, `superEarningsTax`, `contributionsTax`;
@@ -2282,7 +2291,7 @@ it can merge before or after it.
       it for verification.
 - [x] Owner verifies and merges M5 PR A.
 - [x] Approve the cash drawn last plan.
-- [ ] Implement cash drawn last (steps 1 and 2), then open it for
+- [x] Implement cash drawn last (steps 1 and 2), then open it for
       verification.
 - [ ] Owner verifies and merges the cash drawn last PR.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for

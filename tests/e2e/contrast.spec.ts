@@ -437,7 +437,7 @@ test("results has readable text with a shortfall, its banners and an outlined ro
   await expect(page.locator(".year-by-year-section").getByRole("alert")).toContainText(
     "1 year can't be funded: 2031",
   );
-  await expect(page.getByText("Shortfall −$6,729")).toBeVisible();
+  await expect(page.getByText("Shortfall −$9,339")).toBeVisible();
   await expect(page.locator("tr[data-outlined='true']")).toHaveCount(1);
 
   for (const mode of ["Today's dollars", "Nominal"]) {

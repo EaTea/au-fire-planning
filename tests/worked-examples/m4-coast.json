@@ -146,20 +146,20 @@
         ]
       },
       "arithmetic": [
-        "The car comes out of cash first, then the portfolio, so the number rises",
-        "Coast FIRE number $890,925.23; in 2042 dollars $1,322,583.51",
-        "Reached in 2033 (age 41): $1,309,224.01 vs $1,291,956.32"
+        "The car is paid from the portfolio (cash is drawn last), so the portfolio needed today rises by its cost discounted at the portfolio return",
+        "Coast FIRE number $896,085.95; in 2042 dollars $1,330,244.63",
+        "Reached in 2033 (age 41): $1,306,880.11 vs $1,297,899.40"
       ],
       "expected": {
         "coast": {
-          "number": 890925.23,
-          "numberInRetirementYearDollars": 1322583.51,
+          "number": 896085.95,
+          "numberInRetirementYearDollars": 1330244.63,
           "reached": {
             "yearIndex": 7,
             "calendarYear": 2033,
             "age": 41,
-            "investable": 1309224.01,
-            "coastNumber": 1291956.32
+            "investable": 1306880.11,
+            "coastNumber": 1297899.4
           }
         }
       }

@@ -37,7 +37,7 @@ describe("assessSolvency", () => {
     ]);
   });
 
-  // The plan's example B: only the last year is short, by $6,728.95.
+  // The plan's example B: only the last year is short, by $9,339.18 (portfolio first, cash last).
   it("finds the first shortfall year and explains it", () => {
     const result = assessSolvency(projectPortfolio(runsOutInputs, 2026));
 
@@ -47,14 +47,14 @@ describe("assessSolvency", () => {
       age: 65,
       shortfallYears: [2031],
     });
-    expect(result.explanation.value).toBeCloseTo(6728.95, 2);
+    expect(result.explanation.value).toBeCloseTo(9339.18, 2);
     expect(result.explanation.lines.map((line) => [line.operator, line.label])).toEqual([
       [undefined, "Spending to fund in 2031"],
       ["−", "Cash and portfolio available"],
       ["=", "Shortfall"],
     ]);
     expect(result.explanation.lines[0]?.value).toBe(30000);
-    expect(result.explanation.lines[1]?.value).toBeCloseTo(23271.05, 2);
+    expect(result.explanation.lines[1]?.value).toBeCloseTo(20660.82, 2);
   });
 
   // A shortfall is followed by more shortfall years, all listed.
