@@ -32,7 +32,7 @@ async function renderMockup(page, htmlFileName) {
 
 /*
  * Entry point: renders all *.html files in this folder, or only the
- * names passed on the command line (e.g. `node render.js 05-results.html`).
+ * names passed on the command line (e.g. `node render.cjs 05-results.html`).
  */
 async function main() {
   const requestedFiles = process.argv.slice(2);

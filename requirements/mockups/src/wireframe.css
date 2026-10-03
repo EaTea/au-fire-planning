@@ -30,7 +30,7 @@ body {
   color: var(--ink);
 }
 
-/* One mockup screen: fixed desktop width, rendered to PNG by render.js. */
+/* One mockup screen: fixed desktop width, rendered to PNG by render.cjs. */
 .screen {
   width: 1440px;
   margin: 0 auto;

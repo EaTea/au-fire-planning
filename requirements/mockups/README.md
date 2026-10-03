@@ -92,8 +92,8 @@ To re-render after editing, you need Node.js and
 ```sh
 npm install --no-save playwright   # once, if Playwright isn't installed
 npx playwright install chromium    # once, if Chromium isn't installed
-node requirements/mockups/src/render.js                  # all screens
-node requirements/mockups/src/render.js 05-results.html  # one screen
+node requirements/mockups/src/render.cjs                  # all screens
+node requirements/mockups/src/render.cjs 05-results.html  # one screen
 ```
 
 Commit the updated PNGs together with the HTML changes, so the two stay in
