@@ -1977,7 +1977,7 @@ No new dependencies.
 
 #### Step 6 · Engine: Coast FIRE with super
 
-- [ ] Done
+- [x] Done
 
 1. Extend `calculateCoastFire` as described above. Super's "employer
    contributions only" path from each row comes from `projectPortfolio`
@@ -1992,6 +1992,63 @@ No new dependencies.
      super contributions together.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `superLeft(k)` comes from `projectPortfolio` with the portfolio stop age
+  and the salary sacrifice and non-concessional end years pulled back to row
+  k (no new engine input), and with no dated expenses, because the formula
+  has the portfolio pay any spill so super is never drawn before retirement.
+  The "no further contributions" chart line uses the same helper at row 0.
+- **Spill adjustment (rows at or after 65, or any plan where cash plus
+  super already cover the FI number):** the closed form let the portfolio go
+  negative on the way when `FI − cash − super` was negative but a dated
+  expense still fell due. That made the number rise slightly with a higher
+  return. The portfolio needed is now at least the spills discounted back to
+  row k. M4 is unchanged, because a spill there always means cash is empty
+  and `FI − cash` is positive. When the floor applies, the breakdown says
+  "Portfolio needed today, to pay the dated expenses your cash can't".
+- The breakdown gains "Your super, growing at {return} net of fees and tax,
+  with employer contributions, to {year}" and "Your super today", only when
+  there is super, so plans without it read as in M4.
+- Examples A ($672,262.87, reached today) and C ($698,765.82, reached 2037
+  at age 45) are in `m5-super.json`. The fixture format now treats the
+  retirement-year-dollars figure and the reached row's investable and coast
+  figures as optional, because the plan doesn't list them.
+- Properties: the generators now include salary and super, and "reached means
+  stoppable" stops the portfolio, salary sacrifice and non-concessional
+  together. A plan where a dated expense only locked super could pay is a
+  flagged shortfall that the projection doesn't charge against FI, but Coast
+  FIRE does, so the "one year earlier doesn't reach FI" half and "chart line
+  matches reached today" skip plans with a shortfall before retirement. The
+  "at the retirement row" property now compares with cash + super.
+- **"Reached" is decided exactly (the owner's choice).** The closed form
+  assumes the portfolio pays every dated expense, but from age 65 the
+  projection pays one from super, which the formula's super path (no dated
+  expenses) doesn't see. So `coast(n)` could be a little off, and "reached"
+  optimistic. Coast FIRE is now reached at the first row k from 0 to n where
+  `projectPortfolio`, with voluntary contributions stopped after row k
+  (employer contributions unchanged), has investable at the retirement row at
+  least that row's FI number and no shortfall year in rows k+1 to n that the
+  plan with its contributions doesn't already have. That is n + 1
+  projections. The Coast FIRE number, the `coast(k)` path and the chart line
+  stay on the formula, so they can differ from "reached" in that edge case.
+  The reached explanation keeps its margin lines and appends "If you stop
+  voluntary contributions after {year}: investable at {retirement year}" and
+  "FI number at {retirement year}", which state the exact test (the margin can
+  be slightly negative in the edge case).
+- Properties: the generators include salary and super. "Reached means
+  stoppable" (and "a year earlier doesn't") now hold by construction and have
+  no edge-case skips. "Stopping now reaches FI without a new shortfall
+  exactly when reached today" replaces the old chart-line property. The
+  retirement-row property only covers plans where super isn't drawn up to
+  retirement (the edge case above). "Larger contributions never make Coast
+  FIRE later" skips plans where the smaller one has a shortfall before
+  retirement, because larger contributions can pay an expense the smaller
+  plan leaves as a shortfall, which then counts as a new shortfall when
+  stopping.
+- A regression unit test covers the edge case: retiring at 65 with exactly
+  the FI number in super and a $1 dated expense at 65, where the formula says
+  reached and the exact test correctly says not reached.
 
 #### Step 7 · Super state and wire format
 

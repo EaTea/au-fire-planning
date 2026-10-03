@@ -23,6 +23,10 @@ const settingsArbitrary = fc.record({
   annualContribution: fc.integer({ min: 0, max: 150_000 }),
   livingAnnual: fc.integer({ min: 1000, max: 150_000 }),
   portfolioValue: fc.integer({ min: 0, max: 3_000_000 }),
+  salary: fc.integer({ min: 0, max: 300_000 }),
+  superBalance: fc.integer({ min: 0, max: 800_000 }),
+  salarySacrifice: fc.integer({ min: 0, max: 30_000 }),
+  nonConcessional: fc.integer({ min: 0, max: 30_000 }),
   cashBalance: fc.integer({ min: 0, max: 500_000 }),
   datedExpenses: fc.array(
     fc.record({
@@ -41,7 +45,11 @@ function withoutDatedExpenses(settings: Settings): Settings {
   return { ...settings, datedExpenses: [] };
 }
 
-/** Builds a complete plan from generated settings; `stopAge` overrides when contributions stop. */
+/**
+ * Builds a complete plan from generated settings. `stopAge` overrides when the
+ * contributions you choose to make stop: the portfolio's, salary sacrifice
+ * and non-concessional (employer contributions continue while working).
+ */
 function buildPlan(settings: Settings, stopAge?: number): Plan {
   let counter = 0;
   const blank = createNewPlan(() => `id-${++counter}`);
@@ -54,7 +62,30 @@ function buildPlan(settings: Settings, stopAge?: number): Plan {
   return {
     ...blank,
     household: {
-      people: [{ ...person, currentAge: settings.currentAge, targetRetirementAge: retirementAge }],
+      people: [
+        {
+          ...person,
+          currentAge: settings.currentAge,
+          targetRetirementAge: retirementAge,
+          salary: { annual: settings.salary },
+          superAccount: {
+            balance: settings.superBalance,
+            // Unset years mean "to the retirement year"; a stop age pulls the end earlier.
+            salarySacrifice: {
+              annual: settings.salarySacrifice,
+              ...(stopAge === undefined
+                ? {}
+                : { toYear: START_YEAR + stopAge - settings.currentAge }),
+            },
+            nonConcessional: {
+              annual: settings.nonConcessional,
+              ...(stopAge === undefined
+                ? {}
+                : { toYear: START_YEAR + stopAge - settings.currentAge }),
+            },
+          },
+        },
+      ],
       projectionEndAge: retirementAge + 20,
     },
     cash: { balance: settings.cashBalance },
@@ -113,16 +144,29 @@ test.prop([settingsArbitrary])("Coast FIRE is deterministic", (settings) => {
 });
 
 // At retirement there is no growing left to do: you need the FI number, or just
-// your cash if that alone is more.
+// your cash and super if those alone are more.
+//
+// Only for plans where super is never drawn at or before retirement. From 65 super can pay
+// a dated expense in a working year, and the formula's super path leaves dated expenses out,
+// so there coast(n) can be a little off. That edge case is why "reached" is decided by
+// re-running the projection (see coastFire.ts), not by the formula.
 test.prop([settingsArbitrary])(
-  "at the retirement row the Coast FIRE number is the FI number (or just the cash, if larger)",
+  "at the retirement row the Coast FIRE number is the FI number (or just the cash and super, if larger)",
   (settings) => {
     const projection = completeProjection(buildPlan(settings));
     const last = projection.coast.path[projection.coast.path.length - 1];
     const retirementRow = projection.rows[projection.coast.path.length - 1];
     if (last === undefined || retirementRow === undefined) throw new Error("empty path");
 
-    const expected = Math.max(last.fiNumber, retirementRow.cashClosing);
+    const superIsDrawnBeforeRetirement = projection.rows
+      .slice(0, projection.coast.path.length)
+      .some((row) => row.fromSuper > 0);
+    if (superIsDrawnBeforeRetirement) return;
+
+    const expected = Math.max(
+      last.fiNumber,
+      retirementRow.cashClosing + retirementRow.superClosing,
+    );
     expect(Math.abs(last.coastNumber - expected)).toBeLessThanOrEqual(tolerance(expected));
   },
 );
@@ -168,7 +212,16 @@ test.prop([settingsArbitrary, fc.integer({ min: 0, max: 50 })])(
 test.prop([settingsArbitrary, fc.integer({ min: 0, max: 100_000 })])(
   "larger contributions never make Coast FIRE later",
   (settings, extraContribution) => {
-    const smaller = coastYearIndex(buildPlan(settings));
+    // "Reached" asks for no shortfall year the plan doesn't already have. Larger contributions can
+    // pay a dated expense the smaller plan leaves as a shortfall, which then counts against
+    // stopping, so compare only plans where the smaller one has no shortfall before retirement.
+    const smallerProjection = completeProjection(buildPlan(settings));
+    const retirementIndex = smallerProjection.coast.path.length - 1;
+    if (smallerProjection.rows.slice(0, retirementIndex + 1).some((row) => row.shortfall > 0)) {
+      return;
+    }
+
+    const smaller = smallerProjection.coast.reached?.yearIndex ?? Number.POSITIVE_INFINITY;
     const larger = coastYearIndex(
       buildPlan({
         ...settings,
@@ -180,23 +233,30 @@ test.prop([settingsArbitrary, fc.integer({ min: 0, max: 100_000 })])(
   },
 );
 
-// The chart's "today's savings, no more contributions" line ends at the FI number
-// exactly when the tile says "reached" for today.
+// The chart's "no more voluntary contributions" line ends at the FI number, with no new shortfall
+// year, exactly when the tile says "reached" for today (the exact test at row 0).
 test.prop([settingsArbitrary])(
-  "without contributions, savings reach the FI number at retirement exactly when Coast FIRE is reached today",
+  "stopping now reaches the FI number without a new shortfall exactly when Coast FIRE is reached today",
   (settings) => {
-    const { coast } = completeProjection(buildPlan(settings));
+    const plan = buildPlan(settings);
+    const { coast, rows } = completeProjection(plan);
     const last = coast.path[coast.path.length - 1];
     if (last === undefined) throw new Error("empty path");
-
-    const reachesFi = last.withoutContributions >= last.fiNumber - tolerance(last.fiNumber);
-    const reachedToday = coast.reached?.yearIndex === 0;
 
     // Skip knife-edge cases where the two sides are equal to within rounding.
     const gap = Math.abs(last.withoutContributions - last.fiNumber);
     if (gap <= tolerance(last.fiNumber)) return;
 
-    expect(reachesFi).toBe(reachedToday);
+    // A shortfall the plan already has doesn't count against stopping; a new one does.
+    const stoppedNow = completeProjection(buildPlan(settings, settings.currentAge));
+    const hasNewShortfall = stoppedNow.rows
+      .slice(0, coast.path.length)
+      .some((row, index) => row.shortfall > 0 && (rows[index]?.shortfall ?? 0) <= 0);
+
+    const succeeds = last.withoutContributions >= last.fiNumber && !hasNewShortfall;
+    const reachedToday = coast.reached?.yearIndex === 0;
+
+    expect(succeeds).toBe(reachedToday);
   },
 );
 
@@ -214,6 +274,10 @@ const likelyToCoastArbitrary = fc.record({
   annualContribution: fc.integer({ min: 15_000, max: 80_000 }),
   livingAnnual: fc.integer({ min: 20_000, max: 60_000 }),
   portfolioValue: fc.integer({ min: 0, max: 400_000 }),
+  salary: fc.integer({ min: 0, max: 300_000 }),
+  superBalance: fc.integer({ min: 0, max: 800_000 }),
+  salarySacrifice: fc.integer({ min: 0, max: 30_000 }),
+  nonConcessional: fc.integer({ min: 0, max: 30_000 }),
   cashBalance: fc.integer({ min: 0, max: 100_000 }),
   datedExpenses: fc.array(
     fc.record({
@@ -225,8 +289,12 @@ const likelyToCoastArbitrary = fc.record({
   ),
 });
 
-// The point of the whole feature: reached at row k means stopping after year k still gets
-// you to the FI number by retirement, and stopping a year earlier doesn't.
+// The point of the whole feature: reached at row k means stopping your voluntary contributions
+// (portfolio, salary sacrifice and non-concessional together) after year k still gets you to the
+// FI number by retirement with no new shortfall, and stopping a year earlier doesn't. "Reached"
+// is decided by exactly this test (see coastFire.ts), so this holds by construction. It also
+// guards the settings-to-engine path: the plan built here stops the contributions through the
+// plan's own fields, not through the engine's helper.
 test.prop([likelyToCoastArbitrary], { numRuns: 300 })(
   "reached means stoppable: stopping contributions at the reached age still reaches FI, one year earlier doesn't",
   (settings) => {
@@ -237,22 +305,27 @@ test.prop([likelyToCoastArbitrary], { numRuns: 300 })(
 
     const retirementIndex = coast.path.length - 1;
 
-    const stoppedAtReachedAge = completeProjection(buildPlan(settings, reached.age));
-    const atRetirement = stoppedAtReachedAge.rows[retirementIndex];
-    if (atRetirement === undefined) throw new Error("missing retirement row");
-    expect(atRetirement.investableClosing).toBeGreaterThanOrEqual(
-      atRetirement.fiNumber - tolerance(atRetirement.fiNumber),
-    );
+    /** Whether stopping after the given age reaches FI at retirement with no shortfall the plan lacks. */
+    function stoppingWorks(stopAge: number): boolean {
+      const stopped = completeProjection(buildPlan(settings, stopAge)).rows;
+      const atRetirement = stopped[retirementIndex];
+      if (atRetirement === undefined) throw new Error("missing retirement row");
 
-    const stoppedEarlier = completeProjection(buildPlan(settings, reached.age - 1));
-    const earlierAtRetirement = stoppedEarlier.rows[retirementIndex];
-    if (earlierAtRetirement === undefined) throw new Error("missing retirement row");
-    expect(earlierAtRetirement.investableClosing).toBeLessThan(
-      earlierAtRetirement.fiNumber + tolerance(earlierAtRetirement.fiNumber),
-    );
+      const hasNewShortfall = stopped
+        .slice(stopAge - settings.currentAge + 1, retirementIndex + 1)
+        .some(
+          (row) =>
+            row.shortfall > tolerance(row.shortfall) && (rows[row.yearIndex]?.shortfall ?? 0) <= 0,
+        );
 
-    // The unchanged plan's rows are the same plan the Coast FIRE path was built from.
-    expect(rows.length).toBeGreaterThan(retirementIndex);
+      return (
+        atRetirement.investableClosing >=
+          atRetirement.fiNumber - tolerance(atRetirement.fiNumber) && !hasNewShortfall
+      );
+    }
+
+    expect(stoppingWorks(reached.age)).toBe(true);
+    expect(stoppingWorks(reached.age - 1)).toBe(false);
   },
 );
 

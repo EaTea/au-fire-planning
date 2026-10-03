@@ -93,15 +93,17 @@ interface ExpectedSuperRow {
 interface ExpectedCoast {
   /** The Coast FIRE number in today's dollars. */
   readonly number: number;
-  /** The same amount in the retirement year's dollars. */
-  readonly numberInRetirementYearDollars: number;
+  /** The same amount in the retirement year's dollars; checked only when listed. */
+  readonly numberInRetirementYearDollars?: number;
   /** `null` means Coast FIRE is not reached before retirement. */
   readonly reached: {
     readonly yearIndex: number;
     readonly calendarYear: number;
     readonly age: number;
-    readonly investable: number;
-    readonly coastNumber: number;
+    /** Checked only when listed. */
+    readonly investable?: number;
+    /** Checked only when listed. */
+    readonly coastNumber?: number;
   } | null;
   /** Rows of the Coast FIRE path worth checking by hand. */
   readonly rows?: readonly {
@@ -339,10 +341,12 @@ function checkCoastFigures(summary: CompleteSummary, expected: WorkedScenario["e
   const { coast } = summary.projection;
 
   expectToTheCent(coast.number.value, expected.coast.number);
-  expectToTheCent(
-    coast.numberInRetirementYearDollars,
-    expected.coast.numberInRetirementYearDollars,
-  );
+  if (expected.coast.numberInRetirementYearDollars !== undefined) {
+    expectToTheCent(
+      coast.numberInRetirementYearDollars,
+      expected.coast.numberInRetirementYearDollars,
+    );
+  }
 
   if (expected.coast.reached === null) {
     expect(coast.reached).toBeUndefined();
@@ -355,8 +359,12 @@ function checkCoastFigures(summary: CompleteSummary, expected: WorkedScenario["e
     expect(coast.reached.age).toBe(expected.coast.reached.age);
 
     const point = coast.path[coast.reached.yearIndex];
-    expectToTheCent(point?.investable ?? Number.NaN, expected.coast.reached.investable);
-    expectToTheCent(point?.coastNumber ?? Number.NaN, expected.coast.reached.coastNumber);
+    if (expected.coast.reached.investable !== undefined) {
+      expectToTheCent(point?.investable ?? Number.NaN, expected.coast.reached.investable);
+    }
+    if (expected.coast.reached.coastNumber !== undefined) {
+      expectToTheCent(point?.coastNumber ?? Number.NaN, expected.coast.reached.coastNumber);
+    }
   }
 
   for (const expectedRow of expected.coast.rows ?? []) {

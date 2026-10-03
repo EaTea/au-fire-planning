@@ -44,7 +44,8 @@
         "2027: employer 12% x 150,075 = 18,009.00; earnings 12,950.00, tax 1,942.50; contributions tax 15% x 28,009 = 4,201.35; super 185,000 + 12,950 - 1,942.50 + 28,009 - 4,201.35 = 219,815.15; investable 1,041,015.15",
         "2042 (age 50): salary 251,427.98, employer 30,171.36, super 1,175,633.85",
         "FI reached 2033 (age 41): 1,932,046.19 against 1,901,897.21",
-        "Money lasts to 95; earliest retirement age 40"
+        "Money lasts to 95; earliest retirement age 40",
+        "Coast FIRE (step 6): cash 20,000 + super 185,000 + portfolio 467,262.87 = 672,262.87; already reached (investable today is 925,000)"
       ],
       "expected": {
         "salaryRows": [
@@ -94,6 +95,14 @@
           "status": "feasible",
           "age": 40,
           "year": 2032
+        },
+        "coast": {
+          "number": 672262.87,
+          "reached": {
+            "yearIndex": 0,
+            "calendarYear": 2026,
+            "age": 34
+          }
         }
       }
     },
@@ -422,7 +431,7 @@
     },
     {
       "name": "C: Coast FIRE later, A with a $300,000 portfolio, $120,000 salary at inflation and $100,000 super",
-      "checkedBy": "independent script (not the app's code), per the M5 plan; Coast FIRE is checked in step 6",
+      "checkedBy": "independent script (not the app's code), per the M5 plan",
       "inputs": {
         "currentAge": 34,
         "targetRetirementAge": 50,
@@ -454,7 +463,8 @@
       },
       "arithmetic": [
         "2027: salary 120,000 x 1.025 = 123,000.00; employer 12% = 14,760.00; concessional 24,760; contributions tax 3,714.00; earnings 7,000, tax 1,050; super 100,000 + 7,000 - 1,050 + 24,760 - 3,714 = 126,996.00; investable 498,796.00",
-        "FI reached 2041 (age 49); earliest retirement age 47"
+        "FI reached 2041 (age 49); earliest retirement age 47",
+        "Coast FIRE (step 6): cash 20,000 + super 100,000 + portfolio 578,765.82 = 698,765.82, reached 2037 (age 45). Stopping voluntary contributions after 45 gives 2,385,819.60 at retirement; after 44, 2,332,394.93 (FI number 2,375,208.99)"
       ],
       "expected": {
         "superRows": [
@@ -477,7 +487,15 @@
           "age": 47,
           "year": 2039
         },
-        "fiNumberAtRetirement": 2375208.99
+        "fiNumberAtRetirement": 2375208.99,
+        "coast": {
+          "number": 698765.82,
+          "reached": {
+            "yearIndex": 11,
+            "calendarYear": 2037,
+            "age": 45
+          }
+        }
       }
     }
   ]

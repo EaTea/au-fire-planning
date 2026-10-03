@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { calculateCoastFire } from "./coastFire";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
 
@@ -111,6 +112,8 @@ describe("calculateCoastFire", () => {
       "Investable at end of 2028 (age 42)",
       "Coast FIRE number in 2028",
       "Coast FIRE reached",
+      "If you stop voluntary contributions after 2028: investable at 2028",
+      "FI number at 2028",
     ]);
   });
 
@@ -155,5 +158,109 @@ describe("calculateCoastFire", () => {
       ["=", "Coast FIRE number", "dollars"],
     ]);
     expect(coast.number.lines[2]?.value).toBeCloseTo(2.9522, 4);
+  });
+});
+
+// Coast FIRE with super (M5 step 6), at 0% growth with no salary tax effects to keep it checkable.
+describe("calculateCoastFire with super", () => {
+  const withSuper: ProjectionInputs = {
+    ...flatInputs,
+    salary: { annual: 1000, growth: { kind: "none" } },
+    superAccount: {
+      opening: 300,
+      returnRate: 0,
+      employerRate: 0.1,
+      earningsTaxRate: 0,
+      salarySacrifice: { annual: 500 },
+      nonConcessional: { annual: 50 },
+      ruleSet: bundledRuleSet,
+    },
+  };
+
+  // Employer: 10% x 1,000 = 100, less 15% tax = 85 a year, for 2 years: 300 + 170 = 470 at retirement.
+  // Coasting leaves out the sacrifice and non-concessional contributions.
+  it("counts super with employer contributions only: 1,000 - 100 cash - 470 super = 430 portfolio", () => {
+    const coast = coastFor(withSuper);
+
+    expect(coast.path[0]?.portfolioNeeded).toBeCloseTo(430, 6);
+    expect(coast.number.value).toBeCloseTo(100 + 300 + 430, 6);
+  });
+
+  it("adds the super line to the breakdown, naming the return and the year", () => {
+    const labels = coastFor(withSuper).number.lines.map((line) => line.label);
+
+    expect(labels).toContain(
+      "Your super, growing at 0% net of fees and tax, with employer contributions, to 2028",
+    );
+    expect(labels).toContain("Your super today");
+  });
+
+  it("leaves the breakdown as before when there is no super", () => {
+    const labels = coastFor(flatInputs).number.lines.map((line) => line.label);
+
+    expect(labels.some((label) => label.includes("super"))).toBe(false);
+  });
+
+  // Super alone covers the FI number, but a dated expense still has to be paid from the portfolio.
+  it("needs the portfolio to pay a dated expense when cash and super already cover the FI number", () => {
+    const coast = coastFor({
+      ...withSuper,
+      cashOpening: 0,
+      portfolioOpening: 0,
+      superAccount: { ...withSuper.superAccount!, opening: 2000 },
+      datedExpenses: [{ annual: 70, fromYear: 2027, toYear: 2027 }],
+    });
+
+    expect(coast.path[0]?.portfolioNeeded).toBeCloseTo(70, 6);
+  });
+});
+
+// The exact "reached" test (M5 step 6): decided by re-running the projection, not by the formula.
+describe("Coast FIRE reached, decided exactly", () => {
+  // The review's edge case: retiring at 65 with exactly the FI number in super, and a $1 dated
+  // expense in 2053 (age 65), which super pays because it is accessible from 65. The formula's
+  // super path leaves out dated expenses, so it thinks super is still $1,000 at retirement.
+  const superPaysAtRetirement: ProjectionInputs = {
+    ...flatInputs,
+    currentAge: 38,
+    endAge: 70,
+    retirementAge: 65,
+    contributionsStopAge: 65,
+    portfolioOpening: 0,
+    cashOpening: 0,
+    datedExpenses: [{ annual: 1, fromYear: 2053, toYear: 2053 }],
+    superAccount: {
+      opening: 1000,
+      returnRate: 0,
+      salarySacrifice: { annual: 0 },
+      nonConcessional: { annual: 0 },
+      ruleSet: bundledRuleSet,
+    },
+  };
+
+  it("does not say reached when super pays a dated expense at 65 and ends a dollar short", () => {
+    const coast = coastFor(superPaysAtRetirement);
+    const lastPoint = coast.path[coast.path.length - 1];
+
+    // The formula (the number and chart line) is a dollar optimistic here: at the retirement row
+    // it asks for $999, the super left after the draw, instead of the $1,000 FI number...
+    expect(lastPoint?.coastNumber).toBeCloseTo(999, 6);
+    expect(lastPoint?.investable).toBeCloseTo(999, 6);
+    // ...but the exact test sees that stopping at any row ends at $999, below $1,000.
+    expect(coast.reached).toBeUndefined();
+  });
+
+  it("appends the exact test's two lines to the explanation", () => {
+    const labels = coastFor({
+      ...superPaysAtRetirement,
+      superAccount: { ...superPaysAtRetirement.superAccount!, opening: 1001 },
+    }).reached?.explanation.lines.map((line) => line.label);
+
+    expect(labels?.slice(-2)).toEqual([
+      expect.stringMatching(
+        /^If you stop voluntary contributions after \d{4}: investable at 2053$/,
+      ),
+      "FI number at 2053",
+    ]);
   });
 });

@@ -445,7 +445,11 @@ describe("ResultsScreen", () => {
       expect(rows).toContain("= Coast FIRE number$811,877");
       expect(rows).toContain("Investable at end of 2029 (age 37)$1,000,975");
       expect(rows).toContain("− Coast FIRE number in 2029$992,580");
-      expect(rows[rows.length - 1]).toBe("= Coast FIRE reached$8,395");
+      expect(rows).toContain("= Coast FIRE reached$8,395");
+      expect(
+        rows.some((row) => row?.startsWith("If you stop voluntary contributions after 2029")),
+      ).toBe(true);
+      expect(rows[rows.length - 1]).toBe("FI number at 2042$2,375,209");
     });
 
     it("includes the dated-expense line when one falls before retirement (example C)", async () => {
