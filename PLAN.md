@@ -1480,6 +1480,14 @@ From then on, contributions are optional. Results shows:
 **One PR**, five steps. It's smaller than M3, and each step leaves the app
 working.
 
+**Builds on the one-page Results page.** M4 is implemented after the
+one-page Results plan above. Everything M4 adds is a section of that page:
+- **Order:** the tiles, the milestones, chart (a), the Coast FIRE chart,
+  then Year by year.
+- **Dollars:** the page's single dollars toggle covers it all.
+- **Navigation:** chart clicks jump to rows on the same page.
+- **"On this page" links:** each new section adds one.
+
 **Definition of done:**
 
 - Results has a **Coast FIRE** tile. For worked example A it shows:
@@ -1626,7 +1634,9 @@ interface CoastMilestone { yearIndex; calendarYear; age; explanation: Explained 
 
 **The Coast FIRE tile** (Results, after "FI number" and "Progress to FI",
 as in mockup 05):
-- **Value:** the Coast FIRE number in today's dollars.
+- **Value:** the Coast FIRE number in today's dollars. It is a figure for
+  today (row 0), so it reads the same whichever way the page's dollars
+  toggle is set.
 - **Sub-lines:**
   - "{amount} in {retirement year} dollars";
   - then one of: "Reached: contributions are now optional", "Reached in
@@ -1649,9 +1659,10 @@ COAST-6 (a) and (b)):
 - **Caption under the chart:** "With no more contributions from today,
   your savings reach {amount} by {year}, against an FI number of
   {amount}". It's in nominal dollars, and says so.
-- **Mode:** the chart follows the today's/nominal toggle, with its own
-  toggle in the card header (as chart (a) does).
-- **Interaction:** clicking a year opens Year by year at that row.
+- **Mode:** the chart follows the Results page's dollars toggle, like
+  everything else on the page. It has no toggle of its own.
+- **Interaction:** clicking a year jumps to that year's row in the Year by
+  year section (`#/results?year={year}`), as chart (a) does.
 - **Changes to the wrapper:**
   - `TimeSeriesChart`'s `dashed?: boolean` becomes
     `strokeStyle?: "solid" | "dashed" | "dotted"`. Chart (a) keeps its look:
@@ -1673,7 +1684,8 @@ COAST-6 (a) and (b)):
   - "Money lasts to {age}" or "Money runs out at {age}".
 - **Later milestones add their own items:** super access (M6), the mortgage
   paid off (M13) and so on.
-- **Placement:** below the tiles, above the charts, as in mockup 05.
+- **Placement:** below the tiles, above the charts, as in mockup 05. It
+  gets a "Milestones" entry in the page's "On this page" links.
 
 #### Worked examples
 
@@ -1764,8 +1776,9 @@ No new dependencies.
    - Styles use role variables only. Reached items are solid, projected
      items are outlined, so status never relies on colour alone.
    - Add any new pairs to `tokens.test.ts`.
-2. Add a `MilestonesSection` on Results, built from the summary. It shows
-   only when the projection is complete.
+2. Add a `MilestonesSection` on Results, built from the summary, between
+   the tiles and chart (a). It shows only when the projection is complete,
+   and adds "Milestones" to the "On this page" links.
 3. Tests:
    - ordering by year;
    - undated items last;
@@ -1788,7 +1801,9 @@ No new dependencies.
    `src/ui/charts/coastChart.ts`, with unit tests for examples A and E in
    both modes.
 4. Add `CoastChartSection` on Results, after chart (a), with the caption and
-   a toggle. Clicking a year opens Year by year at that row.
+   no toggle of its own (it follows the page's toggle). Clicking a year
+   jumps to that row in the Year by year section. Add "Coast FIRE chart"
+   to the "On this page" links.
 5. Add the Results page with this chart to the contrast sweep.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
