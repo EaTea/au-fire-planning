@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { SalaryGrowth } from "../plan/types";
 import {
   findFiReached,
+  salaryGrowthRate,
   projectPortfolio,
   type ProjectionInputs,
   type ProjectionRow,
@@ -283,6 +285,84 @@ describe("projectPortfolio: dated expenses", () => {
   });
 });
 
+// Tests for salary (IN-7): one index per row, working years only.
+describe("salary in the projection", () => {
+  /** Age 40, retiring at 42, 2.5% inflation, $100,000 salary today. */
+  const withSalary = (growth: SalaryGrowth): ProjectionInputs => ({
+    ...exampleB,
+    currentAge: 40,
+    endAge: 45,
+    retirementAge: 42,
+    inflationRate: 0.025,
+    salary: { annual: 100000, growth },
+  });
+
+  it("grows with inflation plus the margin", () => {
+    const rows = projectPortfolio(withSalary({ kind: "inflationPlus", margin: 0.01 }), 2026);
+
+    expect(rows[0]?.salary).toBeCloseTo(100000, 6);
+    expect(rows[1]?.salary).toBeCloseTo(103500, 6);
+    expect(rows[2]?.salary).toBeCloseTo(100000 * 1.035 ** 2, 6);
+  });
+
+  it("grows with inflation alone for a margin of 0, and slower for a negative margin", () => {
+    const flatMargin = projectPortfolio(withSalary({ kind: "inflationPlus", margin: 0 }), 2026);
+    const negativeMargin = projectPortfolio(
+      withSalary({ kind: "inflationPlus", margin: -0.01 }),
+      2026,
+    );
+
+    expect(flatMargin[1]?.salary).toBeCloseTo(102500, 6);
+    expect(negativeMargin[1]?.salary).toBeCloseTo(101500, 6);
+  });
+
+  it("grows at a fixed rate whatever inflation is", () => {
+    const rows = projectPortfolio(withSalary({ kind: "fixed", rate: 0.04 }), 2026);
+
+    expect(rows[2]?.salary).toBeCloseTo(100000 * 1.04 ** 2, 6);
+  });
+
+  it("stays flat with no growth", () => {
+    const rows = projectPortfolio(withSalary({ kind: "none" }), 2026);
+
+    expect(rows[1]?.salary).toBe(100000);
+    expect(rows[2]?.salary).toBe(100000);
+  });
+
+  it("pays nothing after the retirement age, including the year after", () => {
+    const rows = projectPortfolio(withSalary({ kind: "none" }), 2026);
+
+    // Age 42 is the last working year; age 43 is retired.
+    expect(rows[2]?.salary).toBe(100000);
+    expect(rows[3]?.salary).toBe(0);
+    expect(rows[5]?.salary).toBe(0);
+  });
+
+  it("is 0 when there is no salary", () => {
+    expect(projectPortfolio(exampleB, 2026).every((candidate) => candidate.salary === 0)).toBe(
+      true,
+    );
+  });
+
+  it("does not change anything else in the rows", () => {
+    const withPay = projectPortfolio(withSalary({ kind: "fixed", rate: 0.05 }), 2026);
+    const withoutPay = projectPortfolio(
+      { ...withSalary({ kind: "none" }), salary: undefined },
+      2026,
+    );
+
+    for (const [index, payRow] of withPay.entries()) {
+      expect({ ...payRow, salary: 0 }).toEqual({ ...withoutPay[index], salary: 0 });
+    }
+  });
+
+  it("salaryGrowthRate maps each kind to a yearly rate", () => {
+    expect(salaryGrowthRate({ kind: "inflationPlus", margin: 0.01 }, 0.025)).toBeCloseTo(0.035);
+    expect(salaryGrowthRate({ kind: "fixed", rate: 0.03 }, 0.025)).toBe(0.03);
+    expect(salaryGrowthRate({ kind: "none" }, 0.025)).toBe(0);
+  });
+});
+
 /** A minimal row for exercising `findFiReached`. */
 function row(yearIndex: number, investableClosing: number, fiNumber: number): ProjectionRow {
   return {
@@ -305,6 +385,7 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     investableClosing,
     livingExpenses: 0,
     fiNumber,
+    salary: 0,
   };
 }
 

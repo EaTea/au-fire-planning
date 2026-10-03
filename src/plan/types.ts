@@ -10,6 +10,23 @@
 // These are NOT the stored (wire) types; those live in src/persistence/ and are
 // converted to and from these by explicit mapper functions.
 
+/**
+ * How a salary grows each year (IN-7). "Inflation" is `inflationPlus` with a
+ * margin of 0; "Inflation − 1%" is a margin of −0.01.
+ */
+export type SalaryGrowth =
+  | { readonly kind: "inflationPlus"; readonly margin: number } // inflation + margin
+  | { readonly kind: "fixed"; readonly rate: number } // the same rate every year
+  | { readonly kind: "none" }; // flat
+
+/** A person's pay (IN-7). Every field is optional; unset means the default. */
+export interface Salary {
+  /** Gross (pre-tax) dollars per year today. `undefined` means default ($0). */
+  readonly annual?: number;
+  /** How it grows. `undefined` means default (inflation). */
+  readonly growth?: SalaryGrowth;
+}
+
 /** One person in the household. M1 has exactly one; couples arrive in M7. */
 export interface Person {
   readonly id: string;
@@ -19,6 +36,8 @@ export interface Person {
   readonly currentAge?: number;
   /** Age in whole years at which they plan to retire. `undefined` means "not set" (no default). */
   readonly targetRetirementAge?: number;
+  /** Gross salary (IN-7). `undefined` means none entered (default $0). */
+  readonly salary?: Salary;
 }
 
 /** One share portfolio. M1 has exactly one; several arrive in later milestones. */

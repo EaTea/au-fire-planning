@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { summarisePlan } from "../../src/engine/fiNumber";
+import { bundledRuleSet } from "../../src/rules/bundledRuleSet";
 import { createNewPlan } from "../../src/plan/createNewPlan";
-import type { DatedExpense, Plan, RetirementSpending } from "../../src/plan/types";
+import type { DatedExpense, Plan, RetirementSpending, SalaryGrowth } from "../../src/plan/types";
 
 // Checks the engine against the independently worked examples in
 // tests/worked-examples/ (NFR-6). Every *.json file there is picked up, so a
@@ -37,6 +38,9 @@ interface WorkedScenario {
     readonly cashBalance?: number | null;
     readonly interestRate?: number | null;
     readonly datedExpenses?: readonly FixtureDatedExpense[];
+    // M5 onwards; absent means "left unset".
+    readonly salaryAnnual?: number | null;
+    readonly salaryGrowth?: SalaryGrowth | null;
   };
   /** M1 figures: present in M1 fixtures only. */
   readonly expected: {
@@ -54,6 +58,8 @@ interface WorkedScenario {
     readonly earliestRetirement?: ExpectedEarliestRetirement;
     /** M4 figures: present in M4 fixtures only. */
     readonly coast?: ExpectedCoast;
+    /** M5 figures: salary in the listed rows. */
+    readonly salaryRows?: readonly { readonly yearIndex: number; readonly salary: number }[];
   };
 }
 
@@ -154,6 +160,10 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
           ...person,
           currentAge: inputs.currentAge,
           targetRetirementAge: inputs.targetRetirementAge,
+          salary: {
+            annual: inputs.salaryAnnual ?? undefined,
+            growth: inputs.salaryGrowth ?? undefined,
+          },
         },
       ],
       projectionEndAge: inputs.projectionEndAge ?? undefined,
@@ -326,6 +336,19 @@ function checkCoastFigures(summary: CompleteSummary, expected: WorkedScenario["e
   }
 }
 
+/** Checks salary in the listed rows (M5). */
+function checkSalaryFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.salaryRows === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+
+  for (const expectedRow of expected.salaryRows) {
+    const row = summary.projection.rows[expectedRow.yearIndex];
+    expectToTheCent(row?.salary ?? Number.NaN, expectedRow.salary);
+  }
+}
+
 /** Checks the "does the money last?" answer against a fixture, field by field. */
 function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
   expect(actual.status).toBe(expected.status);
@@ -366,6 +389,7 @@ describe("worked examples", () => {
           const summary = summarisePlan(
             planFromScenario(scenario.inputs),
             file.startYear ?? DEFAULT_START_YEAR,
+            bundledRuleSet,
           );
 
           expect(summary.status).toBe("complete");
@@ -374,6 +398,7 @@ describe("worked examples", () => {
           checkFiNumberFigures(summary, scenario.expected);
           checkProjectionFigures(summary, scenario.expected);
           checkCoastFigures(summary, scenario.expected);
+          checkSalaryFigures(summary, scenario.expected);
         },
       );
     });

@@ -19,6 +19,7 @@
 // Every value in row k shares one inflation index, (1+i)^k, so converting any
 // of them to today's dollars divides by that single number.
 
+import type { SalaryGrowth } from "../plan/types";
 import type { Explained, ExplanationLine } from "./explained";
 
 /** A dated expense as the projection needs it: today's dollars per year, over calendar years. */
@@ -29,6 +30,14 @@ export interface ProjectionDatedExpense {
   readonly fromYear: number;
   /** Last calendar year it applies (inclusive). */
   readonly toYear: number;
+}
+
+/** A person's salary as the projection needs it (IN-7). */
+export interface ProjectionSalary {
+  /** Gross dollars per year today. */
+  readonly annual: number;
+  /** How it grows each year. */
+  readonly growth: SalaryGrowth;
 }
 
 /** Plain numbers the projection needs, all resolved (see ResolvedProjectionInputs). */
@@ -60,6 +69,8 @@ export interface ProjectionInputs {
   readonly datedExpenses: readonly ProjectionDatedExpense[];
   /** M1's FI number in today's dollars. */
   readonly fiNumberToday: number;
+  /** Gross salary (IN-7). Absent means no salary. It affects only each row's `salary` for now. */
+  readonly salary?: ProjectionSalary;
 }
 
 /** Whether a year is before or after the target retirement age. */
@@ -94,6 +105,8 @@ export interface ProjectionRow {
   readonly investableClosing: number;
   readonly livingExpenses: number;
   readonly fiNumber: number;
+  /** Gross salary this year (nominal); 0 once retired or when there is none. Sets employer super from M5 step 5. */
+  readonly salary: number;
 }
 
 /** The year investable net worth first reaches the FI number, with the working behind it. */
@@ -136,6 +149,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       investableClosing: inputs.cashOpening + inputs.portfolioOpening,
       livingExpenses: inputs.livingAnnual,
       fiNumber: inputs.fiNumberToday,
+      salary: salaryInYear(inputs, 0),
     },
   ];
 
@@ -196,10 +210,44 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       investableClosing: cash + portfolio,
       livingExpenses: inputs.livingAnnual * inflationIndex,
       fiNumber: inputs.fiNumberToday * inflationIndex,
+      salary: salaryInYear(inputs, yearIndex),
     });
   }
 
   return rows;
+}
+
+/**
+ * The yearly growth rate of a salary (IN-7): inflation plus the margin,
+ * a fixed rate, or zero. Called by `salaryInYear`.
+ */
+export function salaryGrowthRate(growth: SalaryGrowth, inflationRate: number): number {
+  switch (growth.kind) {
+    case "inflationPlus":
+      return inflationRate + growth.margin;
+    case "fixed":
+      return growth.rate;
+    case "none":
+      return 0;
+  }
+}
+
+/**
+ * Gross salary in row `yearIndex`: today's salary grown `yearIndex` times
+ * (like living expenses, one index per row, so row 1 already has a year's
+ * growth), while working (age at or below the retirement age), then 0.
+ * Called by `projectPortfolio` for every row.
+ */
+function salaryInYear(inputs: ProjectionInputs, yearIndex: number): number {
+  const age = inputs.currentAge + yearIndex;
+
+  if (inputs.salary === undefined || age > inputs.retirementAge) {
+    return 0;
+  }
+
+  const growthRate = salaryGrowthRate(inputs.salary.growth, inputs.inflationRate);
+
+  return inputs.salary.annual * Math.pow(1 + growthRate, yearIndex);
 }
 
 /** Retired years are those after the target retirement age (the retirement-age year is the last working one). */

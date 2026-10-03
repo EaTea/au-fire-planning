@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { createNewPlan } from "../plan/createNewPlan";
 import type { Plan } from "../plan/types";
 import {
@@ -16,7 +17,7 @@ const START_YEAR = 2026;
 
 /** Summarises a plan with the fixed start year. */
 function summarisePlan(plan: Plan) {
-  return summarisePlanForYear(plan, START_YEAR);
+  return summarisePlanForYear(plan, START_YEAR, bundledRuleSet);
 }
 
 /** A plan with predictable IDs, given living expenses and a portfolio value, plus any overrides. */

@@ -1741,7 +1741,7 @@ No new dependencies.
 
 #### Step 1 · Rules as data (NFR-3)
 
-- [x] Done (values unverified; see the note below)
+- [x] Done (values verified by the owner on 2026-10-03)
 
 1. Add `src/rules/`:
    - `rulesFile.ts`: the Zod schema for one file (above);
@@ -1777,8 +1777,9 @@ No new dependencies.
   this as `"verification": { "status": "unverified", ... }`. Later, the
   network was opened to the ATO, but its site blocks automated clients
   (Akamai "Access Denied"). The owner chose to commit with the values
-  unverified, and to check them before PR A merges (see step 4). Candidate
-  URLs, as stored in `sources`:
+  unverified, then **checked all five against these pages on 2026-10-03
+  and confirmed them**. The file now says `"status": "verified"`. URLs, as
+  stored in `sources`:
   - SG 12%:
     https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee
   - Maximum contribution base $62,500 per quarter:
@@ -1800,7 +1801,7 @@ No new dependencies.
 
 #### Step 2 · Engine: salary
 
-- [ ] Done
+- [x] Done
 
 1. Add `salary?: { annual?: number; growth?: SalaryGrowth }` to `Person`,
    with defaults ($0, inflation). Resolve it in `resolvePlanInputs`.
@@ -1815,6 +1816,21 @@ No new dependencies.
    - a property test: "No growth" keeps salary flat while working.
 
 **Check:** `npm run check` passes. Every earlier figure is unchanged.
+
+**As built:**
+- `Person.salary` (`Salary`, `SalaryGrowth`) in `src/plan/types.ts`, defaults
+  in `defaults.ts`, resolved into `ResolvedProjectionInputs.salaryAnnual` and
+  `salaryGrowth`.
+- `ProjectionInputs.salary` is optional (absent means no salary), so the
+  existing engine tests didn't need editing. `ProjectionRow.salary` is
+  required. Row 0 is the salary today (`annual`, if working), consistent with
+  the formula at k = 0.
+- `summarisePlan(plan, startYear, ruleSet)`: the rule set is accepted but not
+  read yet, so the parameter carries an `eslint-disable` for
+  `no-unused-vars`. Remove it in step 5 when super reads the rules.
+- Worked examples A (2027 $150,075.00, 2042 $251,427.98, 2043 $0) and B (flat,
+  by hand) are in `tests/worked-examples/m5-super.json`, checked by a new
+  `salaryRows` field in `tests/unit/workedExamples.test.ts`.
 
 #### Step 3 · Salary state, wire format and shared fields
 
@@ -1849,10 +1865,8 @@ No new dependencies.
    - Year by year shows the grown salary until retirement, and "—" after;
    - after a reload, it's still there.
 5. README "What it does": add salary.
-6. **Before PR A merges:** the owner checks the five FY2025–26 values against
-   the ATO pages listed under step 1. Then set
-   `"verification": { "status": "verified", "note": "Checked by the owner on
-   {date}" }`. List this in PR A's description as a checklist item.
+6. ~~Before PR A merges, the owner checks the FY2025–26 values.~~ Done: the
+   owner verified them on 2026-10-03, and the file says so.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A.**
 

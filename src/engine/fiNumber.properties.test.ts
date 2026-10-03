@@ -1,6 +1,7 @@
 import { fc, test } from "@fast-check/vitest";
 import { expect } from "vitest";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { createNewPlan } from "../plan/createNewPlan";
 import type { Plan } from "../plan/types";
 import { summarisePlan as summarisePlanForYear } from "./fiNumber";
@@ -32,7 +33,7 @@ const START_YEAR = 2026;
 
 /** Summarises a plan with the fixed start year. */
 function summarisePlan(plan: Plan) {
-  return summarisePlanForYear(plan, START_YEAR);
+  return summarisePlanForYear(plan, START_YEAR, bundledRuleSet);
 }
 
 /** Builds a complete plan from generated values. */

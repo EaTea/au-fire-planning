@@ -49,5 +49,10 @@ loads every file in this folder and checks the engine against it to the cent.
   retirement) and optionally `rows` (`yearIndex`, `investable`,
   `coastNumber`) for rows worth checking by hand.
 
+- M5 fixtures (`m5-super.json`) add inputs `salaryAnnual` and `salaryGrowth`
+  (an internal `SalaryGrowth`, e.g. `{ "kind": "inflationPlus", "margin": 0.01 }`)
+  and `expected.salaryRows` (`yearIndex`, `salary`). Super figures are added
+  in M5 step 5.
+
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.

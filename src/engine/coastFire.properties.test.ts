@@ -1,6 +1,7 @@
 import { fc, test } from "@fast-check/vitest";
 import { expect } from "vitest";
 
+import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { createNewPlan } from "../plan/createNewPlan";
 import type { Plan } from "../plan/types";
 import { summarisePlan } from "./fiNumber";
@@ -87,7 +88,7 @@ function buildPlan(settings: Settings, stopAge?: number): Plan {
 
 /** The completed projection of a plan, failing the test otherwise. */
 function completeProjection(plan: Plan) {
-  const summary = summarisePlan(plan, START_YEAR);
+  const summary = summarisePlan(plan, START_YEAR, bundledRuleSet);
   if (summary.status !== "complete" || summary.projection.status !== "complete") {
     throw new Error("expected a complete projection");
   }

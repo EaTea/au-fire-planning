@@ -5,7 +5,7 @@
 // Living expenses have no default on purpose: without them there is nothing to
 // calculate.
 
-import type { RetirementSpending } from "./types";
+import type { RetirementSpending, SalaryGrowth } from "./types";
 
 /** Safe withdrawal rate: 4% a year (a fraction). */
 export const DEFAULT_SAFE_WITHDRAWAL_RATE = 0.04;
@@ -33,6 +33,12 @@ export const DEFAULT_PROJECTION_END_AGE = 95;
 
 /** General interest rate paid on cash: 4% a year (a fraction). */
 export const DEFAULT_INTEREST_RATE = 0.04;
+
+/** Gross salary: $0 a year (IN-7). */
+export const DEFAULT_SALARY_ANNUAL = 0;
+
+/** Salary growth: with inflation (a margin of 0). */
+export const DEFAULT_SALARY_GROWTH: SalaryGrowth = { kind: "inflationPlus", margin: 0 };
 
 /** Cash savings: $0. */
 export const DEFAULT_CASH_BALANCE = 0;
