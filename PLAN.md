@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is proposed and comes before M5 PR B (super), which is not started.
+**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is approved and comes before M5 PR B (super), which is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last proposed. M5 PR B not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last approved. M5 PR B not started |
 
 ## 1. Requirement ordering
 
@@ -1380,7 +1380,7 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### Cash drawn last: step-by-step plan
 
-**Status:** proposed, awaiting the owner's review. It lands before M5 PR B,
+**Status:** approved by the owner. It lands before M5 PR B,
 because PR B adds super to the same drawing order.
 
 **Kind:** behavior change. One PR.
@@ -1448,11 +1448,10 @@ expense in 2029):
   after-tax salary, so it belongs in M8 (personal income tax). This plan
   adds it to M8's scope rather than doing it on gross salary now.
 
-**Open questions for the owner:**
-1. After M5, is the order portfolio, super, then cash (cash truly last)?
-   Recommended: yes.
-2. Is moving the salary cash flow to M8 right, or should a simpler
-   version come sooner? Recommended: M8.
+**Owner's decisions:**
+1. After M5, the order is the portfolio, then super (from 65), then cash,
+   so cash really is last.
+2. The salary cash flow is done in M8, on after-tax salary.
 
 #### Step 1 · Engine: cash drawn last
 
@@ -2214,7 +2213,7 @@ No new dependencies.
 - [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
 - [x] Owner verifies and merges M5 PR A.
-- [ ] Approve the cash drawn last plan.
+- [x] Approve the cash drawn last plan.
 - [ ] Implement cash drawn last (steps 1 and 2), then open it for
       verification.
 - [ ] Owner verifies and merges the cash drawn last PR.
