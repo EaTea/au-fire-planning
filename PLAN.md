@@ -51,6 +51,12 @@ and the [desktop mockups](requirements/mockups/README.md).
   its own.
 - **Rules as data (NFR-3):** from M5, every statutory rate, threshold and cap
   is stored as dated data, not in calculation code.
+- **Each asset grows its own way:** every asset carries its own growth
+  settings: cash at the interest rate, each portfolio at its expected
+  return, and later super net of fees and tax, and property at its own
+  growth rate. No calculation may assume one rate for all savings. More
+  advanced growth options per asset (for example rates that change over
+  time) are a candidate for the backlog.
 - **Mockup conventions:** tables are editable in place, charts have hover
   tooltips, and values can be shown in today's or nominal dollars. Each
   convention applies from the milestone where the table or chart first
@@ -1438,7 +1444,8 @@ for the owner to verify.
 
 ### M4 · Coast FIRE: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** draft, revised after review (cash grows at its own rate while
+coasting). Awaiting the owner's approval. Do not implement yet.
 
 **Kind:** behavior change.
 
@@ -1476,7 +1483,7 @@ working.
 **Definition of done:**
 
 - Results has a **Coast FIRE** tile. For worked example A it shows:
-  - $804,565 today, and $1,194,382 in 2042 dollars;
+  - $811,877 today, and $1,205,235 in 2042 dollars;
   - "Reached in 2029, at age 37", with a breakdown.
 - Results has a **When could you stop contributing?** chart. It runs from
   today to the target retirement year and has four lines:
@@ -1494,36 +1501,62 @@ working.
 
 #### Design decisions for M4
 
-**The Coast FIRE number over time.** Let row *k* be a year up to the
-target retirement year (row *n*, where `n = retirement age − current age`).
-Then:
+**Each asset grows at its own rate while coasting.** Cash earns the
+general interest rate (`g`). The portfolio earns its expected return
+(`r`). Nothing assumes one rate for all savings (see "Applies to every
+milestone").
+
+**Why only the portfolio needs solving.** Contributions go only into the
+portfolio (M2), and dated expenses are paid from cash first (M3). So cash
+follows the same path whether you keep contributing or stop. Only the
+portfolio's part changes, and it has a closed form.
+
+**The Coast FIRE number over time.** Let row *k* be a year up to the target
+retirement year (row *n*, where `n = retirement age − current age`). From
+row *k*, with no more contributions:
 
 ```
-                  FI number at retirement (nominal)
-                + dated expenses in years k+1 … n, each grown at r to year n
-  coast(k)  =  ──────────────────────────────────────────────────────────
-                               (1 + r) ^ (n − k)
+  cash:      starts at cash(k), grows at g, pays dated expenses first.
+             At row n it has cashLeft(k). Any dated expense it can't pay
+             in full "spills" to the portfolio: spill(j) in row j.
+
+                       FI number at retirement (nominal)
+                     − cashLeft(k)
+                     + Σ spill(j) × (1 + r)^(n − j)     for j = k+1 … n
+  portfolioNeeded(k) = ─────────────────────────────────────────────── , and at least 0
+                                  (1 + r)^(n − k)
+
+  coast(k) = cash(k) + portfolioNeeded(k)
 ```
 
-- `r` is the portfolio's expected return. `coast(k)` is nominal, in year
-  *k*'s dollars. In today's dollars, divide by that row's inflation index,
-  as everywhere else.
-- **The Coast FIRE number** (COAST-1) is `coast(0)`. Row 0 is today, so its
-  nominal and today's values are the same.
+- `cash(k)` is the cash on your current path in row *k* (the M3
+  projection's `cashClosing`). `coast(k)` is nominal, in year *k*'s
+  dollars. In today's dollars, divide by that row's inflation index, as
+  everywhere else.
+- **The Coast FIRE number** (COAST-1) is `coast(0)`: your cash today plus
+  the portfolio you'd need today. Row 0 is today, so its nominal and
+  today's values are the same.
 - **"In 2042 dollars"** (COAST-1's nominal figure, as in mockup 05) is
   `coast(0) × (1+i)^n`: the same amount expressed in the retirement year's
   dollars.
-- **At retirement,** `coast(n)` equals the FI number, because there's no
-  time left to grow.
+- **At retirement,** `coast(n)` is at least the FI number. It is exactly
+  the FI number unless cash alone already exceeds it.
 - **Dated expenses before retirement count.** Since M3 they come out of
   savings, so money set aside to coast has to cover them too. A $100,000
   car in 2030 raises the Coast FIRE number. Dated expenses after
   retirement are already part of whether the money lasts, so they aren't
   added here.
+- **If cash alone reaches the FI number,** `portfolioNeeded` is 0 and the
+  Coast FIRE number is just your cash.
 
 **Coast FIRE reached** (COAST-2) is the first row *k* from 0 to *n* where
-investable net worth on your current path, `investableClosing` from the M3
-projection, is at least `coast(k)`.
+investable net worth on your current path (`investableClosing`) is at
+least `coast(k)`.
+- The cash parts are identical, so this is the same as the portfolio
+  being at least `portfolioNeeded(k)`. That in turn means exactly: **if you
+  stopped contributing after year k, you would still reach the FI number by
+  retirement.** A property test checks this against the real projection
+  with contributions stopped.
 - **Row 0** means you've already reached it.
 - **If no row up to retirement reaches it,** it's "Not before retirement
   at {age}".
@@ -1532,24 +1565,22 @@ projection, is at least `coast(k)`.
   - "− Coast FIRE number in {year}";
   - "= Coast FIRE reached", valued at the margin.
 
-**All savings are treated as growing at the portfolio's expected return**
-when coasting. This includes cash.
-- **Why:** it is COAST-1's own definition ("grows … at the expected
-  return"), and it keeps the tile, the threshold line and the "no further
-  contributions" line consistent with each other. A chart line can never
-  cross where the tile says it doesn't.
-- **The cost:** a plan holding a lot of cash at a lower interest rate gets
-  a slightly optimistic answer.
-- **Checked on example A:** really stopping contributions at 37 (the Coast
-  FIRE age), with cash earning 4%, still reaches FI by 50: $2,395,440
-  against $2,375,209. Stopping at 36 does not.
-- **The breakdown says so** in its first line: "Assumes all savings,
-  including cash, grow at the expected return".
+**Checked against the real projection.** In each example, stopping
+contributions in the year Coast FIRE is reached still reaches FI.
+Stopping a year earlier doesn't:
+- **A:** stopping at 37 gives $2,395,439.84, and at 36 gives
+  $2,323,144.49, against $2,375,208.99.
+- **B:** stopping at 46 gives $502,025.62, and at 45 gives $487,384.62,
+  against $500,000.
+- **C:** stopping at 41 gives $2,406,954.94, and at 40 gives
+  $2,351,801.17, against $2,375,208.99.
 
-**Today's savings with no further contributions** (chart (a)) is
-`investable(0) × (1+r)^k`, minus each earlier dated expense grown at `r`.
-It reaches the FI number at retirement exactly when Coast FIRE is already
-reached today, so the chart and the tile agree.
+**Today's savings with no further contributions** (chart (a)) is the M3
+projection run with contributions switched off: `projectPortfolio` with a
+contribution of $0, up to retirement. Cash and portfolio grow at their own
+rates, and dated expenses are paid. It reaches the FI number at retirement
+exactly when Coast FIRE is already reached today, so the chart and the tile
+agree.
 
 **Engine shape.** `src/engine/coastFire.ts`:
 
@@ -1562,7 +1593,8 @@ interface CoastFire {
 }
 interface CoastPathPoint {
   yearIndex; calendarYear; age; inflationIndex;
-  coastNumber: number;                   // coast(k), nominal
+  coastNumber: number;                   // coast(k) = cash(k) + portfolioNeeded(k), nominal
+  portfolioNeeded: number;               // nominal
   investable: number;                    // current path, nominal
   withoutContributions: number;          // today's savings, no contributions, nominal
   fiNumber: number;                      // nominal
@@ -1571,21 +1603,26 @@ interface CoastMilestone { yearIndex; calendarYear; age; explanation: Explained 
 ```
 
 - **`calculateCoastFire(rows, inputs)`** takes the M3 projection rows plus
-  the return, the retirement row and the dated expenses. It never
-  re-projects.
+  the return, the interest rate, the retirement row and the dated
+  expenses. The "without contributions" path calls `projectPortfolio`
+  with a $0 contribution. Everything else is worked out from the rows, so
+  it never copies the projection's rules.
 - **`ProjectionSummary`'s `complete` variant gains `coast: CoastFire`.**
   Coast FIRE needs the ages, so it lives with the projection.
 - **Retirement age equal to the current age:** `n = 0`, so the Coast FIRE
-  number is the FI number. It is reached only if FI is.
+  number is today's cash plus whatever the portfolio must add to reach the
+  FI number now. It is reached only if FI is.
 
-**The Coast FIRE number's breakdown:**
-- "Assumes all savings, including cash, grow at the expected return" (a
-  note line with no value; see the step 1 note on note lines);
-- "FI number at age {retirement age} ({year})";
-- "+ Dated expenses before then, grown to {year}" (only when there are
-  any);
-- "÷ Growth at {r} over {n} years", as a `factor`;
-- "= Coast FIRE number".
+**The Coast FIRE number's breakdown,** for example A:
+- "FI number at age 50 (2042)": $2,375,208.99;
+- "− Your cash, growing at 4% to 2042": $37,459.62. With dated expenses, it
+  reads "after paying the dated expenses it can";
+- "+ Dated expenses the portfolio would pay, grown to 2042": shown only
+  when there are any;
+- "÷ Portfolio growth at 7% over 16 years", as a `factor`: 2.9522;
+- "= Portfolio needed today": $791,876.59;
+- "+ Your cash today": $20,000.00;
+- "= Coast FIRE number": $811,876.59.
 
 **The Coast FIRE tile** (Results, after "FI number" and "Progress to FI",
 as in mockup 05):
@@ -1646,11 +1683,16 @@ is 2026.
 
 | | Inputs | Coast FIRE number (today) | In retirement-year dollars | Reached |
 | --- | --- | --- | --- | --- |
-| **A: headline** | M3's example A (age 34, retire 50, $720,000 at 7% + $30,000/yr, $20,000 cash at 4%, 2.5% inflation, $64,000, 4%) | $804,565.46 | $1,194,381.95 (2042) | **2029, age 37**: investable $1,000,975.24 vs $985,627.29 |
+| **A: headline** | M3's example A (age 34, retire 50, $720,000 at 7% + $30,000/yr, $20,000 cash at 4%, 2.5% inflation, $64,000, 4%) | $811,876.59 ($20,000 cash + $791,876.59 portfolio) | $1,205,235.36 (2042) | **2029, age 37**: investable $1,000,975.24 vs $992,580.16 |
 | **B: by hand** | Age 40, retire 50, $150,000 at 10% + $10,000/yr, no cash, 0% inflation, $20,000, 4% | $192,771.64 (= $500,000 ÷ 1.1¹⁰) | $192,771.64 (2036) | **2032, age 46**: $342,890.25 vs $341,506.73 |
-| **C: dated expense** | A, plus a $100,000 one-off in 2030 | $888,774.82 | $1,319,391.22 (2042) | **2033, age 41**: $1,309,224.01 vs $1,291,956.32 |
+| **C: dated expense** | A, plus a $100,000 one-off in 2030 | $890,925.23 | $1,322,583.51 (2042) | **2033, age 41**: $1,309,224.01 vs $1,291,956.32 |
 | **D: already coasting** | Age 45, retire 60, $1,000,000 at 7%, no contributions, 2.5%, $50,000, 4% | $656,162.38 | $950,318.77 (2041) | **already** (2026, age 45) |
 | **E: never** | Age 30, retire 40, $10,000 at 5% + $1,000/yr, 3% inflation, $80,000, 4% | $1,650,096.15 | $2,217,591.25 (2036) | **not before retirement at 40** |
+| **F: lots of cash** | Age 40, retire 55, $300,000 at 7% + $20,000/yr, $300,000 cash at 3%, 2.5% inflation, $50,000, 4% | $786,758.66 ($300,000 cash + $486,758.66 portfolio) | $1,139,461.12 (2041) | **not before retirement at 55** |
+
+Example F is why cash has its own rate. Treating its cash as earning 7%
+would have given $656,162.38, understating what's needed by about
+$130,000.
 
 Example B's rows, for checking by hand:
 
@@ -1674,20 +1716,15 @@ No new dependencies.
 - [ ] Done
 
 1. Add `src/engine/coastFire.ts` with the types above and
-   `calculateCoastFire`, following the design decisions exactly. The
-   "without contributions" values use `r` throughout, as described above.
-2. **Note lines.** The breakdown's first line is a note with no value. If
-   `ExplanationLine` can't express that today, add an optional `note` form
-   (label only) and render it in `ExplainPanel` as plain text, with no
-   value or operator.
-3. Add `coast` to `ProjectionSummary`'s `complete` variant, built in
+   `calculateCoastFire`, following the design decisions exactly.
+2. Add `coast` to `ProjectionSummary`'s `complete` variant, built in
    `summariseProjection` from the rows it already has.
 4. Tests:
    - unit tests for `coast(k)`, including:
      - with and without dated expenses;
      - a dated expense after retirement (ignored);
      - `n = 0`;
-   - fixture `tests/worked-examples/m4-coast.json` with examples A to E.
+   - fixture `tests/worked-examples/m4-coast.json` with examples A to F.
      `tests/unit/workedExamples.test.ts` checks the Coast FIRE number, the
      retirement-year figure, the reached row (or none) and example B's rows,
      to the cent;
@@ -1698,7 +1735,12 @@ No new dependencies.
      - a higher return never raises the Coast FIRE number;
      - larger contributions never make Coast FIRE later;
      - "without contributions" at row *n* is at least the FI number exactly
-       when Coast FIRE is reached at row 0.
+       when Coast FIRE is reached at row 0;
+     - **reached means stoppable:** if Coast FIRE is reached at row *k* (*k*
+       > 0), the real projection with contributions stopping after year *k*
+       reaches the FI number by retirement. Stopping a year earlier doesn't;
+     - moving savings from the portfolio into cash at a lower rate never
+       lowers the Coast FIRE number.
 
 **Check:** `npm run check` passes.
 
@@ -1709,8 +1751,8 @@ No new dependencies.
 1. Add the Coast FIRE tile, as described above, after "Progress to FI".
 2. Tests:
    - examples A, D and E, one for each status;
-   - example C's breakdown includes the dated-expense line;
-   - the note line is shown without a value.
+   - example A's breakdown shows the cash and portfolio lines;
+   - example C's breakdown includes the dated-expense line.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
@@ -1759,7 +1801,7 @@ the four lines are easy to tell apart on the deep green page.
 1. E2E (`tests/e2e/coast.spec.ts`), with the clock fixed in 2026:
    - **Example A:**
      - enter it through the screens;
-     - Results shows "$804,565" and "Reached in 2029, at age 37";
+     - Results shows "$811,877" and "Reached in 2029, at age 37";
      - Milestones lists Coast FIRE 2029 before FI reached 2038;
      - the Coast FIRE chart shows its four lines with the right strokes,
        and a "Coast FIRE" marker;
@@ -1778,9 +1820,12 @@ for the owner to verify.
 
 - **Remember the today's/nominal choice** in `meta` between visits (from
   M2).
-- **Coast FIRE with cash at its own rate**, if the "all savings grow at the
-  expected return" simplification proves misleading. Revisit with super in
-  M6, where super and outside super coast separately anyway.
+- **Advanced growth options per asset** (owner's request, not yet
+  scheduled). Every asset already has its own rate. Later, an advanced
+  option could let an asset grow in other ways, for example a different
+  rate for different periods, or growth split into capital growth and
+  income. It needs a requirement (a backlog entry in REQUIREMENTS.md)
+  before it's planned.
 - **Carried from M1:**
   - flush unsaved edits when the tab closes;
   - write back migrated records once the first migration exists;
