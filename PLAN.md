@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1 and the colour scheme are done and deployed. M2 plan drafted, awaiting approval.
+**Current status:** M0, M1, M2 and the colour scheme are done and deployed. The M3 plan is agreed. A plan to merge Results and Year by year into one page is in review; it lands before M3.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 and M1 done. M2 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M2 done. One-page Results plan in review. M3 plan agreed |
 
 ## 1. Requirement ordering
 
@@ -47,7 +47,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 - **Transparency and determinism (NFR-1, NFR-2):** every new figure can be
   traced to its inputs, and the same inputs always give the same projection.
 - **Year-by-year projection (OUT-1):** starts in M2. Each later milestone adds
-  its own columns.
+  its own columns. It is the last section of the Results page, not a step of
+  its own.
 - **Rules as data (NFR-3):** from M5, every statutory rate, threshold and cap
   is stored as dated data, not in calculation code.
 - **Mockup conventions:** tables are editable in place, charts have hover
@@ -68,12 +69,12 @@ and the [desktop mockups](requirements/mockups/README.md).
 | [M0 · Walking skeleton](#m0--walking-skeleton) | Foundation | 0 | Header and step navigation; empty screens 01–07 |
 | [M1 · FI number](#m1--fi-number) | 1 · Must | 11 | 02, 03b, 04, 05 (first versions) |
 | [M2 · Growth over time](#m2--growth-over-time) | 1 · Must | 10 | 01, 03b, 04, 05, 06 (first versions) |
-| [M3 · Retirement drawdown and solvency](#m3--retirement-drawdown-and-solvency) | 1 · Must | 9 | 04, 05 chart (a), 06 |
+| [M3 · Retirement drawdown and solvency](#m3--retirement-drawdown-and-solvency) | 1 · Must | 9 | 04, 05 chart (a) and year by year |
 | [M4 · Coast FIRE](#m4--coast-fire) | 1 · Must | 3 | 05 Coast FIRE section |
 | [M5 · Superannuation: accumulation](#m5--superannuation-accumulation) | 1 · Must | 8 | 03d (super), 02 (salary) |
 | [M6 · Super access and the bridge period](#m6--super-access-and-the-bridge-period) | 1 · Must | 8 | 01 (access age), 05 bridge check and chart (b), Coast FIRE (c) |
 | [M7 · Couples](#m7--couples) | 1 · Must | 7 | 01, 02, 03b, 03d per person |
-| [M8 · Personal income tax](#m8--personal-income-tax) | 1 · Must | 4 | 06 tax columns, 05 chart (c) |
+| [M8 · Personal income tax](#m8--personal-income-tax) | 1 · Must | 4 | 05 chart (c) and year-by-year tax columns |
 | [M9 · Investment income and capital gains](#m9--investment-income-and-capital-gains) | 1 · Must | 6 | 03b complete |
 | [M10 · Super in retirement](#m10--super-in-retirement) | 1 · Must | 3 | 03d rules panel, 05 milestones |
 | [M11 · Super caps and large balances](#m11--super-caps-and-large-balances) | 1 · Must | 2 | 03d cap warnings and Division 296 toggle |
@@ -81,7 +82,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 | [M13 · Mortgage](#m13--mortgage) | 1 · Must | 8 | 03a (mortgage and calculated panel) |
 | [M14 · Investment property](#m14--investment-property) | 1 · Must — MVP complete | 5 | 03c |
 | [M15 · Spending detail](#m15--spending-detail) | 2 · Should | 4 | 02 complete |
-| [M16 · Inputs panel and scenarios](#m16--inputs-panel-and-scenarios) | 2 · Should | 2 | 05b, 07 |
+| [M16 · Inputs panel and scenarios](#m16--inputs-panel-and-scenarios) | 2 · Should | 2 | 05b, 06 |
 | [M17 · Coast FIRE choices](#m17--coast-fire-choices) | 2 · Should | 3 | 05 Coast FIRE (c) and comparison table |
 | [M18 · More income, fees and debts](#m18--more-income-fees-and-debts) | 2 · Should | 4 | 02, 03b, 03d |
 | [M19 · Property events](#m19--property-events) | 2 · Should | 4 | 03a and 03c planned changes |
@@ -145,7 +146,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 - **Kind:** Behavior change
 - **Phase:** 1 · Must
-- **Mockups:** 04, 05 chart (a), 06
+- **Mockups:** 04, 05 chart (a) and year by year
 - **Working app at the end:** The projection continues past retirement, drawing spending from the portfolio and cash. It flags years that can't be funded and finds the earliest feasible retirement age.
 
 | # | Requirement | Priority | Scope in this milestone |
@@ -230,7 +231,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 - **Kind:** Behavior change
 - **Phase:** 1 · Must
-- **Mockups:** 06 tax columns, 05 chart (c)
+- **Mockups:** 05 chart (c) and year-by-year tax columns
 - **Working app at the end:** Salary and investment income are taxed per person. After-tax spending is grossed up to the pre-tax income or withdrawals that fund it.
 
 | # | Requirement | Priority | Scope in this milestone |
@@ -350,7 +351,7 @@ and the [desktop mockups](requirements/mockups/README.md).
 
 - **Kind:** Behavior change
 - **Phase:** 2 · Should
-- **Mockups:** 05b, 07
+- **Mockups:** 05b, 06
 - **Working app at the end:** Inputs can be edited from a drop-down panel without leaving the results (mockup 05b). Scenarios can be saved and compared, with a sensitivity chart.
 
 | # | Requirement | Priority | Scope in this milestone |
@@ -634,7 +635,7 @@ UI or storage. It takes a plan and a rule set and returns a projection. Everythi
 ```
  ┌──────────────────────────── Browser ─────────────────────────────┐
  │                                                                  │
- │  UI (React)            screens 01–07 + 05b, one per mockup       │
+ │  UI (React)            screens 01–06 + 05b, one per mockup       │
  │    │  ▲                                                          │
  │    │  │ view models: formatted figures, chart series,            │
  │    │  │ today's ↔ nominal conversion (OUT-2)                     │
@@ -884,7 +885,7 @@ uses, and covered by React Testing Library tests.
 | Component | Purpose | Mockups | Introduced | Reused in |
 | --- | --- | --- | --- | --- |
 | `AppShell` + `StepNav` | Header, step navigation, plan picker and export slots | all | M0 | every milestone |
-| `StepPage` | Page title, intro, content and Back/Next footer | 01–04, 06, 07 | M0 | every input step |
+| `StepPage` | Page title, intro, content and Back/Next footer | 01–06 | M0 | every input step |
 | `Card`, `Banner` | Grouping and notices: disclaimer, "not yet modelled", hints | all | M1 | every milestone |
 | `AssetSidebar` | Asset list grouped by kind, with net worth and investable totals | 03a–03d | M5 | M9, M12–M14, M18 |
 | `InputsPanel` | Drop-down panel that edits any input without leaving the page | 05b | M16 | all result screens |
@@ -907,16 +908,16 @@ uses, and covered by React Testing Library tests.
 | Component | Purpose | Mockups | Introduced | Reused in |
 | --- | --- | --- | --- | --- |
 | `MetricTile` | Headline figure with a sub-line and status | 05, 05b | M1 (FI number, progress) | M2–M6, M16 |
-| `ExplainPanel` | "How was this calculated?" breakdown (NFR-1) | 05, 06 | M1 | every figure; M8 (year detail), M14 (rental cash flow) |
-| `DollarsModeToggle` + `formatMoney` | Today's or nominal dollars for every figure (OUT-2) | 05–07 | M2 | every output |
-| `ProjectionTable` | Year rows, phase bands, collapsed gaps, shortfall flags, column groups, row detail | 06 | M2 | M3 (shortfalls), M5–M14 (new columns) |
-| `TimeSeriesChart` | Lines with reference lines and markers, hover tooltip, click to open the year | 03b, 05, 07 | M3 (FIRE chart a) | M4, M13, M16 |
+| `ExplainPanel` | "How was this calculated?" breakdown (NFR-1) | 05 | M1 | every figure; M8 (year detail), M14 (rental cash flow) |
+| `DollarsModeToggle` + `formatMoney` | Today's or nominal dollars for every figure (OUT-2) | 05, 06 | M2 | every output |
+| `ProjectionTable` | Year rows, phase bands, collapsed gaps, shortfall flags, column groups, row detail | 05 | M2 | M3 (shortfalls), M5–M14 (new columns) |
+| `TimeSeriesChart` | Lines with reference lines and markers, hover tooltip, click to jump to the year's row | 03b, 05, 06 | M3 (FIRE chart a) | M4, M13, M16 |
 | `StackedAreaChart` | Stacked balances over time with a shaded period | 05 | M6 (bridge chart b) | M10 |
 | `CashFlowChart` | Money in above the axis, money out below, per year | 05 | M8 (FIRE chart c) | M9–M14 |
 | `MilestoneTimeline` | Key years on one line (OUT-4) | 05 | M4 | M6, M7, M10, M13 |
 | `StatusMeter` | Need vs projected, with MET / SHORT / OVER status | 03d, 05 | M6 (bridge check) | M11 (cap warnings), M16 |
-| `ComparisonTable` | Options or scenarios side by side | 05, 07 | M16 (scenarios) | M17 (Coast FIRE choices) |
-| `TornadoChart` | One bar per assumption, earlier vs later | 07 | M16 (sensitivity) | none yet |
+| `ComparisonTable` | Options or scenarios side by side | 05, 06 | M16 (scenarios) | M17 (Coast FIRE choices) |
+| `TornadoChart` | One bar per assumption, earlier vs later | 06 | M16 (sensitivity) | none yet |
 | `LearnMoreLink` | Link to further reading (NFR-7) | all | M21 | every screen |
 
 **Milestones where introducing a component early pays off**
@@ -1216,9 +1217,141 @@ Conventions settled while building M2, which later milestones rely on:
 - **Shared screen pieces:** `MissingInputsBanner` ("Enter these") and
   `ProjectionTable` (generic over `{ header, cell(row) }` columns).
 
-### M3 · Retirement drawdown and solvency: step-by-step plan
+### Results and Year by year on one page: step-by-step plan
 
 **Status:** draft, awaiting the owner's approval. Do not implement yet.
+
+**Kind:** behavior change. It changes what the user sees and where, not
+any figure.
+
+**Why:** Results and Year by year answer one question, "does my plan
+work?", at two levels of detail. As separate steps, the user flips
+between tabs to see the years behind a headline number, and the
+today's/nominal toggle lives in two places. OUT-1 now says the projection
+is shown on the same page as the results, below the headline figures and
+charts, and mockup 05 shows the combined page (mockup 06 Projection is
+gone, and Scenarios is now 06).
+
+**Goal:** one Results step. The headline tiles come first, then the Year
+by year table, with one dollars toggle for the whole page. The app has six
+steps instead of seven.
+
+**The page, top to bottom:**
+
+```
+  ┌ Results ─────────────────────────────── [Nominal | Today's $] ┐
+  │ intro                                                          │
+  │ On this page: Headline numbers · Year by year ↓                │
+  ├────────────────────────────────────────────────────────────────┤
+  │ [missing inputs banner, only if the plan is incomplete]        │
+  │ FI number tile   Progress to FI tile   FI reached tile         │
+  │ "Not yet modelled" banner                                      │
+  ├─ Year by year ─────────────────────────────────────────────────┤
+  │ one line on what the table shows                               │
+  │ Year | Age | ... table (the M2 columns, FI row highlighted)    │
+  ├────────────────────────────────────────────────────────────────┤
+  │ ← Assumptions                                    Scenarios →   │
+  └────────────────────────────────────────────────────────────────┘
+```
+
+Later milestones slot their sections (milestones, charts, Coast FIRE)
+between the tiles and Year by year, as mockup 05 shows, and add them to
+the "On this page" links.
+
+**Design decisions:**
+
+- **One step, one route.** `steps.ts` loses `year-by-year`, and Scenarios
+  becomes step 6. The header, the Back/Next footer and the placeholders
+  all follow from that list, so Results' Next becomes "Scenarios".
+- **Old links still work.** `#/year-by-year` redirects to
+  `#/results?view=year-by-year`, which scrolls to the Year by year
+  section. M3 adds `#/results?year=2038`, which scrolls to one row.
+- **The dollars toggle moves to the Results page header** and covers the
+  whole page. Figures that are nominal by definition (the FI number at
+  retirement) still say so and don't follow it, as in M2.
+- **The table becomes a section, not a screen.** `YearByYearScreen`
+  becomes `YearByYearSection` in `src/ui/screens/`. It keeps its columns,
+  its FI row highlight and its rule for which years to show, and gains an
+  `<h2>` heading with `id="year-by-year"` for the in-page link.
+- **One "Enter these" banner per page.** If the plan is incomplete, the
+  `MissingInputsBanner` at the top already lists what's missing, so the
+  Year by year section isn't shown until the projection is complete. The
+  table never shows a second copy of the same banner.
+- **"On this page" links** are plain in-page links. With only the tiles and
+  the table today, the row has two links; it is worth having now because
+  every later milestone makes the page longer.
+- **Styles:** the table keeps its `app.css` rules. The new heading and the
+  links use existing role variables, so no new colour pairs are needed. The
+  contrast sweep visits Results with a complete plan instead of
+  `#/year-by-year`.
+- **Not changed:** the engine, the plan state, the wire format and saved
+  plans. No new dependencies.
+
+**One PR.** Two steps, each leaving the app working.
+
+**Definition of done:**
+
+- The header shows six steps, ending "5 Results" and "6 Scenarios".
+- Results shows the tiles and then the Year by year table, with one
+  dollars toggle at the top that changes the table's figures.
+- `#/year-by-year` lands on Results, scrolled to the table.
+- The README describes the six steps.
+- `npm run check` and `npm run test:e2e` pass, and CI is green.
+
+#### Step A · Year by year as a section of Results
+
+- [ ] Done
+
+1. Turn `YearByYearScreen` into `YearByYearSection`: same columns and rows,
+   no `StepPage`, no toggle and no missing-inputs banner of its own. It
+   renders nothing while the projection is incomplete.
+2. On `ResultsScreen`:
+   - put the `DollarsModeToggle` in the page header, beside the title;
+   - add the "On this page" links;
+   - render `YearByYearSection` after the "Not yet modelled" banner.
+3. Leave the Year by year step in place for now, so this step changes
+   nothing else. It will briefly show the table in two places; step B
+   removes the old one.
+4. Tests:
+   - move the table tests from `YearByYearScreen.test.tsx` into a
+     `YearByYearSection.test.tsx`;
+   - in `ResultsScreen.test.tsx`: the table appears after the tiles with a
+     complete plan; it is absent, and the banner appears once, with an
+     incomplete projection; switching the toggle on Results changes a
+     table cell.
+   - Update `tests/e2e/growth.spec.ts` to check the table on Results
+     instead of following "Next: Year by year".
+
+**Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Step B · Remove the Year by year step (end of PR)
+
+- [ ] Done
+
+1. Remove `year-by-year` from `steps.ts`, and its entry in `App`'s screen
+   map. Scenarios becomes step 6.
+2. Add a `/year-by-year` route that redirects to
+   `/results?view=year-by-year`. On Results, `?view=year-by-year` scrolls
+   the section's heading into view once the page has rendered.
+3. Update the doc comments that mention the Year by year screen
+   (`MissingInputsBanner`, `ProjectionTable`, `dollarsMode`) and the
+   README's list of steps.
+4. Tests:
+   - `steps.test.ts` and `StepPage.test.tsx` for six steps, with Results'
+     Next being Scenarios;
+   - `tests/e2e/navigation.spec.ts` for six steps;
+   - `tests/e2e/contrast.spec.ts` visits Results with a complete plan, in
+     both dollar modes, instead of `#/year-by-year`;
+   - E2E: opening `#/year-by-year` lands on Results with the Year by year
+     heading in view.
+
+**Check:** `npm run check` and `npm run test:e2e` pass. **Open the PR**
+for the owner to verify.
+
+### M3 · Retirement drawdown and solvency: step-by-step plan
+
+**Status:** agreed. Implement after the one-page Results plan above has
+landed, because steps 6, 7 and 10 build on that page.
 
 **Kind:** behavior change.
 
@@ -1268,7 +1401,7 @@ solvent.
 - Assumptions has "General interest rate" (default 4%) and states the
   withdrawal rule.
 - Income & expenses has a "Dated and one-off expenses" table.
-- Year by year runs to the end age, with the following:
+- The Year by year section of Results runs to the end age, with the following:
   - Working and Retired bands;
   - spending, cash and investable columns;
   - shortfall flags, with a banner listing the years that can't be funded.
@@ -1441,8 +1574,8 @@ M2's `openingBalance`, `growth` and `closingBalance` are renamed
   following the dollars toggle. It has a vertical marker at the FI year and
   at retirement, and a red-pink band on any shortfall years.
   - Hovering shows the year's values.
-  - Clicking a year opens Year by year scrolled to that row, which is
-    briefly outlined. This uses `#/year-by-year?year=2038`.
+  - Clicking a year scrolls down to that row in the Year by year section,
+    which is briefly outlined. This uses `#/results?year=2038`.
 - **The "Not yet modelled" banner** becomes "super (M5), the bridge to super
   (M6), tax (M8), property (M12) and more."
 
@@ -1692,7 +1825,7 @@ changes to tests.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 6 · Year by year: drawdown, phases and shortfalls
+#### Step 6 · Year by year section: drawdown, phases and shortfalls
 
 - [ ] Done
 
@@ -1702,8 +1835,9 @@ changes to tests.
    width row with the phase text, so a screen reader reads it in order.
 3. Status cells: "✓", or "Shortfall −$6,729" in error text.
 4. A shortfall `Banner` above the table, with year ranges. The "No
-   withdrawals" banner is removed.
-5. **Scroll to a year:** if the URL has `?year=`, the matching row is
+   withdrawals" banner is removed. Step 7 adds a short one at the top of
+   Results that links down to this one.
+5. **Scroll to a year:** if the URL is `#/results?year=…`, the matching row is
    scrolled into view and outlined for a few seconds. PR B uses this, but it
    is built here with the table.
 6. Tests:
@@ -1720,17 +1854,17 @@ changes to tests.
 - [ ] Done
 
 1. Add the "Money lasts" tile, with its explanation, as described above.
-2. When the projection runs out, show a `Banner` on Results linking to Year
-   by year: "Your money runs out at age {age} ({year}). See the years that
-   can't be funded."
+2. When the projection runs out, show a `Banner` at the top of Results,
+   above the tiles, linking down to the Year by year section: "Your money
+   runs out at age {age} ({year}). See the years that can't be funded."
 3. Update the "Not yet modelled" banner, and change "Not by age 100" to use
    the end age.
 4. Tests for both solvency outcomes, using examples A and B.
 5. E2E (`tests/e2e/drawdown.spec.ts`):
    - enter example B through the screens, with the clock fixed in 2026;
    - Results shows "Runs out at age 65";
-   - Year by year flags 2031 and shows the banner;
-   - add a dated expense in Income & expenses, and check Year by year's
+   - the Year by year section flags 2031 and shows the banner;
+   - add a dated expense in Income & expenses, and check the Year by year
      spending changes for that year;
    - after a reload, the cash, end age and dated expense are still there.
 
@@ -1791,7 +1925,7 @@ the owner to verify.
    - shortfall bands.
 4. Add a `FireChartSection` card on Results, below the tiles: "Investable
    net worth vs FI number". Clicking a year goes to
-   `#/year-by-year?year={year}`.
+   `#/results?year={year}`, which scrolls down to that row.
 5. Add the chart roles to `tokens.css`. Add the graphics pairs (3:1) and the
    band-label pair (4.5:1) to `tokens.test.ts`. Add the Results page with
    data to the contrast sweep.
@@ -1803,7 +1937,7 @@ the owner to verify.
    - enter example A;
    - Results shows "Earliest retirement: Age 43";
    - hovering the chart shows a tooltip with a year and two dollar values;
-   - clicking a year opens Year by year with that row outlined.
+   - clicking a year scrolls to that row in the Year by year section, outlined.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
 the chart reads clearly on the deep green page. **Open PR B** for the owner
@@ -1835,7 +1969,10 @@ to verify.
 - [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [x] Owner verifies and merges the M2 PR.
-- [ ] Approve the M3 step-by-step plan (this PR).
+- [x] Approve the M3 step-by-step plan.
+- [ ] Approve the one-page Results plan (this PR).
+- [ ] Implement the one-page Results (steps A and B), then open it for
+      verification.
 - [ ] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
 - [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
