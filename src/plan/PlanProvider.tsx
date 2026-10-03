@@ -3,9 +3,10 @@
 //   PlanProvider
 //     ├─ useReducer(planReducer) ──► plan      ──► usePlan()
 //     ├─ useMemo(summarisePlan)  ──► summary   ──► usePlanSummary()
+//     ├─ startYear (from the Clock)            ──► usePlanStartYear()
 //     └─ dispatch                              ──► usePlanDispatch()
 //
-// Three separate contexts are used so a component that only dispatches (for
+// Separate contexts are used so a component that only dispatches (for
 // example a form field) doesn't re-render when the plan changes.
 
 import {
@@ -25,6 +26,7 @@ import type { Plan } from "./types";
 
 const PlanContext = createContext<Plan | null>(null);
 const PlanSummaryContext = createContext<PlanSummary | null>(null);
+const StartYearContext = createContext<number | null>(null);
 const PlanDispatchContext = createContext<Dispatch<PlanAction> | null>(null);
 
 interface PlanProviderProps {
@@ -60,7 +62,11 @@ export function PlanProvider({ initialPlan, startYear, children }: PlanProviderP
   return (
     <PlanDispatchContext.Provider value={dispatch}>
       <PlanContext.Provider value={plan}>
-        <PlanSummaryContext.Provider value={summary}>{children}</PlanSummaryContext.Provider>
+        <PlanSummaryContext.Provider value={summary}>
+          <StartYearContext.Provider value={resolvedStartYear}>
+            {children}
+          </StartYearContext.Provider>
+        </PlanSummaryContext.Provider>
       </PlanContext.Provider>
     </PlanDispatchContext.Provider>
   );
@@ -74,6 +80,16 @@ export function usePlan(): Plan {
 /** Returns the engine's summary of the current plan. Used by the Results screen. */
 export function usePlanSummary(): PlanSummary {
   return requireContextValue(useContext(PlanSummaryContext), "usePlanSummary");
+}
+
+/**
+ * Returns the calendar year of row 0 of the projection (today's year, from the
+ * Clock, or the year a test passed to PlanProvider). Sections that need "this
+ * year" (such as the dated expenses table's year limits) read it here, so
+ * they never call `new Date()` themselves.
+ */
+export function usePlanStartYear(): number {
+  return requireContextValue(useContext(StartYearContext), "usePlanStartYear");
 }
 
 /** Returns the function that applies a `PlanAction`. Used by input screens when the user edits a field. */

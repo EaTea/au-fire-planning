@@ -134,21 +134,61 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
 
 /**
  * Types a value into every input on the current page, then moves focus away.
- * "valid" uses a value every field accepts: 50 for ages (15 to 100), and 5
- * for everything else (percentages are capped at 15%). "invalid" uses -5,
- * which every field rejects.
+ * "valid" uses a value every field accepts: 50 for ages (15 to 100), 90 for
+ * "Plan until age" (50 to 110, and after the other ages), and 5 for everything
+ * else (percentages are capped at 15%). "invalid" uses -5, which every field
+ * rejects.
  */
 async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<void> {
   for (const input of await page.locator("input").all()) {
-    const isAge = /age/i.test(await labelTextOf(input));
+    const labelText = await labelTextOf(input);
+    const isAge = /age/i.test(labelText);
+    const isEndAge = /plan until age/i.test(labelText);
 
     if (values === "invalid") {
       await input.fill("-5");
     } else {
-      await input.fill(isAge ? "50" : "5");
+      await input.fill(isEndAge ? "90" : isAge ? "50" : "5");
     }
   }
   await page.locator("h1").click();
+}
+
+/**
+ * Fills the dated expenses table on the Income & expenses page, leaving it in
+ * the state the sweep should look at. Makes sure the table has one row, then:
+ * "valid" gives the row an amount and opens its actions menu; "invalid" types
+ * a negative amount and presses Enter, which leaves that editor open showing
+ * its error. Does nothing on other pages.
+ */
+async function fillDatedExpensesTable(page: Page, values: "valid" | "invalid"): Promise<void> {
+  const addButton = page.getByRole("button", { name: "+ Add expense" });
+  if ((await addButton.count()) === 0) {
+    return;
+  }
+
+  // One row is enough to cover the table; the add button also opens the name editor.
+  if ((await page.locator(".editable-cell").count()) === 0) {
+    await addButton.click();
+    await page.keyboard.type("Replace car");
+    await page.keyboard.press("Enter");
+  }
+
+  // The second editable cell is "Per year".
+  await page.locator(".editable-cell").nth(1).click();
+  await page.locator(".editable-cell-editor input").fill(values === "valid" ? "5" : "-5");
+  await page.keyboard.press("Enter");
+
+  if (values === "valid") {
+    await page.getByRole("button", { name: /^Actions for/ }).click();
+  }
+}
+
+/** Fills every input on `inputPage` (see fillEveryInput), then its dated expenses table if it has one. */
+async function fillPage(page: Page, inputPage: string, values: "valid" | "invalid") {
+  await page.goto(inputPage);
+  await fillEveryInput(page, values);
+  await fillDatedExpensesTable(page, values);
 }
 
 /** The text of the <label> that names `input`, or "" if it has none. */
@@ -184,8 +224,7 @@ test("every input page has readable text with valid and with invalid values", as
 
   for (const value of ["valid", "invalid"] as const) {
     for (const inputPage of inputPages) {
-      await page.goto(inputPage);
-      await fillEveryInput(page, value);
+      await fillPage(page, inputPage, value);
 
       // Makes sure each pass is what it says: errors to check in the invalid
       // pass, and none in the valid one.
@@ -205,8 +244,7 @@ test("the results page has readable text with every explanation open", async ({ 
   await startFresh(page);
 
   for (const inputPage of inputPages) {
-    await page.goto(inputPage);
-    await fillEveryInput(page, "valid");
+    await fillPage(page, inputPage, "valid");
   }
 
   await page.goto("#/results");
@@ -223,8 +261,7 @@ test("the year by year table has readable text in both dollar modes, including t
 }) => {
   await startFresh(page);
   for (const inputPage of inputPages) {
-    await page.goto(inputPage);
-    await fillEveryInput(page, "valid");
+    await fillPage(page, inputPage, "valid");
   }
   await page.goto("#/year-by-year");
 

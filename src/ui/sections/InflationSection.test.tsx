@@ -54,4 +54,39 @@ describe("InflationSection", () => {
     await user.type(screen.getByLabelText("Inflation per year"), "0{Enter}");
     expect(readPlan().assumptions.inflationRate).toBe(0);
   });
+
+  it("is titled Economy", () => {
+    renderSection(<InflationSection />);
+
+    expect(screen.getByRole("heading", { name: "Economy" })).toBeInTheDocument();
+  });
+
+  it("shows the 4% interest default with its hint, stores a typed rate and clears it", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<InflationSection />);
+
+    expect(screen.getByLabelText("General interest rate")).toHaveValue("4%");
+    expect(screen.getByText("Paid on cash savings.")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("General interest rate"), "3.5{Enter}");
+    expect(readPlan().assumptions.interestRate).toBe(0.035);
+
+    await user.clear(screen.getByLabelText("General interest rate"));
+    await user.tab();
+    expect(readPlan().assumptions.interestRate).toBeUndefined();
+    expect(screen.getByLabelText("General interest rate")).toHaveValue("4%");
+  });
+
+  it("limits the interest rate to 0% to 15%, and accepts 0%", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<InflationSection />);
+
+    await user.type(screen.getByLabelText("General interest rate"), "16{Enter}");
+    expect(screen.getByText("Enter a value of at most 15%.")).toBeInTheDocument();
+    expect(readPlan().assumptions.interestRate).toBeUndefined();
+
+    await user.clear(screen.getByLabelText("General interest rate"));
+    await user.type(screen.getByLabelText("General interest rate"), "0{Enter}");
+    expect(readPlan().assumptions.interestRate).toBe(0);
+  });
 });

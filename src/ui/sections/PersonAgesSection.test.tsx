@@ -6,12 +6,14 @@ import { PersonAgesSection } from "./PersonAgesSection";
 import { blankPlan, renderSection } from "./sectionTestHelpers";
 
 describe("PersonAgesSection", () => {
-  it("shows both ages empty, with no default, while unset", () => {
+  it("shows the current and retirement ages empty, with no default, while unset", () => {
     const { container } = renderSection(<PersonAgesSection />);
 
     expect(screen.getByLabelText("Current age")).toHaveValue("");
     expect(screen.getByLabelText("Target retirement age")).toHaveValue("");
-    expect(container.querySelector(".input.default")).toBeNull();
+
+    // Only "Plan until age" has a default.
+    expect(container.querySelectorAll(".input.default")).toHaveLength(1);
     expect(
       screen.getByText("Only your age is stored, not your date of birth."),
     ).toBeInTheDocument();
@@ -72,5 +74,40 @@ describe("PersonAgesSection", () => {
     expect(screen.getByText("Enter a value of at least 18.")).toBeInTheDocument();
 
     expect(readPlan().household.people[0]?.targetRetirementAge).toBeUndefined();
+  });
+
+  it("shows the plan-until age as a dashed default of 95 with its hint", () => {
+    const { container } = renderSection(<PersonAgesSection />);
+
+    expect(screen.getByLabelText("Plan until age")).toHaveValue("95");
+    expect(container.querySelector(".input.default")).not.toBeNull();
+    expect(screen.getByText("The projection runs to this age.")).toBeInTheDocument();
+  });
+
+  it("stores a typed plan-until age and clears it back to the default", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<PersonAgesSection />);
+
+    await user.type(screen.getByLabelText("Plan until age"), "90{Enter}");
+    expect(readPlan().household.projectionEndAge).toBe(90);
+
+    await user.clear(screen.getByLabelText("Plan until age"));
+    await user.tab();
+    expect(readPlan().household.projectionEndAge).toBeUndefined();
+    expect(screen.getByLabelText("Plan until age")).toHaveValue("95");
+  });
+
+  it("rejects plan-until ages outside 50 to 110", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<PersonAgesSection />);
+
+    await user.type(screen.getByLabelText("Plan until age"), "111{Enter}");
+    expect(screen.getByText("Enter a value of at most 110.")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Plan until age"));
+    await user.type(screen.getByLabelText("Plan until age"), "49{Enter}");
+    expect(screen.getByText("Enter a value of at least 50.")).toBeInTheDocument();
+
+    expect(readPlan().household.projectionEndAge).toBeUndefined();
   });
 });

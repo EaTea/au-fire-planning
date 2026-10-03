@@ -1689,7 +1689,7 @@ changes to tests.
 
 #### Step 5 · Inputs: end age, cash, interest, withdrawal rule, dated expenses
 
-- [ ] Done
+- [x] Done
 
 1. **Household:** add `AgeField` "Plan until age" (default 95, min 50,
    max 110). Hint: "The projection runs to this age."
@@ -1725,6 +1725,26 @@ changes to tests.
    - press Escape on an edit: the old value stays;
    - duplicate and delete a row with the keyboard only;
    - after a reload, the remaining rows are still there.
+
+**As built:**
+- Sections read the start year with a new `usePlanStartYear()` hook from
+  `PlanProvider`, which exposes the same value it passes to `summarisePlan`.
+  `renderSection` in the section tests fixes it at 2026.
+- "Plan until age" sits in the existing "About you" card
+  (`PersonAgesSection`), not a new card. `CashSection` is on Assets,
+  `DatedExpensesSection` on Income & expenses.
+- The year fields' upper limit is the year the person reaches the plan-until
+  age. It is left off until the current age is entered, and when the ages are
+  inconsistent (the missing-inputs banner reports that).
+- The editors' field labels ("Amount per year for Replace car") are visually
+  hidden inside table cells (`app.css`), because the column header already
+  names them.
+- `missingInputSteps.ts` already mapped `projectionEndAge` (added in step 2),
+  so only a Results test was added for the two new messages.
+- In the contrast sweep, the valid pass types 90 into "Plan until age" (50
+  would make the plan incomplete), and `fillPage` adds one table row, then
+  gives it a valid amount with the row menu open, or an invalid amount left
+  in its editor showing the error.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 

@@ -191,5 +191,32 @@ describe("ResultsScreen", () => {
         screen.getByRole("link", { name: "Target retirement age → Household" }),
       ).toBeInTheDocument();
     });
+
+    it("links the plan-until age validation messages to the Household step", () => {
+      renderResults({
+        ...exampleA,
+        household: { ...exampleA.household, projectionEndAge: 50 },
+      });
+
+      expect(
+        screen.getByRole("link", {
+          name: "Target retirement age must be before your plan-until age → Household",
+        }),
+      ).toBeInTheDocument();
+
+      renderResults({
+        ...exampleA,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 60, targetRetirementAge: 60 }],
+          projectionEndAge: 55,
+        },
+      });
+
+      expect(
+        screen.getByRole("link", {
+          name: "Plan until age must be after your current age → Household",
+        }),
+      ).toBeInTheDocument();
+    });
   });
 });

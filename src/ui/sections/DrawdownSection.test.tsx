@@ -51,4 +51,14 @@ describe("DrawdownSection", () => {
 
     expect(readPlan().assumptions.safeWithdrawalRate).toBeUndefined();
   });
+
+  it("explains the fixed withdrawal rule in retirement", () => {
+    renderSection(<DrawdownSection />);
+
+    expect(
+      screen.getByText(
+        "Withdrawal in retirement: constant, inflation-adjusted. Each year's spending is drawn from cash first, then the portfolio.",
+      ),
+    ).toBeInTheDocument();
+  });
 });

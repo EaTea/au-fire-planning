@@ -462,6 +462,15 @@ button:focus-visible {
   margin: 0;
 }
 
+/* The cell's header already names the editor, so its label is for assistive technology only. */
+.editable-cell-editor label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 .editable-table-empty {
   color: var(--colour-text-muted);
 }
