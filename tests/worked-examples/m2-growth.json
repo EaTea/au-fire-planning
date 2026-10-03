@@ -28,17 +28,17 @@
         "rows": [
           {
             "yearIndex": 1,
-            "growth": 50400.0,
+            "portfolioGrowth": 50400.0,
             "contribution": 30000.0,
-            "closingBalance": 800400.0
+            "portfolioClosing": 800400.0
           },
-          { "yearIndex": 2, "closingBalance": 886428.0 }
+          { "yearIndex": 2, "portfolioClosing": 886428.0 }
         ],
         "fiReached": {
           "yearIndex": 12,
           "calendarYear": 2038,
           "age": 46,
-          "closingBalance": 2158231.48,
+          "portfolioClosing": 2158231.48,
           "fiNumber": 2151822.12
         },
         "fiNumberAtRetirement": 2375208.99
@@ -66,11 +66,16 @@
         "rows": [
           {
             "yearIndex": 1,
-            "growth": 10000.0,
+            "portfolioGrowth": 10000.0,
             "contribution": 10000.0,
-            "closingBalance": 120000.0
+            "portfolioClosing": 120000.0
           },
-          { "yearIndex": 2, "growth": 12000.0, "contribution": 0.0, "closingBalance": 132000.0 }
+          {
+            "yearIndex": 2,
+            "portfolioGrowth": 12000.0,
+            "contribution": 0.0,
+            "portfolioClosing": 132000.0
+          }
         ]
       }
     },

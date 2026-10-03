@@ -52,10 +52,10 @@ export function YearByYearScreen() {
       header: "Contributions",
       cell: (row) => formatMoney(row.contribution, row.inflationIndex),
     },
-    { header: "Growth", cell: (row) => formatMoney(row.growth, row.inflationIndex) },
+    { header: "Growth", cell: (row) => formatMoney(row.portfolioGrowth, row.inflationIndex) },
     {
       header: "Portfolio balance",
-      cell: (row) => formatMoney(row.closingBalance, row.inflationIndex),
+      cell: (row) => formatMoney(row.portfolioClosing, row.inflationIndex),
     },
     {
       header: "Living expenses",
@@ -63,7 +63,7 @@ export function YearByYearScreen() {
     },
     { header: "FI number", cell: (row) => formatMoney(row.fiNumber, row.inflationIndex) },
     // A ratio of two values in the same year's dollars, so the toggle doesn't change it.
-    { header: "Progress", cell: (row) => formatPercent(row.closingBalance / row.fiNumber) },
+    { header: "Progress", cell: (row) => formatPercent(row.portfolioClosing / row.fiNumber) },
   ];
 
   return (

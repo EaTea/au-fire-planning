@@ -206,7 +206,7 @@ test.prop([currentAges, yearsToRetirement, returns, contributions])(
 
     for (const row of completeProjection(plan).rows) {
       expect(row.inflationIndex).toBe(1);
-      expect(row.closingBalance / row.inflationIndex).toBe(row.closingBalance);
+      expect(row.portfolioClosing / row.inflationIndex).toBe(row.portfolioClosing);
       expect(row.fiNumber).toBe(60000 / 0.04);
     }
   },
@@ -266,9 +266,9 @@ test.prop([currentAges, yearsToRetirement, returns, inflations, contributions])(
       const current = rows[index];
       if (previous === undefined || current === undefined) throw new Error("missing row");
 
-      expect(current.openingBalance).toBe(previous.closingBalance);
-      expect(current.closingBalance).toBe(
-        previous.closingBalance + current.growth + current.contribution,
+      expect(current.portfolioOpening).toBe(previous.portfolioClosing);
+      expect(current.portfolioClosing).toBe(
+        previous.portfolioClosing + current.portfolioGrowth + current.contribution,
       );
     }
   },

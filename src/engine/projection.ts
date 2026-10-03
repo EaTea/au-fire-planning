@@ -45,10 +45,10 @@ export interface ProjectionRow {
   readonly age: number;
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
   readonly inflationIndex: number;
-  readonly openingBalance: number;
-  readonly growth: number;
+  readonly portfolioOpening: number;
+  readonly portfolioGrowth: number;
   readonly contribution: number;
-  readonly closingBalance: number;
+  readonly portfolioClosing: number;
   readonly livingExpenses: number;
   readonly fiNumber: number;
 }
@@ -78,10 +78,10 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       calendarYear: startYear,
       age: inputs.currentAge,
       inflationIndex: 1,
-      openingBalance: inputs.openingBalance,
-      growth: 0,
+      portfolioOpening: inputs.openingBalance,
+      portfolioGrowth: 0,
       contribution: 0,
-      closingBalance: inputs.openingBalance,
+      portfolioClosing: inputs.openingBalance,
       livingExpenses: inputs.livingAnnual,
       fiNumber: inputs.fiNumberToday,
     },
@@ -106,10 +106,10 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       calendarYear: startYear + yearIndex,
       age,
       inflationIndex,
-      openingBalance,
-      growth,
+      portfolioOpening: openingBalance,
+      portfolioGrowth: growth,
       contribution,
-      closingBalance: balance,
+      portfolioClosing: balance,
       livingExpenses: inputs.livingAnnual * inflationIndex,
       fiNumber: inputs.fiNumberToday * inflationIndex,
     });
@@ -126,7 +126,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
  * by `summarisePlan` to fill `fiReached`, which the Results screen shows.
  */
 export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | undefined {
-  const row = rows.find((candidate) => candidate.closingBalance >= candidate.fiNumber);
+  const row = rows.find((candidate) => candidate.portfolioClosing >= candidate.fiNumber);
 
   if (row === undefined) {
     return undefined;
@@ -135,7 +135,7 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
   const lines: ExplanationLine[] = [
     {
       label: `Balance at end of ${row.calendarYear} (age ${row.age})`,
-      value: row.closingBalance,
+      value: row.portfolioClosing,
       unit: "dollars",
       source: "calculated",
     },
@@ -149,7 +149,7 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
     {
       // The margin by which the balance is at or above the FI number.
       label: "FI reached",
-      value: row.closingBalance - row.fiNumber,
+      value: row.portfolioClosing - row.fiNumber,
       unit: "dollars",
       operator: "=",
       source: "calculated",
@@ -160,6 +160,6 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
     age: row.age,
-    explanation: { value: row.closingBalance, unit: "dollars", lines },
+    explanation: { value: row.portfolioClosing, unit: "dollars", lines },
   };
 }

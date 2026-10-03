@@ -1218,7 +1218,7 @@ Conventions settled while building M2, which later milestones rely on:
 
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved. PR A (steps 1 to 7) in progress, one step at a time.
 
 **Kind:** behavior change.
 
@@ -1546,7 +1546,7 @@ dependencies.
 
 #### Step 1 · Rename the portfolio fields in projection rows
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor. Behaviour doesn't change.
 
@@ -1835,7 +1835,7 @@ to verify.
 - [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [x] Owner verifies and merges the M2 PR.
-- [ ] Approve the M3 step-by-step plan (this PR).
+- [x] Approve the M3 step-by-step plan.
 - [ ] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
 - [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps

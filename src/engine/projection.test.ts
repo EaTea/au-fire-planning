@@ -31,9 +31,9 @@ describe("projectPortfolio", () => {
       calendarYear: 2026,
       age: 40,
       inflationIndex: 1,
-      growth: 0,
+      portfolioGrowth: 0,
       contribution: 0,
-      closingBalance: 100000,
+      portfolioClosing: 100000,
       livingExpenses: 20000,
       fiNumber: 400000,
     });
@@ -46,10 +46,10 @@ describe("projectPortfolio", () => {
     expect(row).toMatchObject({
       calendarYear: 2027,
       age: 41,
-      openingBalance: 100000,
-      growth: 10000,
+      portfolioOpening: 100000,
+      portfolioGrowth: 10000,
       contribution: 10000,
-      closingBalance: 120000,
+      portfolioClosing: 120000,
     });
   });
 
@@ -57,7 +57,12 @@ describe("projectPortfolio", () => {
   it("stops contributing after the stop age but keeps growing", () => {
     const row = projectPortfolio(exampleB, 2026)[2];
 
-    expect(row).toMatchObject({ age: 42, growth: 12000, contribution: 0, closingBalance: 132000 });
+    expect(row).toMatchObject({
+      age: 42,
+      portfolioGrowth: 12000,
+      contribution: 0,
+      portfolioClosing: 132000,
+    });
   });
 
   // Every value in a row shares one index, (1+i)^k.
@@ -85,16 +90,16 @@ describe("projectPortfolio", () => {
 });
 
 /** A minimal row for exercising `findFiReached`. */
-function row(yearIndex: number, closingBalance: number, fiNumber: number): ProjectionRow {
+function row(yearIndex: number, portfolioClosing: number, fiNumber: number): ProjectionRow {
   return {
     yearIndex,
     calendarYear: 2026 + yearIndex,
     age: 40 + yearIndex,
     inflationIndex: 1,
-    openingBalance: 0,
-    growth: 0,
+    portfolioOpening: 0,
+    portfolioGrowth: 0,
     contribution: 0,
-    closingBalance,
+    portfolioClosing,
     livingExpenses: 0,
     fiNumber,
   };

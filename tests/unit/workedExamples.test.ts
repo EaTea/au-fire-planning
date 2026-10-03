@@ -49,16 +49,16 @@ interface WorkedScenario {
 /** The figures checked for one projection row; unlisted fields aren't checked. */
 interface ExpectedRow {
   readonly yearIndex: number;
-  readonly growth?: number;
+  readonly portfolioGrowth?: number;
   readonly contribution?: number;
-  readonly closingBalance: number;
+  readonly portfolioClosing: number;
 }
 
 interface ExpectedFiReached {
   readonly yearIndex: number;
   readonly calendarYear: number;
   readonly age: number;
-  readonly closingBalance: number;
+  readonly portfolioClosing: number;
   readonly fiNumber: number;
 }
 
@@ -142,8 +142,9 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     expect(row).toBeDefined();
     if (row === undefined) continue;
 
-    expectToTheCent(row.closingBalance, expectedRow.closingBalance);
-    if (expectedRow.growth !== undefined) expectToTheCent(row.growth, expectedRow.growth);
+    expectToTheCent(row.portfolioClosing, expectedRow.portfolioClosing);
+    if (expectedRow.portfolioGrowth !== undefined)
+      expectToTheCent(row.portfolioGrowth, expectedRow.portfolioGrowth);
     if (expectedRow.contribution !== undefined) {
       expectToTheCent(row.contribution, expectedRow.contribution);
     }
@@ -161,7 +162,7 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     expect(fiReached.age).toBe(expected.fiReached.age);
 
     const row = projection.rows[fiReached.yearIndex];
-    expectToTheCent(row?.closingBalance ?? Number.NaN, expected.fiReached.closingBalance);
+    expectToTheCent(row?.portfolioClosing ?? Number.NaN, expected.fiReached.portfolioClosing);
     expectToTheCent(row?.fiNumber ?? Number.NaN, expected.fiReached.fiNumber);
   }
 
