@@ -40,6 +40,37 @@ Everything is calculated in your browser and saved only on your device.
 Super, tax and property aren't modelled yet; see
 [PLAN.md](PLAN.md) for what comes next.
 
+## Project layout
+
+```
+src/
+  engine/        pure calculations: projection, FI and Coast FIRE figures
+  rules/         statutory rules as dated data (NFR-3): wire schema, RuleSet,
+                 rulesForYear, and data/fy*.json, one file per financial year
+  plan/          Plan types, reducer, defaults
+  persistence/   saved-plan wire types, migrations, IndexedDB store
+  ui/            screens and shared components
+tests/           end-to-end tests (Playwright) and fixtures
+```
+
+## How to add next year's rules
+
+Statutory rates and thresholds live in `src/rules/data/`, not in calculation
+code. When the ATO publishes a new financial year's figures:
+
+1. Copy the latest file, e.g. `src/rules/data/fy2025-26.json`, to
+   `fy2026-27.json`.
+2. Update `financialYear`, `effectiveFrom` (the first day the rules apply, e.g.
+   `2026-07-01`) and every value. Percentages are written as percentages (12,
+   not 0.12) and the contribution base is the per-quarter amount.
+3. Give every value a `sources` link to the page you checked it against. Set
+   `verification.status` to `"verified"` only once you have opened each page
+   and confirmed the value; otherwise leave it `"unverified"` with a note.
+4. Run `npm test`. A test parses every file in the folder, so a missing field
+   or a negative rate fails there. No code changes are needed: the new file is
+   picked up automatically, and replaces the inflation estimate the app uses
+   for years after the previous latest file.
+
 ## Prerequisites
 
 - Node 22 (see `.nvmrc`)

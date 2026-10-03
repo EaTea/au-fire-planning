@@ -20,8 +20,8 @@ export interface ExplanationLine {
   readonly unit: ExplainedUnit;
   /** How this line combines with the ones above it. Absent on the first line. */
   readonly operator?: "+" | "−" | "×" | "÷" | "=";
-  /** Typed in by the user, filled in from a default, or worked out by the engine. */
-  readonly source: "input" | "default" | "calculated";
+  /** Typed in by the user, filled in from a default, set by the law (a rule), or worked out by the engine. */
+  readonly source: "input" | "default" | "rule" | "calculated";
 }
 
 /** A calculated figure and the breakdown that produced it. */

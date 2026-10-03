@@ -89,8 +89,11 @@ export interface Plan {
   readonly portfolios: readonly Portfolio[];
 }
 
-/** Where a resolved value came from: typed in by the user, or filled in from the defaults. */
-export type ValueSource = "input" | "default";
+/**
+ * Where a resolved value came from: typed in by the user, filled in from the
+ * defaults, or set by the law (a statutory rate from the rules data, NFR-3).
+ */
+export type ValueSource = "input" | "default" | "rule";
 
 /** A resolved value together with where it came from, so explanations can say so. */
 export interface Sourced<Value> {

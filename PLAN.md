@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 plan drafted, awaiting approval.
+**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 is in progress.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 in progress |
 
 ## 1. Requirement ordering
 
@@ -1378,7 +1378,8 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved (PR #25). PR A (steps 1 to 4) in progress, one step
+at a time.
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -1740,7 +1741,7 @@ No new dependencies.
 
 #### Step 1 · Rules as data (NFR-3)
 
-- [ ] Done
+- [x] Done (values unverified; see the note below)
 
 1. Add `src/rules/`:
    - `rulesFile.ts`: the Zod schema for one file (above);
@@ -1767,6 +1768,35 @@ No new dependencies.
 **Kind:** behaviour-neutral foundation. Nothing reads the rules yet.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- **The values are unverified.** The network policy blocked ato.gov.au and
+  legislation.gov.au, so the pages could not be opened. The values match
+  what web search reported from ATO pages (SG 12%, $62,500 per quarter,
+  15% and 15%, one-third discount on the 15% rate = 10%). The file records
+  this as `"verification": { "status": "unverified", ... }`. Later, the
+  network was opened to the ATO, but its site blocks automated clients
+  (Akamai "Access Denied"). The owner chose to commit with the values
+  unverified, and to check them before PR A merges (see step 4). Candidate
+  URLs, as stored in `sources`:
+  - SG 12%:
+    https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee
+  - Maximum contribution base $62,500 per quarter:
+    https://www.ato.gov.au/businesses-and-organisations/super-for-employers/quarterly-super-to-30-june-2026/how-much-super-to-pay
+  - Contributions tax 15%, earnings tax 15% and discounted capital gains
+    10% (the 10% is a one-third discount on 15%, so check the page states
+    the discount):
+    https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/self-managed-super-funds-smsf/smsf-administration-and-reporting/how-smsfs-are-taxed
+- Differs from the plan: the rules file has a required top-level
+  `verification` field (`status` is `"verified"` or `"unverified"`, plus an
+  optional `note`).
+- `"rule"` was added to `ExplanationLine.source` in `src/engine/explained.ts`
+  as well as `ValueSource`, because the engine's explanation lines are
+  assigned from `ValueSource`. Nothing displays it yet.
+- The README had no project layout, so a "Project layout" section was added
+  alongside "How to add next year's rules".
+- `rulesForYear` also returns `isEstimated`, true when the thresholds are an
+  inflation estimate past the latest file.
 
 #### Step 2 · Engine: salary
 
@@ -1819,6 +1849,10 @@ No new dependencies.
    - Year by year shows the grown salary until retirement, and "—" after;
    - after a reload, it's still there.
 5. README "What it does": add salary.
+6. **Before PR A merges:** the owner checks the five FY2025–26 values against
+   the ATO pages listed under step 1. Then set
+   `"verification": { "status": "verified", "note": "Checked by the owner on
+   {date}" }`. List this in PR A's description as a checklist item.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A.**
 
@@ -1973,6 +2007,10 @@ No new dependencies.
   backlog requirement.
 - **The FY2026–27 rules file,** once the ATO publishes it, replaces the
   inflation estimate for the maximum contribution base.
+- **M11: clarify the "Tax on earnings" hint** (owner's decision). The field
+  is for a fund's effective rate below 15%, not for approximating Division
+  296, which M11 models from the rules. Confirm Division 296's legislative
+  status when planning M11.
 - **Carried from M1:**
   - flush unsaved edits when the tab closes;
   - write back migrated records once the first migration exists;
@@ -2009,7 +2047,7 @@ No new dependencies.
 - [x] Approve the M4 step-by-step plan.
 - [x] Implement M4 (steps 1 to 5), then open the M4 PR for verification.
 - [x] Owner verifies and merges the M4 PR.
-- [ ] Approve the M5 step-by-step plan (this PR).
+- [x] Approve the M5 step-by-step plan.
 - [ ] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
