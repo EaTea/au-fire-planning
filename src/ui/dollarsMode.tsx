@@ -24,7 +24,7 @@ const DollarsModeContext = createContext<DollarsModeContextValue | null>(null);
 
 /** Props of DollarsModeProvider. */
 interface DollarsModeProviderProps {
-  /** Starting mode; defaults to today's dollars. Tests use it to start in nominal. */
+  /** Starting mode; defaults to nominal dollars. Tests use it to start in today's dollars. */
   readonly initialMode?: DollarsMode;
   readonly children: ReactNode;
 }
@@ -34,7 +34,10 @@ interface DollarsModeProviderProps {
  * src/ui/App.tsx so the toggle and every figure that shows projected dollars
  * agree.
  */
-export function DollarsModeProvider({ initialMode = "today", children }: DollarsModeProviderProps) {
+export function DollarsModeProvider({
+  initialMode = "nominal",
+  children,
+}: DollarsModeProviderProps) {
   const [mode, setMode] = useState<DollarsMode>(initialMode);
 
   return (

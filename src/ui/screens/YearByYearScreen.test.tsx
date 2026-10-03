@@ -38,7 +38,7 @@ const exampleC: Plan = {
   portfolios: [{ id: "portfolio-1", name: "Share portfolio", expectedReturn: 0 }],
 };
 
-/** Renders the screen for a plan with the start year fixed at 2026, in today's dollars unless told otherwise. */
+/** Renders the screen for a plan with the start year fixed at 2026, starting in the default (nominal) dollars. */
 function renderYearByYear(plan: Plan) {
   return render(
     <PlanProvider initialPlan={plan} startYear={2026}>
@@ -88,20 +88,10 @@ describe("YearByYearScreen", () => {
     expect(screen.getAllByRole("row")).toHaveLength(18);
   });
 
-  it("starts in today's dollars: row 1's contribution is $30,000 ÷ 1.025", () => {
+  it("starts in nominal dollars, matching worked example A", () => {
     renderYearByYear(exampleA);
 
-    const row = rowFor(2027);
-    expect(row[0]).toBe("2027");
-    expect(row[1]).toBe("35");
-    expect(row[2]).toBe("$29,268");
-  });
-
-  it("shows nominal dollars after switching, matching worked example A", async () => {
-    const user = userEvent.setup();
-    renderYearByYear(exampleA);
-
-    await user.click(screen.getByRole("button", { name: "Nominal" }));
+    expect(screen.getByRole("button", { name: "Nominal" })).toHaveAttribute("aria-pressed", "true");
 
     // Row 1: growth $50,400, contribution $30,000, balance $800,400. Row 2's balance is $886,428.
     expect(rowFor(2027).slice(2, 5)).toEqual(["$30,000", "$50,400", "$800,400"]);
@@ -112,6 +102,18 @@ describe("YearByYearScreen", () => {
     expect(fiRow[4]).toBe("$2,158,231");
     expect(fiRow[6]).toBe("$2,151,822");
     expect(fiRow[7]).toBe("100.3%");
+  });
+
+  it("shows today's dollars after switching: row 1's contribution is $30,000 ÷ 1.025", async () => {
+    const user = userEvent.setup();
+    renderYearByYear(exampleA);
+
+    await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+    const row = rowFor(2027);
+    expect(row[0]).toBe("2027");
+    expect(row[1]).toBe("35");
+    expect(row[2]).toBe("$29,268");
   });
 
   it("highlights only the FI row", () => {
