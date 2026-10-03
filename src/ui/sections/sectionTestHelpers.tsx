@@ -21,10 +21,10 @@ function PlanDump() {
   return <pre data-testid="plan-dump">{JSON.stringify(usePlan())}</pre>;
 }
 
-/** Renders `section` with the given starting plan; returns `readPlan` for assertions on the plan. */
+/** Renders `section` (with the clock fixed in 2026) with the given starting plan; returns `readPlan` for assertions on the plan. */
 export function renderSection(section: ReactElement, initialPlan: Plan = blankPlan) {
   const rendered = render(
-    <PlanProvider initialPlan={initialPlan}>
+    <PlanProvider initialPlan={initialPlan} startYear={2026}>
       {section}
       <PlanDump />
     </PlanProvider>,

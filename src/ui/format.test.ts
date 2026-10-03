@@ -5,9 +5,11 @@ import {
   formatDollars,
   formatFactor,
   formatPercent,
+  formatYear,
   parseAge,
   parseDollars,
   parsePercent,
+  parseYear,
 } from "./format";
 
 // Unit tests for the number formatting and parsing used by every field and result.
@@ -103,5 +105,21 @@ describe("parseAge and formatAge", () => {
     expect(parseAge("34.5")).toBeNaN();
     expect(parseAge("abc")).toBeNaN();
     expect(parseAge("-3")).toBeNaN();
+  });
+});
+
+describe("parseYear and formatYear", () => {
+  // Years have no thousands separator, unlike dollars.
+  it("accepts whole years and formats them without a separator", () => {
+    expect(parseYear("2030")).toBe(2030);
+    expect(parseYear(" 2030 ")).toBe(2030);
+    expect(formatYear(2030)).toBe("2030");
+  });
+
+  it("returns undefined for empty text and NaN for anything else", () => {
+    expect(parseYear("")).toBeUndefined();
+    expect(parseYear("2030.5")).toBeNaN();
+    expect(parseYear("20x0")).toBeNaN();
+    expect(parseYear("-3")).toBeNaN();
   });
 });

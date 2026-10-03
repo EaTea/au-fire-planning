@@ -114,3 +114,21 @@ export function parseAge(text: string): number | undefined {
 
   return Number(trimmed);
 }
+
+/**
+ * Formats a calendar year for a field, e.g. 2030 becomes "2030". Unlike dollars
+ * there is no thousands separator ("2,030" would read as a quantity).
+ */
+export function formatYear(year: number): string {
+  return String(year);
+}
+
+/**
+ * Reads the text a user typed into a YearField. Accepts whole numbers such as
+ * "2030". Returns undefined for empty text (cleared) and NaN for anything else
+ * ("2030.5", "abc", "-3"). The allowed range is checked by the field's min and
+ * max, not here.
+ */
+export function parseYear(text: string): number | undefined {
+  return parseAge(text);
+}

@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1 and the colour scheme are done and deployed. M2 plan drafted, awaiting approval.
+**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is implemented and awaiting verification. PR B (steps 8–10) is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0 and M1 done. M2 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A implemented, awaiting verification |
 
 ## 1. Requirement ordering
 
@@ -1218,7 +1218,8 @@ Conventions settled while building M2, which later milestones rely on:
 
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
-**Status:** draft, awaiting the owner's approval. Do not implement yet.
+**Status:** approved. PR A (steps 1 to 7) implemented, awaiting the owner's
+verification. PR B (steps 8 to 10) not started.
 
 **Kind:** behavior change.
 
@@ -1546,7 +1547,7 @@ dependencies.
 
 #### Step 1 · Rename the portfolio fields in projection rows
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor. Behaviour doesn't change.
 
@@ -1561,7 +1562,7 @@ changes to tests.
 
 #### Step 2 · Engine: cash, spending, dated expenses and shortfalls
 
-- [ ] Done
+- [x] Done
 
 1. Add the new optional fields to `src/plan/types.ts` (`DatedExpense`, cash,
    interest rate, end age), and the defaults to `src/plan/defaults.ts`: end
@@ -1599,11 +1600,27 @@ changes to tests.
      - more cash never creates a shortfall that wasn't there;
      - a later end age never removes a shortfall year that's still in range.
 
+**As built:**
+- M2's example B in `m2-growth.json` retired at 41, so its row 2 (age 42)
+  became a retired year that draws spending. Its retirement age is now 45,
+  with the stop age still entered as 41. The scenario still tests what it
+  was for, contributions stopping, with the same by-hand figures.
+- Example C doesn't reach FI (`fiReached: null` in the fixture).
+- M2's property "each balance is the previous plus growth plus
+  contribution" was replaced by the money-conservation property, because
+  retired years now draw spending.
+- `ProjectionInputs.openingBalance` became `portfolioOpening`, alongside
+  `cashOpening`.
+- The `lasts` explanation lines are "Cash at end of {year}", "+ Portfolio"
+  and "= Investable net worth".
+- The FI reached tile's "no withdrawals" sub-line is now inaccurate. Step 7
+  fixes it with the rest of Results.
+
 **Check:** `npm run check` passes.
 
 #### Step 3 · Plan state and wire format
 
-- [ ] Done
+- [x] Done
 
 1. Add reducer actions. An `undefined` value clears back to the default.
    - `setProjectionEndAge { age? }`
@@ -1628,7 +1645,7 @@ changes to tests.
 
 #### Step 4 · Shared pieces: `YearField` and `EditableTable`
 
-- [ ] Done
+- [x] Done
 
 1. `YearField` in `src/ui/components/`: a `NumberField` for whole calendar
    years, with `min`/`max`. It needs `parseYear` in `format.ts`, and is
@@ -1656,11 +1673,24 @@ changes to tests.
      - adding a row opens its first cell;
      - keyboard-only use.
 
+**As built:**
+- Extra props: `getRowId`, `getRowName` ("unnamed row" when empty),
+  `addNoun`, `emptyText`. `onAdd()` returns the new row's id, so the caller
+  generates ids.
+- Editors are plain `NumberField`/`TextField` and save through their own
+  `onChange`. On Enter, the table waits one tick, then closes the editor
+  only if the field isn't showing a validation error (`aria-invalid`).
+  Invalid text stays open for correction, and is discarded if focus leaves.
+- Escape sets a guard so the blur that some browsers fire when a field is
+  removed can't commit the cancelled text. jsdom doesn't fire that blur, so
+  step 5's E2E test covers Enter, invalid text and Escape in Chromium.
+- No new colour pairs: the table uses pairs already in `tokens.test.ts`.
+
 **Check:** `npm run check` passes.
 
 #### Step 5 · Inputs: end age, cash, interest, withdrawal rule, dated expenses
 
-- [ ] Done
+- [x] Done
 
 1. **Household:** add `AgeField` "Plan until age" (default 95, min 50,
    max 110). Hint: "The projection runs to this age."
@@ -1689,12 +1719,39 @@ changes to tests.
 7. Add Household's new field and the dated expenses table to the contrast
    sweep (`tests/e2e/contrast.spec.ts`). Valid and invalid passes cover the
    table with one row.
+8. E2E (`tests/e2e/datedExpenses.spec.ts`), in a real browser:
+   - add an expense, type a name and amount, and commit with Enter;
+   - type invalid text in the amount and press Enter: the editor stays open
+     with an error;
+   - press Escape on an edit: the old value stays;
+   - duplicate and delete a row with the keyboard only;
+   - after a reload, the remaining rows are still there.
+
+**As built:**
+- Sections read the start year with a new `usePlanStartYear()` hook from
+  `PlanProvider`, which exposes the same value it passes to `summarisePlan`.
+  `renderSection` in the section tests fixes it at 2026.
+- "Plan until age" sits in the existing "About you" card
+  (`PersonAgesSection`), not a new card. `CashSection` is on Assets,
+  `DatedExpensesSection` on Income & expenses.
+- The year fields' upper limit is the year the person reaches the plan-until
+  age. It is left off until the current age is entered, and when the ages are
+  inconsistent (the missing-inputs banner reports that).
+- The editors' field labels ("Amount per year for Replace car") are visually
+  hidden inside table cells (`app.css`), because the column header already
+  names them.
+- `missingInputSteps.ts` already mapped `projectionEndAge` (added in step 2),
+  so only a Results test was added for the two new messages.
+- In the contrast sweep, the valid pass types 90 into "Plan until age" (50
+  would make the plan incomplete), and `fillPage` adds one table row, then
+  gives it a valid amount with the row menu open, or an invalid amount left
+  in its editor showing the error.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
 #### Step 6 · Year by year: drawdown, phases and shortfalls
 
-- [ ] Done
+- [x] Done
 
 1. Replace the table's columns with the M3 set above, all money through
    `useMoneyFormatter`. Rows now run from today to the end age.
@@ -1713,11 +1770,26 @@ changes to tests.
    - the banner text for a range and for a single year;
    - `?year=` highlights the row.
 
+**As built:**
+- `ProjectionTable` gained `getBandText` (a full-width band row opens each
+  new band) and `scrollToKey` (scrolls to the row and outlines it for 4
+  seconds, marked `data-outlined`). The screen reads `?year=` with
+  `useSearchParams` and ignores a year that isn't in the table.
+- "Growth & interest" is the portfolio growth plus the cash interest.
+- The status cell is "Shortfall −$6,729" in a `projection-shortfall` span.
+  The banner reads "1 year can't be funded: 2031", or "3 years can't be
+  funded: 2031 – 2033"; separate runs are joined by commas.
+- Error text on the raised background (the FI row) is 3.9:1, so it isn't in
+  `tokens.test.ts`. A shortfall can't coincide with the FI row, because a
+  shortfall year ends with $0 investable. Band text (muted on raised) is.
+- The contrast sweep has a shortfall pass (example B, entered through the
+  screens), with the banner, the outlined row and both dollar modes.
+
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
 #### Step 7 · Results: does the money last? (end of PR A)
 
-- [ ] Done
+- [x] Done
 
 1. Add the "Money lasts" tile, with its explanation, as described above.
 2. When the projection runs out, show a `Banner` on Results linking to Year
@@ -1733,6 +1805,16 @@ changes to tests.
    - add a dated expense in Income & expenses, and check Year by year's
      spending changes for that year;
    - after a reload, the cash, end age and dated expense are still there.
+
+**As built:**
+- The tile reads "To age 95 ✓" with "{investable} left in {year} (nominal
+  dollars)", or "Runs out at age 65" with "2031 · 1 year can't be funded". The
+  amount is nominal and doesn't follow the toggle, like the FI number at
+  retirement, so the sub-line says so.
+- The FI reached tile's sub-line when FI isn't reached is now "With today's
+  inputs".
+- The warning banner is shown on Results only when the money runs out.
+- README's "What it does" now covers M3.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A** for
 the owner to verify.
@@ -1835,8 +1917,9 @@ to verify.
 - [x] Implement the green and gold scheme (steps 1 to 3), one PR.
 - [x] Implement M2 (subagent, step by step), then open the M2 PR for verification.
 - [x] Owner verifies and merges the M2 PR.
-- [ ] Approve the M3 step-by-step plan (this PR).
-- [ ] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
+- [x] Approve the M3 step-by-step plan.
+- [x] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
+- [ ] Owner verifies and merges M3 PR A.
 - [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.

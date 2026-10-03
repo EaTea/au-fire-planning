@@ -5,7 +5,7 @@ import { PersonAgesSection } from "../sections/PersonAgesSection";
 const step = steps.find((candidate) => candidate.id === "household")!;
 
 /**
- * The Household step: your current and target retirement ages. A page layout
+ * The Household step: your current and target retirement ages, and the age the plan runs until. A page layout
  * around self-contained sections; routed from App, and the page the welcome
  * screen's "Start planning" leads to.
  */

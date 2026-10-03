@@ -43,6 +43,22 @@ const exampleC: Plan = {
   portfolios: [{ id: "portfolio-1", name: "Share portfolio", expectedReturn: 0 }],
 };
 
+/** Worked example A from tests/worked-examples/m3-drawdown.json: example A plus $20,000 cash; the money lasts to 95. */
+const exampleAWithCash: Plan = { ...exampleA, cash: { balance: 20000 } };
+
+/** Worked example B from the same fixture: age 60 retired, $10,000 cash, runs short in 2031. */
+const exampleB: Plan = {
+  ...blankPlan,
+  household: {
+    people: [{ id: "person-1", label: "Person 1", currentAge: 60, targetRetirementAge: 60 }],
+    projectionEndAge: 65,
+  },
+  expenses: { livingAnnual: 30000, retirementSpending: { kind: "amount", annual: 30000 } },
+  assumptions: { inflationRate: 0, interestRate: 0.05 },
+  cash: { balance: 10000 },
+  portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 100000, expectedReturn: 0.1 }],
+};
+
 /** Renders the Results screen for a plan, with a stand-in route that shows where a link went. */
 function renderResults(plan: Plan) {
   return render(
@@ -51,6 +67,7 @@ function renderResults(plan: Plan) {
         <Routes>
           <Route path="/results" element={<ResultsScreen />} />
           <Route path="/income-expenses" element={<p>Income and expenses page</p>} />
+          <Route path="/year-by-year" element={<p>Year by year page</p>} />
         </Routes>
       </MemoryRouter>
     </PlanProvider>,
@@ -124,13 +141,17 @@ describe("ResultsScreen", () => {
   it("says what is not modelled yet when incomplete", () => {
     renderResults(blankPlan);
 
-    expect(screen.getByText(/Not yet modelled: withdrawals in retirement/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Not yet modelled: super \(M5\), the bridge to super \(M6\)/),
+    ).toBeInTheDocument();
   });
 
   it("says what is not modelled yet when complete", () => {
     renderResults(workedPlan);
 
-    expect(screen.getByText(/Not yet modelled: withdrawals in retirement/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Not yet modelled: super \(M5\), the bridge to super \(M6\)/),
+    ).toBeInTheDocument();
   });
 
   describe("with the projection", () => {
@@ -173,11 +194,63 @@ describe("ResultsScreen", () => {
       ]);
     });
 
+    it("says the money lasts to the end age, with the money left and its breakdown (example A)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      expect(screen.getByText("Money lasts")).toBeInTheDocument();
+      expect(screen.getByText("To age 95 ✓")).toBeInTheDocument();
+      expect(screen.getByText("$24,101,430 left in 2087 (nominal dollars)")).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+      // Tiles in order: FI number, Progress, FI reached, Money lasts.
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
+        "Cash at end of 2087 (age 95)$0",
+        "+ Portfolio$24,101,430",
+        "= Investable net worth$24,101,430",
+      ]);
+    });
+
+    it("says when the money runs out, with the shortfall working (example B)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleB);
+
+      // FI isn't reached in example B, so its tile has no breakdown: Money lasts is the third.
+      expect(screen.getByText("Runs out at age 65")).toBeInTheDocument();
+      expect(screen.getByText("2031 · 1 year can't be funded")).toBeInTheDocument();
+
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[2]!);
+      expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
+        "Spending to fund in 2031$30,000",
+        "− Cash and portfolio available$23,271",
+        "= Shortfall$6,729",
+      ]);
+    });
+
+    it("counts several unfunded years in the tile", () => {
+      renderResults({ ...exampleB, household: { ...exampleB.household, projectionEndAge: 67 } });
+
+      expect(screen.getByText("2031 · 3 years can't be funded")).toBeInTheDocument();
+    });
+
+    it("warns with a link to Year by year when the money runs out", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleB);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Your money runs out at age 65 (2031). See the years that can't be funded.",
+      );
+
+      await user.click(screen.getByRole("link", { name: "See the years that can't be funded." }));
+      expect(screen.getByText("Year by year page")).toBeInTheDocument();
+    });
+
     it("says FI isn't reached when no year gets there", () => {
       renderResults(exampleC);
 
-      expect(screen.getByText("Not by age 100")).toBeInTheDocument();
-      expect(screen.getByText("With today's inputs and no withdrawals")).toBeInTheDocument();
+      expect(screen.getByText("Not by age 95")).toBeInTheDocument();
+      expect(screen.getByText("With today's inputs")).toBeInTheDocument();
     });
 
     it("keeps the M1 tiles and asks for the missing ages when the projection is incomplete", () => {
@@ -189,6 +262,33 @@ describe("ResultsScreen", () => {
       expect(screen.getByRole("link", { name: "Current age → Household" })).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: "Target retirement age → Household" }),
+      ).toBeInTheDocument();
+    });
+
+    it("links the plan-until age validation messages to the Household step", () => {
+      renderResults({
+        ...exampleA,
+        household: { ...exampleA.household, projectionEndAge: 50 },
+      });
+
+      expect(
+        screen.getByRole("link", {
+          name: "Target retirement age must be before your plan-until age → Household",
+        }),
+      ).toBeInTheDocument();
+
+      renderResults({
+        ...exampleA,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 60, targetRetirementAge: 60 }],
+          projectionEndAge: 55,
+        },
+      });
+
+      expect(
+        screen.getByRole("link", {
+          name: "Plan until age must be after your current age → Household",
+        }),
       ).toBeInTheDocument();
     });
   });
