@@ -1861,11 +1861,22 @@ the owner to verify.
 
 #### Step 9 · Results: earliest retirement tile
 
-- [ ] Done
+- [x] Done
 
 1. Add the "Earliest retirement" tile, with its explanation, as described
    above. It sits after "FI reached".
 2. Tests for the feasible and not-feasible cases, using examples A and B.
+
+**As built:**
+- The tile sits after "FI reached" and before "Money lasts". Feasible: "Age
+  43", sub-line "2035 · your target is 50 (2042)", with the target age and
+  year from the projection summary (`retirementAge`, `retirementYear`).
+- Not feasible: "Not feasible by age {end age − 1}", sub-line "Even retiring
+  at {end age − 1}, the money runs short". It has the engine's one-line
+  explanation.
+- The contrast sweep's "every explanation open" passes already open every
+  "How is this" button, so the new tile's breakdown is covered without
+  changes.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 

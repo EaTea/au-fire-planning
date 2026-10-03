@@ -203,8 +203,8 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("$24,101,430 left in 2087 (nominal dollars)")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-      // Tiles in order: FI number, Progress, FI reached, Money lasts.
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      // Tiles in order: FI number, Progress, FI reached, Earliest retirement, Money lasts.
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[4]!);
       expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
         "Cash at end of 2087 (age 95)$0",
         "+ Portfolio$24,101,430",
@@ -212,15 +212,53 @@ describe("ResultsScreen", () => {
       ]);
     });
 
+    it("shows the earliest retirement age against the target, with its breakdown (example A)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      expect(screen.getByText("Earliest retirement")).toBeInTheDocument();
+      expect(screen.getByText("Age 43")).toBeInTheDocument();
+      expect(screen.getByText("2035 · your target is 50 (2042)")).toBeInTheDocument();
+
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      const rows = screen.getAllByRole("row").map((row) => row.textContent);
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toMatch(/^Retiring at 42: runs short in 2085 \(age 93\)\$/);
+      expect(rows[1]).toMatch(/^Retiring at 43: lasts to age 95\$/);
+      expect(rows[2]).toBe("= Earliest feasible retirement age43");
+    });
+
+    it("shows the earliest retirement age when it is after the target (example B)", () => {
+      renderResults(exampleB);
+
+      expect(screen.getByText("Age 61")).toBeInTheDocument();
+      expect(screen.getByText("2027 · your target is 60 (2026)")).toBeInTheDocument();
+    });
+
+    it("says when no retirement age is feasible", () => {
+      renderResults({
+        ...exampleB,
+        expenses: {
+          ...exampleB.expenses,
+          datedExpenses: [
+            { id: "big", name: "Huge", annual: 10_000_000, fromYear: 2028, toYear: 2028 },
+          ],
+        },
+      });
+
+      expect(screen.getByText("Not feasible by age 64")).toBeInTheDocument();
+      expect(screen.getByText("Even retiring at 64, the money runs short")).toBeInTheDocument();
+    });
+
     it("says when the money runs out, with the shortfall working (example B)", async () => {
       const user = userEvent.setup();
       renderResults(exampleB);
 
-      // FI isn't reached in example B, so its tile has no breakdown: Money lasts is the third.
+      // FI isn't reached in example B, so its tile has no breakdown: Earliest retirement is the third, Money lasts the fourth.
       expect(screen.getByText("Runs out at age 65")).toBeInTheDocument();
       expect(screen.getByText("2031 · 1 year can't be funded")).toBeInTheDocument();
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[2]!);
+      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
       expect(screen.getAllByRole("row").map((row) => row.textContent)).toEqual([
         "Spending to fund in 2031$30,000",
         "− Cash and portfolio available$23,271",
