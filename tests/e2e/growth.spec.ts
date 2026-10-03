@@ -4,8 +4,8 @@ import { expect, startFresh, test } from "./fixtures";
 
 // End-to-end test for M2's headline flow (IN-2, IN-3, IN-11, IN-15, IN-18,
 // OUT-1, OUT-2, OUT-4): enter worked example A through the real screens, read
-// the FI year on Results, then check the Year by year table and its dollars
-// toggle, and that everything survives a reload. The clock is fixed in 2026
+// the FI year on Results, then check the Year by year table below it and the
+// page's dollars toggle, and that everything survives a reload. The clock is fixed in 2026
 // so the calendar years don't depend on the real date.
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
@@ -16,7 +16,9 @@ async function enter(page: Page, label: string, value: string): Promise<void> {
 
 /** The cell texts of the Year by year row for `year`. */
 async function rowCells(page: Page, year: number): Promise<string[]> {
+  // Scoped to the table: the chart's hidden data table on Results has a row per year too.
   const row = page
+    .getByRole("table", { name: "Year by year projection" })
     .getByRole("row")
     .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
 
@@ -57,9 +59,9 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await expect(fiReachedTile.getByText("2038", { exact: true })).toBeVisible();
   await expect(fiReachedTile.getByText("Age 46", { exact: true })).toBeVisible();
 
-  // Year by year: the 2038 row is the only highlighted one.
-  await page.getByRole("link", { name: "Next: Year by year →" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Year by year" })).toBeVisible();
+  // Year by year, further down the same page: the 2038 row is the only highlighted one.
+  await page.getByRole("link", { name: "Year by year ↓" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Year by year" })).toBeInViewport();
 
   const highlightedRows = page.locator("tr[data-highlighted='true']");
   await expect(highlightedRows).toHaveCount(1);
@@ -108,8 +110,7 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await expect(page.locator("tr[data-highlighted='true']").getByRole("cell").first()).toHaveText(
     "2038",
   );
-  await page.getByRole("link", { name: "← Results" }).click();
-  await expect(page.getByText("Age 46", { exact: true })).toBeVisible();
+  await expect(fiReachedTile.getByText("Age 46", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "← Assumptions" }).click();
   await expect(page.getByLabel("Inflation per year")).toHaveValue("2.5%");
   await page.getByRole("link", { name: "← Assets" }).click();

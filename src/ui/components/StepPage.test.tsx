@@ -55,4 +55,19 @@ describe("StepPage", () => {
       "/results",
     );
   });
+
+  // A page-wide control, such as the dollars toggle on Results, sits beside the title.
+  it("shows a header action beside the title when given one", () => {
+    render(
+      <MemoryRouter>
+        <StepPage step={steps[4] as Step} intro="Intro text" headerAction={<button>Toggle</button>}>
+          <p>Page content</p>
+        </StepPage>
+      </MemoryRouter>,
+    );
+
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title.parentElement).toHaveClass("page-header");
+    expect(title.parentElement).toContainElement(screen.getByRole("button", { name: "Toggle" }));
+  });
 });

@@ -6,7 +6,7 @@ import { expect, startFresh, test } from "./fixtures";
 // (tests/worked-examples/m3-drawdown.json) through the real screens, see the
 // earliest retirement age, check the chart draws its lines in the role colours
 // (not the library's default blue), that hovering shows a tooltip, and that
-// clicking a year opens Year by year with that row outlined. The clock is
+// clicking a year scrolls to that row, outlined, on the same page. The clock is
 // fixed in 2026 so the calendar years don't depend on the real date.
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
@@ -43,9 +43,9 @@ test("worked example A: earliest retirement at 43, a coloured chart with a toolt
   const earliestTile = page.locator(".metric", { hasText: "Earliest retirement" });
   await expect(earliestTile.getByText("Age 43", { exact: true })).toBeVisible();
 
-  // The chart card, with the dollars toggle in its header, drawn in the role colours.
+  // The chart card, drawn in the role colours, following the page's dollars toggle.
   const chartCard = page.locator("section.card", { hasText: "Investable net worth vs FI number" });
-  await expect(chartCard.getByRole("button", { name: "Nominal" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Nominal" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -78,9 +78,9 @@ test("worked example A: earliest retirement at 43, a coloured chart with a toolt
   await expect(tooltip.locator(".chart-tooltip-row")).toHaveCount(2);
   await expect(tooltip.getByText(/^\$[\d,]+$/)).toHaveCount(2);
 
-  // Clicking a year opens Year by year with that row outlined.
+  // Clicking a year scrolls down to that row in the table on the same page, outlined.
   await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
-  await expect(page.getByRole("heading", { level: 1, name: "Year by year" })).toBeVisible();
+  await expect(page).toHaveURL(/#\/results\?year=\d{4}$/);
 
   const requestedYear = new URL(page.url()).hash.match(/year=(\d{4})/)?.[1];
   expect(requestedYear).toBeDefined();
@@ -88,4 +88,5 @@ test("worked example A: earliest retirement at 43, a coloured chart with a toolt
   const outlinedRow = page.locator("tr[data-outlined='true']");
   await expect(outlinedRow).toHaveCount(1);
   await expect(outlinedRow.getByRole("cell").first()).toHaveText(requestedYear!);
+  await expect(outlinedRow).toBeInViewport();
 });

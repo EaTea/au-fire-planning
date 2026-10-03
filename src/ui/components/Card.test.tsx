@@ -14,4 +14,13 @@ describe("Card", () => {
     expect(screen.getByRole("heading", { name: "Living expenses" })).toBeInTheDocument();
     expect(screen.getByText("Inside")).toBeInTheDocument();
   });
+
+  it("carries an id, so an in-page link can scroll to it", () => {
+    render(<Card title="Chart" id="fire-chart" />);
+
+    expect(screen.getByRole("heading", { name: "Chart" }).closest("section")).toHaveAttribute(
+      "id",
+      "fire-chart",
+    );
+  });
 });

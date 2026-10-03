@@ -348,7 +348,7 @@ test("the results and year by year pages have readable text with a shortfall, it
 
   // Results with the "Money lasts" tile, the runs-out banner and every explanation open.
   await page.goto("#/results");
-  await expect(page.getByRole("alert")).toContainText("Your money runs out at age 65");
+  await expect(page.getByRole("alert").first()).toContainText("Your money runs out at age 65");
   for (const explainToggle of await page.getByRole("button", { name: /How is this/ }).all()) {
     await explainToggle.click();
   }

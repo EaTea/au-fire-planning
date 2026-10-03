@@ -2048,7 +2048,15 @@ them to the "On this page" links.
 
 #### Step A · Year by year as a section of Results
 
-- [ ] Done
+- [x] Done
+
+Notes from building it:
+- `?view=` scrolling landed here, not in step B, because the "On this
+  page" links need it. The links are "FIRE chart" and "Year by year ↓":
+  the headline numbers sit just under them, so a link to them adds nothing.
+- `StepPage` gained a `headerAction` slot for the toggle, and `Card` an
+  `id` for the chart's link target.
+- `YearByYearScreen` is a thin wrapper around the section until step B.
 
 1. Turn `YearByYearScreen` into `YearByYearSection`: same table, bands,
    status cells, shortfall banner and `?year=` scrolling, but no
