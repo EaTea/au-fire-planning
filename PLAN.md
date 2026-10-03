@@ -1673,7 +1673,18 @@ No new dependencies.
 
 #### Step 2 · Results: Coast FIRE tile
 
-- [ ] Done
+- [x] Done
+
+**As built:** the tile is `CoastFireTile` in `ResultsScreen.tsx`, between
+"Progress to FI" and "FI reached", and only when the projection is
+complete. When Coast FIRE isn't reached, the breakdown ends with the
+retirement-year row, in the same three-line shape as the reached lines:
+"Investable at end of {year} (age {age})", "− Coast FIRE number in
+{year}", and "= Short of Coast FIRE", valued at the margin (negative). The
+plan didn't name that last label, so it's a judgement call. Existing
+Results tests now open a tile's breakdown by its label (`openExplanation`)
+instead of by button index. The contrast sweeps click every "How is this"
+toggle, so they already cover the new tile.
 
 1. Add the Coast FIRE tile, as described above, after "Progress to FI".
 2. Tests:

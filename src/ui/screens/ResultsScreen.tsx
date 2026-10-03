@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 
-import type { Explained } from "../../engine/explained";
+import type { Explained, ExplanationLine } from "../../engine/explained";
 import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
@@ -64,6 +64,7 @@ export function ResultsScreen() {
 
             {summary.projection.status === "complete" ? (
               <>
+                <CoastFireTile projection={summary.projection} />
                 <FiReachedTile projection={summary.projection} />
                 <EarliestRetirementTile projection={summary.projection} />
                 <MoneyLastsTile projection={summary.projection} />
@@ -282,4 +283,84 @@ function RunsOutBanner({ projection }: { readonly projection: CompleteProjection
       </div>
     </Banner>
   );
+}
+
+/**
+ * The "Coast FIRE" tile (COAST-1, COAST-2): the savings you need today so
+ * that, with no further contributions, you would still reach the FI number
+ * by your target retirement age; the same amount in the retirement year's
+ * dollars; and whether (and when) your savings get there. Placed after
+ * "Progress to FI". The headline is a figure for today (row 0), so it reads
+ * the same in both dollar modes and does not use the dollars-mode formatter;
+ * the retirement-year figure is nominal by definition. Shown only when the
+ * projection is complete, since it needs the retirement year.
+ */
+function CoastFireTile({ projection }: { readonly projection: CompleteProjection }) {
+  const { coast } = projection;
+
+  const inRetirementYearLine = `${formatDollars(coast.numberInRetirementYearDollars)} in ${projection.retirementYear} dollars`;
+  const statusLine = describeCoastFireStatus(coast.reached, projection.retirementAge);
+
+  return (
+    <MetricTile
+      label="Coast FIRE"
+      value={formatDollars(coast.number.value)}
+      subLine={[inRetirementYearLine, statusLine]}
+      explanation={explainCoastFireTile(coast)}
+    />
+  );
+}
+
+/**
+ * The tile's status sub-line: reached already (year 0), reached in a later
+ * year, or not before retirement. Used by CoastFireTile.
+ */
+function describeCoastFireStatus(
+  reached: CompleteProjection["coast"]["reached"],
+  retirementAge: number,
+): string {
+  if (reached === undefined) return `Not before retirement at ${retirementAge}`;
+  if (reached.yearIndex === 0) return "Reached: contributions are now optional";
+
+  return `Reached in ${reached.calendarYear}, at age ${reached.age}`;
+}
+
+/**
+ * The Coast FIRE tile's breakdown: the number's own lines, then either the
+ * year it is reached (the engine's lines) or, when it isn't reached, the
+ * retirement-year row: investable net worth against the Coast FIRE number,
+ * ending in the (negative) margin. Used by CoastFireTile.
+ */
+function explainCoastFireTile(coast: CompleteProjection["coast"]): Explained {
+  if (coast.reached !== undefined) {
+    return { ...coast.number, lines: [...coast.number.lines, ...coast.reached.explanation.lines] };
+  }
+
+  const retirementPoint = coast.path[coast.path.length - 1];
+  if (retirementPoint === undefined) return coast.number;
+
+  const retirementRowLines: ExplanationLine[] = [
+    {
+      label: `Investable at end of ${retirementPoint.calendarYear} (age ${retirementPoint.age})`,
+      value: retirementPoint.investable,
+      unit: "dollars",
+      source: "calculated",
+    },
+    {
+      label: `Coast FIRE number in ${retirementPoint.calendarYear}`,
+      value: retirementPoint.coastNumber,
+      unit: "dollars",
+      operator: "−",
+      source: "calculated",
+    },
+    {
+      label: "Short of Coast FIRE",
+      value: retirementPoint.investable - retirementPoint.coastNumber,
+      unit: "dollars",
+      operator: "=",
+      source: "calculated",
+    },
+  ];
+
+  return { ...coast.number, lines: [...coast.number.lines, ...retirementRowLines] };
 }
