@@ -196,3 +196,193 @@ describe("planReducer", () => {
     ).toEqual(blank);
   });
 });
+
+// M3 actions: end age, cash, interest and the dated expenses table.
+describe("planReducer: drawdown actions", () => {
+  /** A plan holding three dated expenses, ids "a", "b" and "c". */
+  function buildPlanWithExpenses(): Plan {
+    const blank = buildBlankPlan();
+
+    return {
+      ...blank,
+      expenses: {
+        datedExpenses: [
+          { id: "a", name: "Car", annual: 30000, fromYear: 2028, toYear: 2028 },
+          { id: "b", name: "School", annual: 10000, fromYear: 2029, toYear: 2030 },
+          { id: "c", name: "Trip", fromYear: 2031, toYear: 2031 },
+        ],
+      },
+    };
+  }
+
+  // The end age lives in the household and clears to unset (default 95).
+  it("sets and clears the projection end age", () => {
+    const set = planReducer(buildBlankPlan(), { type: "setProjectionEndAge", age: 90 });
+    expect(set.household.projectionEndAge).toBe(90);
+
+    const cleared = planReducer(set, { type: "setProjectionEndAge" });
+    expect(cleared.household.projectionEndAge).toBeUndefined();
+    expect(cleared.household.people).toEqual(set.household.people);
+  });
+
+  // The cash balance is stored under `cash` and clears to unset (default $0).
+  it("sets and clears the cash balance", () => {
+    const set = planReducer(buildBlankPlan(), { type: "setCashBalance", balance: 20000 });
+    expect(set.cash?.balance).toBe(20000);
+
+    const cleared = planReducer(set, { type: "setCashBalance" });
+    expect(cleared.cash?.balance).toBeUndefined();
+  });
+
+  // The interest rate lives in assumptions and clears to unset (default 4%).
+  it("sets and clears the interest rate", () => {
+    const set = planReducer(buildBlankPlan(), { type: "setInterestRate", rate: 0.035 });
+    expect(set.assumptions.interestRate).toBe(0.035);
+
+    const cleared = planReducer(set, { type: "setInterestRate" });
+    expect(cleared.assumptions.interestRate).toBeUndefined();
+  });
+
+  // A new row is a valid one-off in the year after the start year, with no amount yet.
+  it("adds a dated expense as a one-off in the year after the start year", () => {
+    const plan = planReducer(buildBlankPlan(), {
+      type: "addDatedExpense",
+      id: "new",
+      startYear: 2026,
+    });
+
+    expect(plan.expenses.datedExpenses).toStrictEqual([
+      { id: "new", name: "", fromYear: 2027, toYear: 2027 },
+    ]);
+  });
+
+  // New rows go at the end of the table.
+  it("appends to the existing dated expenses", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "addDatedExpense",
+      id: "d",
+      startYear: 2026,
+    });
+
+    expect(plan.expenses.datedExpenses?.map((expense) => expense.id)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  // Only the named row changes, and only the named fields.
+  it("updates one dated expense's name, amount and years", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "b",
+      changes: { name: "Fees", annual: 12000, toYear: 2032 },
+    });
+
+    expect(plan.expenses.datedExpenses?.[1]).toStrictEqual({
+      id: "b",
+      name: "Fees",
+      annual: 12000,
+      fromYear: 2029,
+      toYear: 2032,
+    });
+    expect(plan.expenses.datedExpenses?.[0]).toStrictEqual(
+      buildPlanWithExpenses().expenses.datedExpenses?.[0],
+    );
+  });
+
+  // Clearing the amount sets it back to unset, which counts as $0.
+  it("clears a dated expense's amount", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "a",
+      changes: { annual: undefined },
+    });
+
+    expect(plan.expenses.datedExpenses?.[0]?.annual).toBeUndefined();
+  });
+
+  // Moving "From" past "To" drags "To" along, so the range stays valid.
+  it("moves toYear up when fromYear passes it", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "b",
+      changes: { fromYear: 2035 },
+    });
+
+    expect(plan.expenses.datedExpenses?.[1]).toMatchObject({ fromYear: 2035, toYear: 2035 });
+  });
+
+  // Moving "From" within the range leaves "To" alone.
+  it("leaves toYear alone when fromYear stays before it", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "b",
+      changes: { fromYear: 2030 },
+    });
+
+    expect(plan.expenses.datedExpenses?.[1]).toMatchObject({ fromYear: 2030, toYear: 2030 });
+
+    const wider = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "b",
+      changes: { fromYear: 2027 },
+    });
+    expect(wider.expenses.datedExpenses?.[1]).toMatchObject({ fromYear: 2027, toYear: 2030 });
+  });
+
+  // A "To" year typed before "From" is raised to "From" rather than breaking the invariant.
+  it("raises a toYear that is set before fromYear", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "updateDatedExpense",
+      id: "b",
+      changes: { toYear: 2020 },
+    });
+
+    expect(plan.expenses.datedExpenses?.[1]).toMatchObject({ fromYear: 2029, toYear: 2029 });
+  });
+
+  // The copy has the same content, a new id, and sits right after the original.
+  it("duplicates a dated expense, inserting the copy after the original", () => {
+    const plan = planReducer(buildPlanWithExpenses(), {
+      type: "duplicateDatedExpense",
+      id: "a",
+      newId: "a-copy",
+    });
+
+    expect(plan.expenses.datedExpenses?.map((expense) => expense.id)).toEqual([
+      "a",
+      "a-copy",
+      "b",
+      "c",
+    ]);
+    expect(plan.expenses.datedExpenses?.[1]).toStrictEqual({
+      id: "a-copy",
+      name: "Car",
+      annual: 30000,
+      fromYear: 2028,
+      toYear: 2028,
+    });
+  });
+
+  // Removing deletes only the named row; removing the last leaves an empty list.
+  it("removes a dated expense", () => {
+    const plan = planReducer(buildPlanWithExpenses(), { type: "removeDatedExpense", id: "b" });
+    expect(plan.expenses.datedExpenses?.map((expense) => expense.id)).toEqual(["a", "c"]);
+
+    const emptied = planReducer(planReducer(plan, { type: "removeDatedExpense", id: "a" }), {
+      type: "removeDatedExpense",
+      id: "c",
+    });
+    expect(emptied.expenses.datedExpenses).toEqual([]);
+  });
+
+  // Unknown ids change nothing.
+  it("ignores update, duplicate and remove for an id that doesn't exist", () => {
+    const plan = buildPlanWithExpenses();
+
+    expect(
+      planReducer(plan, { type: "updateDatedExpense", id: "zzz", changes: { name: "x" } }),
+    ).toEqual(plan);
+    expect(planReducer(plan, { type: "duplicateDatedExpense", id: "zzz", newId: "n" })).toEqual(
+      plan,
+    );
+    expect(planReducer(plan, { type: "removeDatedExpense", id: "zzz" })).toEqual(plan);
+  });
+});

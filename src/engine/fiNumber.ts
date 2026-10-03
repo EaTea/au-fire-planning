@@ -3,7 +3,7 @@
 // storage imports), so the same plan always gives the same answer.
 //
 //   Plan ─► resolvePlanInputs ─► retirementSpendingAnnual ─► calculateFiNumber ─┐
-//                              └─► investable (sum of portfolios) ──────────────┴─► calculateProgressToFi
+//                              └─► investable (portfolios + cash) ──────────────┴─► calculateProgressToFi
 //
 // `summarisePlan` is the entry point the UI calls; the other functions are
 // exported so they can be tested one at a time.
@@ -19,8 +19,11 @@ import {
   findFiReached,
   projectPortfolio,
   type FiMilestone,
+  type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
+import { findEarliestRetirementAge, type EarliestRetirement } from "./earliestRetirement";
+import { assessSolvency, type Solvency } from "./solvency";
 
 /**
  * The year-by-year part of the summary. It has its own "complete" level
@@ -38,6 +41,12 @@ export type ProjectionSummary =
       readonly retirementAge: number;
       /** The calendar year the target retirement age is reached: start year + (retirement age − current age). */
       readonly retirementYear: number;
+      /** The age the projection runs until (IN-4), so screens needn't look it up. */
+      readonly endAge: number;
+      /** Whether the money lasts to the end age, or the first year it can't be funded. */
+      readonly solvency: Solvency;
+      /** The first retirement age from today to the end age at which the money lasts (FIRE-3). */
+      readonly earliestRetirement: EarliestRetirement;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -200,7 +209,7 @@ export function calculateProgressToFi(investable: Explained, fiNumber: Explained
  *
  * Returns `incomplete` (naming what is missing) rather than guessing when
  * required inputs are absent or retirement spending is not above $0. The investable amount is the sum of the
- * portfolios' values, ready for more portfolios in later milestones.
+ * portfolios' values plus cash savings.
  */
 export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
   const resolved = resolvePlanInputs(plan);
@@ -227,7 +236,7 @@ export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
     inputs.safeWithdrawalRate.value,
     inputs.safeWithdrawalRate.source,
   );
-  const investable = sumPortfolios(inputs.portfolios);
+  const investable = sumInvestable(inputs.portfolios, inputs.cashBalance);
   const progressToFi = calculateProgressToFi(investable, fiNumber);
 
   return {
@@ -237,7 +246,7 @@ export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
     investable,
     retirementSpending: spending,
     safeWithdrawalRate: inputs.safeWithdrawalRate.value,
-    projection: summariseProjection(inputs, fiNumber, investable.value, startYear),
+    projection: summariseProjection(inputs, fiNumber, spending.value, startYear),
   };
 }
 
@@ -251,7 +260,7 @@ export function summarisePlan(plan: Plan, startYear: number): PlanSummary {
 function summariseProjection(
   inputs: ResolvedPlanInputs,
   fiNumberToday: Explained,
-  openingBalance: number,
+  retirementSpendingAnnual: number,
   startYear: number,
 ): ProjectionSummary {
   if (inputs.projection.status === "incomplete") {
@@ -260,19 +269,28 @@ function summariseProjection(
 
   const projectionInputs = inputs.projection.inputs;
 
-  const rows = projectPortfolio(
-    {
-      currentAge: projectionInputs.currentAge.value,
-      expectedReturn: projectionInputs.expectedReturn.value,
-      inflationRate: projectionInputs.inflationRate.value,
-      annualContribution: projectionInputs.annualContribution.value,
-      contributionsStopAge: projectionInputs.contributionsStopAge.value,
-      openingBalance,
-      livingAnnual: inputs.livingAnnual.value,
-      fiNumberToday: fiNumberToday.value,
-    },
-    startYear,
-  );
+  const projectionSettings: ProjectionInputs = {
+    currentAge: projectionInputs.currentAge.value,
+    endAge: projectionInputs.endAge.value,
+    retirementAge: projectionInputs.targetRetirementAge.value,
+    expectedReturn: projectionInputs.expectedReturn.value,
+    interestRate: projectionInputs.interestRate.value,
+    inflationRate: projectionInputs.inflationRate.value,
+    annualContribution: projectionInputs.annualContribution.value,
+    contributionsStopAge: projectionInputs.contributionsStopAge.value,
+    portfolioOpening: sumValues(inputs.portfolios),
+    cashOpening: inputs.cashBalance.value,
+    livingAnnual: inputs.livingAnnual.value,
+    retirementSpendingAnnual,
+    datedExpenses: projectionInputs.datedExpenses.map((expense) => ({
+      annual: expense.annual.value,
+      fromYear: expense.fromYear,
+      toYear: expense.toYear,
+    })),
+    fiNumberToday: fiNumberToday.value,
+  };
+
+  const rows = projectPortfolio(projectionSettings, startYear);
 
   const fiReached = findFiReached(rows);
   const retirementAge = projectionInputs.targetRetirementAge.value;
@@ -289,6 +307,17 @@ function summariseProjection(
     ),
     retirementAge,
     retirementYear: startYear + yearsUntilRetirement,
+    endAge: projectionInputs.endAge.value,
+    solvency: assessSolvency(rows),
+    earliestRetirement: findEarliestRetirementAge(
+      {
+        ...projectionSettings,
+        // A stop age the user left unset follows each retirement age the search tries.
+        contributionsStopAgeFollowsRetirementAge:
+          projectionInputs.contributionsStopAge.source === "default",
+      },
+      startYear,
+    ),
   };
 }
 
@@ -330,12 +359,21 @@ export function calculateFiNumberAtRetirement(
   };
 }
 
+/** Adds up the portfolios' values. Shared by the investable explanation and the projection's opening balance. */
+function sumValues(portfolios: readonly { value: Sourced<number> }[]): number {
+  return portfolios.reduce((running, portfolio) => running + portfolio.value.value, 0);
+}
+
 /**
- * Adds up the portfolios into one investable amount, listing each portfolio as
- * a line (and a total line when there is more than one).
+ * Adds up the portfolios and cash savings into one investable amount (cash +
+ * portfolio), listing each portfolio and the cash as a line, then a total.
+ * Called by `summarisePlan`; this is the figure progress to FI measures.
  */
-function sumPortfolios(portfolios: readonly { name: string; value: Sourced<number> }[]): Explained {
-  const total = portfolios.reduce((running, portfolio) => running + portfolio.value.value, 0);
+function sumInvestable(
+  portfolios: readonly { name: string; value: Sourced<number> }[],
+  cashBalance: Sourced<number>,
+): Explained {
+  const total = sumValues(portfolios) + cashBalance.value;
 
   const portfolioLines = portfolios.map((portfolio, index): ExplanationLine => ({
     label: portfolio.name,
@@ -345,21 +383,24 @@ function sumPortfolios(portfolios: readonly { name: string; value: Sourced<numbe
     source: portfolio.value.source,
   }));
 
-  // With one portfolio the total would just repeat that line, so only add it for several.
-  const totalLines: ExplanationLine[] =
-    portfolios.length > 1
-      ? [
-          {
-            label: "Investable amount",
-            value: total,
-            unit: "dollars",
-            operator: "=",
-            source: "calculated",
-          },
-        ]
-      : [];
+  const cashLine: ExplanationLine = {
+    label: "Cash savings",
+    value: cashBalance.value,
+    unit: "dollars",
+    // Cash always follows at least one portfolio line in M3, but stay correct if there are none.
+    ...(portfolios.length > 0 ? { operator: "+" as const } : {}),
+    source: cashBalance.source,
+  };
 
-  return { value: total, unit: "dollars", lines: [...portfolioLines, ...totalLines] };
+  const totalLine: ExplanationLine = {
+    label: "Investable amount",
+    value: total,
+    unit: "dollars",
+    operator: "=",
+    source: "calculated",
+  };
+
+  return { value: total, unit: "dollars", lines: [...portfolioLines, cashLine, totalLine] };
 }
 
 /**

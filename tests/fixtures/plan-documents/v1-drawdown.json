@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [
+      {
+        "id": "person-1",
+        "label": "Person 1",
+        "currentAgeYears": 40,
+        "targetRetirementAgeYears": 45
+      }
+    ],
+    "projectionEndAgeYears": 90
+  },
+  "cash": { "balanceDollars": 20000 },
+  "expenses": {
+    "livingAnnualDollars": 40000,
+    "datedExpenses": [
+      {
+        "id": "expense-1",
+        "name": "Replace car",
+        "annualDollars": 30000,
+        "fromYear": 2028,
+        "toYear": 2028
+      },
+      {
+        "id": "expense-2",
+        "name": "School fees",
+        "annualDollars": 10000,
+        "fromYear": 2029,
+        "toYear": 2030
+      },
+      { "id": "expense-3", "name": "", "fromYear": 2031, "toYear": 2031 }
+    ]
+  },
+  "assumptions": { "inflationPercent": 2, "interestPercent": 3.5 },
+  "portfolios": [
+    {
+      "id": "portfolio-1",
+      "name": "Share portfolio",
+      "valueDollars": 200000,
+      "expectedReturnPercent": 5,
+      "annualContributionDollars": 20000
+    }
+  ]
+}

@@ -7,9 +7,12 @@
 
 import {
   DEFAULT_ANNUAL_CONTRIBUTION,
+  DEFAULT_CASH_BALANCE,
   DEFAULT_EXPECTED_RETURN,
   DEFAULT_INFLATION_RATE,
+  DEFAULT_INTEREST_RATE,
   DEFAULT_PORTFOLIO_VALUE,
+  DEFAULT_PROJECTION_END_AGE,
   DEFAULT_RETIREMENT_SPENDING,
   DEFAULT_SAFE_WITHDRAWAL_RATE,
 } from "./defaults";
@@ -17,7 +20,12 @@ import type { Plan, RetirementSpending, Sourced } from "./types";
 
 /** An input the user still has to provide. The UI maps `field` to the step where it is entered. */
 export interface MissingInput {
-  readonly field: "livingExpenses" | "retirementSpending" | "currentAge" | "targetRetirementAge";
+  readonly field:
+    | "livingExpenses"
+    | "retirementSpending"
+    | "currentAge"
+    | "targetRetirementAge"
+    | "projectionEndAge";
   readonly label: string;
 }
 
@@ -26,6 +34,16 @@ export interface ResolvedPortfolio {
   readonly id: string;
   readonly name: string;
   readonly value: Sourced<number>;
+}
+
+/** A dated expense with its amount resolved (unset counts as $0). */
+export interface ResolvedDatedExpense {
+  readonly id: string;
+  readonly name: string;
+  /** Dollars per year in today's dollars. */
+  readonly annual: Sourced<number>;
+  readonly fromYear: number;
+  readonly toYear: number;
 }
 
 /**
@@ -41,6 +59,12 @@ export interface ResolvedProjectionInputs {
   readonly annualContribution: Sourced<number>;
   /** The last age in which a contribution is made; defaults to the target retirement age. */
   readonly contributionsStopAge: Sourced<number>;
+  /** The age the projection runs until (default 95). */
+  readonly endAge: Sourced<number>;
+  /** General interest rate on cash, a fraction (default 4%). */
+  readonly interestRate: Sourced<number>;
+  /** Dated and one-off expenses, in the order entered. */
+  readonly datedExpenses: readonly ResolvedDatedExpense[];
 }
 
 /**
@@ -57,6 +81,8 @@ export interface ResolvedPlanInputs {
   readonly retirementSpending: Sourced<RetirementSpending>;
   readonly safeWithdrawalRate: Sourced<number>;
   readonly portfolios: readonly ResolvedPortfolio[];
+  /** Cash savings in today's dollars (default $0). */
+  readonly cashBalance: Sourced<number>;
   readonly projection: ResolvedProjection;
 }
 
@@ -97,6 +123,7 @@ export function resolvePlanInputs(plan: Plan): ResolvedPlan {
       retirementSpending: sourceOrDefault(retirementSpending, DEFAULT_RETIREMENT_SPENDING),
       safeWithdrawalRate: sourceOrDefault(safeWithdrawalRate, DEFAULT_SAFE_WITHDRAWAL_RATE),
       portfolios,
+      cashBalance: sourceOrDefault(plan.cash?.balance, DEFAULT_CASH_BALANCE),
       projection: resolveProjectionInputs(plan),
     },
   };
@@ -104,8 +131,12 @@ export function resolvePlanInputs(plan: Plan): ResolvedPlan {
 
 /**
  * Resolves the projection inputs: the two ages (no defaults, so they can be
- * reported missing) plus inflation, return, contribution and stop age, which
- * have defaults.
+ * reported missing) plus inflation, return, contribution, stop age, end age,
+ * interest rate and dated expenses, which have defaults.
+ *
+ * Also validates the ages against the plan-until age: it must be after the
+ * current age, and the retirement age must be before it. These are reported
+ * as missing inputs, because the engine never throws on user data.
  *
  * Called by `resolvePlanInputs`. Uses the first person and first portfolio,
  * because M2 supports exactly one of each.
@@ -138,6 +169,21 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
     });
   }
 
+  const endAge = sourceOrDefault(plan.household.projectionEndAge, DEFAULT_PROJECTION_END_AGE);
+
+  if (currentAge !== undefined && endAge.value <= currentAge) {
+    missing.push({
+      field: "projectionEndAge",
+      label: "Plan until age must be after your current age",
+    });
+  }
+  if (targetRetirementAge !== undefined && targetRetirementAge >= endAge.value) {
+    missing.push({
+      field: "targetRetirementAge",
+      label: "Target retirement age must be before your plan-until age",
+    });
+  }
+
   if (currentAge === undefined || targetRetirementAge === undefined || missing.length > 0) {
     return { status: "incomplete", missing };
   }
@@ -155,6 +201,19 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
       ),
       // Depends on another input, so it can't be a constant in defaults.ts.
       contributionsStopAge: sourceOrDefault(portfolio?.contributionsStopAge, targetRetirementAge),
+      endAge,
+      interestRate: sourceOrDefault(plan.assumptions.interestRate, DEFAULT_INTEREST_RATE),
+      datedExpenses: (plan.expenses.datedExpenses ?? []).map((expense): ResolvedDatedExpense => ({
+        id: expense.id,
+        name: expense.name,
+        // An amount not typed yet counts as $0.
+        annual: {
+          value: expense.annual ?? 0,
+          source: expense.annual === undefined ? "default" : "input",
+        },
+        fromYear: expense.fromYear,
+        toYear: expense.toYear,
+      })),
     },
   };
 }

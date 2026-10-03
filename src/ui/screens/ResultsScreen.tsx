@@ -1,4 +1,5 @@
-import { MAX_PROJECTION_AGE } from "../../engine/projection";
+import { Link } from "react-router";
+
 import type { Explained } from "../../engine/explained";
 import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
@@ -6,6 +7,7 @@ import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { FireChartSection } from "../sections/FireChartSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
 
 const step = steps.find((candidate) => candidate.id === "results")!;
@@ -48,7 +50,13 @@ export function ResultsScreen() {
             />
 
             {summary.projection.status === "complete" ? (
-              <FiReachedTile projection={summary.projection} />
+              <>
+                <FiReachedTile projection={summary.projection} />
+                <EarliestRetirementTile projection={summary.projection} />
+                <MoneyLastsTile projection={summary.projection} />
+                <RunsOutBanner projection={summary.projection} />
+                <FireChartSection projection={summary.projection} />
+              </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />
             )}
@@ -58,8 +66,7 @@ export function ResultsScreen() {
         )}
 
         <Banner tone="info">
-          Not yet modelled: withdrawals in retirement and when money runs out (M3), super (M5), tax
-          (M8), property (M12) and more.
+          Not yet modelled: super (M5), the bridge to super (M6), tax (M8), property (M12) and more.
         </Banner>
       </div>
     </StepPage>
@@ -117,8 +124,8 @@ function FiReachedTile({
     return (
       <MetricTile
         label="FI reached"
-        value={`Not by age ${MAX_PROJECTION_AGE}`}
-        subLine="With today's inputs and no withdrawals"
+        value={`Not by age ${projection.endAge}`}
+        subLine="With today's inputs"
       />
     );
   }
@@ -130,5 +137,97 @@ function FiReachedTile({
       subLine={`Age ${fiReached.age}`}
       explanation={fiReached.explanation}
     />
+  );
+}
+
+/** The complete variant of the projection summary, as the solvency pieces receive it. */
+type CompleteProjection = Extract<CompleteSummary["projection"], { status: "complete" }>;
+
+/**
+ * The "Earliest retirement" tile (FIRE-3): the first age at which retiring
+ * still leaves the money lasting to the plan-until age, with the year and how
+ * it compares with the target retirement age (read from the projection
+ * summary). If no age works, says so; the last age tried is one before the
+ * plan-until age. Shown only when the projection is complete. The ages and
+ * years don't follow the dollars toggle.
+ */
+function EarliestRetirementTile({ projection }: { readonly projection: CompleteProjection }) {
+  const { earliestRetirement } = projection;
+
+  if (earliestRetirement.status === "notFeasible") {
+    const lastAgeTried = projection.endAge - 1;
+
+    return (
+      <MetricTile
+        label="Earliest retirement"
+        value={`Not feasible by age ${lastAgeTried}`}
+        subLine={`Even retiring at ${lastAgeTried}, the money runs short`}
+        explanation={earliestRetirement.explanation}
+      />
+    );
+  }
+
+  return (
+    <MetricTile
+      label="Earliest retirement"
+      value={`Age ${earliestRetirement.age}`}
+      subLine={`${earliestRetirement.year} · your target is ${projection.retirementAge} (${projection.retirementYear})`}
+      explanation={earliestRetirement.explanation}
+    />
+  );
+}
+
+/**
+ * The "Money lasts" tile (OUT-3, OUT-4): whether cash and the portfolio fund
+ * every year to the plan-until age, with the working behind it. Shown only
+ * when the projection is complete. The money left is nominal in the end year,
+ * like the FI number at retirement, so it doesn't follow the dollars toggle.
+ */
+function MoneyLastsTile({ projection }: { readonly projection: CompleteProjection }) {
+  const { solvency } = projection;
+
+  if (solvency.status === "lasts") {
+    const lastRow = projection.rows[projection.rows.length - 1];
+
+    return (
+      <MetricTile
+        label="Money lasts"
+        value={`To age ${projection.endAge} ✓`}
+        subLine={`${formatDollars(solvency.explanation.value)} left in ${lastRow?.calendarYear} (nominal dollars)`}
+        explanation={solvency.explanation}
+      />
+    );
+  }
+
+  const yearCount = solvency.shortfallYears.length;
+
+  return (
+    <MetricTile
+      label="Money lasts"
+      value={`Runs out at age ${solvency.age}`}
+      subLine={`${solvency.year} · ${yearCount === 1 ? "1 year" : `${yearCount} years`} can't be funded`}
+      explanation={solvency.explanation}
+    />
+  );
+}
+
+/**
+ * A warning above the tiles' notes when the money runs out, linking to the
+ * Year by year step where the unfunded years are flagged. Renders nothing when
+ * the money lasts.
+ */
+function RunsOutBanner({ projection }: { readonly projection: CompleteProjection }) {
+  const { solvency } = projection;
+  if (solvency.status !== "runsOut") return null;
+
+  const yearByYearStep = steps.find((candidate) => candidate.id === "year-by-year")!;
+
+  return (
+    <Banner tone="warning">
+      <div>
+        Your money runs out at age {solvency.age} ({solvency.year}).{" "}
+        <Link to={yearByYearStep.path}>See the years that can&apos;t be funded.</Link>
+      </div>
+    </Banner>
   );
 }

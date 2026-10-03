@@ -418,3 +418,271 @@ button:focus-visible {
   background: var(--colour-surface-raised);
   font-weight: 700;
 }
+
+/* The row a link pointed at (?year=): outlined in the accent colour for a few seconds. */
+.projection-row-outlined td {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: -2px;
+}
+
+/* A phase heading spanning the whole table, e.g. "Retired · ...". */
+.projection-table .projection-band td {
+  text-align: left;
+  font-weight: 700;
+  color: var(--colour-text-muted);
+  background: var(--colour-surface-raised);
+}
+
+/* A year whose spending can't be fully funded: the word "Shortfall" as well as the colour. */
+.projection-shortfall {
+  color: var(--colour-text-error);
+  font-weight: 700;
+}
+
+/* ---------- Editable table (cells edited in place, row menu) ---------- */
+
+.editable-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.editable-table-grid th,
+.editable-table-grid td {
+  border-bottom: 1px solid var(--colour-border-soft);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.editable-table-grid th {
+  font-weight: 700;
+  color: var(--colour-text-muted);
+  border-bottom-color: var(--colour-border);
+}
+
+/* A cell's value as a button: it reads as text, with an underline hinting that it can be edited. */
+.editable-cell {
+  min-width: 48px;
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px dashed var(--colour-border);
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.editable-cell:hover {
+  background: var(--colour-surface-raised);
+}
+
+.editable-cell-editor .field {
+  margin: 0;
+}
+
+/* The cell's header already names the editor, so its label is for assistive technology only. */
+.editable-cell-editor label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.editable-table-empty {
+  color: var(--colour-text-muted);
+}
+
+.editable-table-add {
+  margin-top: var(--space-small);
+}
+
+.row-menu {
+  position: relative;
+}
+
+.row-menu-button {
+  padding: 2px 8px;
+  border: 1px solid var(--colour-border);
+  border-radius: 4px;
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-menu [role="menu"] {
+  position: absolute;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  border: 1px solid var(--colour-border-strong);
+  border-radius: 4px;
+  background: var(--colour-surface-raised);
+}
+
+.row-menu [role="menuitem"] {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--colour-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-menu [role="menuitem"]:hover {
+  background: var(--colour-page-background);
+}
+
+/* Text for assistive technology only. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Charts (TimeSeriesChart) and the chart card ---------- */
+
+/* A card header with a control beside the title; the title loses its own bottom margin. */
+.card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-medium);
+  margin-bottom: var(--space-medium);
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.time-series-chart {
+  margin: 0;
+}
+
+.chart-hint {
+  margin: var(--space-small) 0 0;
+  font-size: 13px;
+  color: var(--colour-text-muted);
+}
+
+/* Each series class sets one custom property; the line and the legend swatch both read it. */
+.chart-series-investable {
+  --series-colour: var(--colour-chart-primary);
+}
+
+.chart-series-fi-number {
+  --series-colour: var(--colour-chart-reference);
+}
+
+.time-series-chart .recharts-line-curve {
+  stroke: var(--series-colour);
+  stroke-width: 2.5px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-medium) var(--space-large);
+  margin: 0 0 var(--space-small);
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--colour-text);
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-swatch {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  border-top: 3px solid var(--series-colour);
+}
+
+.chart-swatch-dashed {
+  border-top-style: dashed;
+}
+
+/* The picture's text and strokes. SVG attributes can't use var(), so it's all set here. */
+.chart-picture {
+  color: var(--colour-text-muted);
+}
+
+.chart-picture svg {
+  overflow: visible;
+}
+
+.chart-picture text {
+  fill: var(--colour-text-muted);
+  font-size: 12px;
+}
+
+.chart-picture .recharts-cartesian-axis-line,
+.chart-picture .recharts-cartesian-axis-tick-line {
+  stroke: var(--colour-border);
+}
+
+/* Gridlines are decoration, not information, so they stay subtle. */
+.chart-picture line.chart-grid {
+  stroke: var(--colour-border-soft);
+}
+
+.chart-picture .chart-marker line {
+  stroke: var(--colour-chart-reference);
+  stroke-width: 1.5px;
+  stroke-dasharray: 2 4;
+}
+
+.chart-picture .chart-marker-label {
+  fill: var(--colour-text);
+}
+
+.chart-picture .chart-band rect {
+  fill: var(--colour-chart-band);
+  fill-opacity: var(--chart-band-opacity);
+}
+
+/* Plain text colour: error pink on the tinted band is only 4.2:1 (see tokens.test.ts). */
+.chart-picture .chart-band-label {
+  fill: var(--colour-text);
+  font-weight: 700;
+}
+
+.chart-picture .chart-cursor {
+  stroke: var(--colour-border);
+}
+
+.chart-tooltip {
+  min-width: 190px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--colour-border);
+  border-radius: 6px;
+  background: var(--colour-page-background);
+  color: var(--colour-text);
+  font-size: 13px;
+}
+
+.chart-tooltip-title {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-medium);
+}

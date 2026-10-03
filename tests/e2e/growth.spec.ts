@@ -49,10 +49,13 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
 
   // Results: the FI year and the nominal FI number at the retirement age.
   await page.getByRole("link", { name: "Next: Results →" }).click();
-  await expect(page.getByText("$1,600,000", { exact: true })).toBeVisible();
+  // The chart's hidden data table repeats some figures, so look inside the tiles.
+  const fiNumberTile = page.locator(".metric", { hasText: "FI number" });
+  await expect(fiNumberTile.getByText("$1,600,000", { exact: true })).toBeVisible();
   await expect(page.getByText("$2,375,209 at age 50 (2042)")).toBeVisible();
-  await expect(page.getByText("2038", { exact: true })).toBeVisible();
-  await expect(page.getByText("Age 46", { exact: true })).toBeVisible();
+  const fiReachedTile = page.locator(".metric", { hasText: "FI reached" });
+  await expect(fiReachedTile.getByText("2038", { exact: true })).toBeVisible();
+  await expect(fiReachedTile.getByText("Age 46", { exact: true })).toBeVisible();
 
   // Year by year: the 2038 row is the only highlighted one.
   await page.getByRole("link", { name: "Next: Year by year →" }).click();
@@ -69,13 +72,13 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
     "true",
   );
   expect((await rowCells(page, 2027))[2]).toBe("$30,000");
-  expect((await rowCells(page, 2027))[4]).toBe("$800,400");
-  expect((await rowCells(page, 2038))[4]).toBe("$2,158,231");
+  expect((await rowCells(page, 2027))[6]).toBe("$800,400");
+  expect((await rowCells(page, 2038))[6]).toBe("$2,158,231");
 
   // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025.
   await page.getByRole("button", { name: "Today's dollars" }).click();
   expect((await rowCells(page, 2027))[2]).toBe("$29,268");
-  expect((await rowCells(page, 2027))[4]).toBe("$780,878");
+  expect((await rowCells(page, 2027))[6]).toBe("$780,878");
 
   // Autosave waits 500 ms after the last edit; reload once the plan is stored.
   await expect

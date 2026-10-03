@@ -134,21 +134,61 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
 
 /**
  * Types a value into every input on the current page, then moves focus away.
- * "valid" uses a value every field accepts: 50 for ages (15 to 100), and 5
- * for everything else (percentages are capped at 15%). "invalid" uses -5,
- * which every field rejects.
+ * "valid" uses a value every field accepts: 50 for ages (15 to 100), 90 for
+ * "Plan until age" (50 to 110, and after the other ages), and 5 for everything
+ * else (percentages are capped at 15%). "invalid" uses -5, which every field
+ * rejects.
  */
 async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<void> {
   for (const input of await page.locator("input").all()) {
-    const isAge = /age/i.test(await labelTextOf(input));
+    const labelText = await labelTextOf(input);
+    const isAge = /age/i.test(labelText);
+    const isEndAge = /plan until age/i.test(labelText);
 
     if (values === "invalid") {
       await input.fill("-5");
     } else {
-      await input.fill(isAge ? "50" : "5");
+      await input.fill(isEndAge ? "90" : isAge ? "50" : "5");
     }
   }
   await page.locator("h1").click();
+}
+
+/**
+ * Fills the dated expenses table on the Income & expenses page, leaving it in
+ * the state the sweep should look at. Makes sure the table has one row, then:
+ * "valid" gives the row an amount and opens its actions menu; "invalid" types
+ * a negative amount and presses Enter, which leaves that editor open showing
+ * its error. Does nothing on other pages.
+ */
+async function fillDatedExpensesTable(page: Page, values: "valid" | "invalid"): Promise<void> {
+  const addButton = page.getByRole("button", { name: "+ Add expense" });
+  if ((await addButton.count()) === 0) {
+    return;
+  }
+
+  // One row is enough to cover the table; the add button also opens the name editor.
+  if ((await page.locator(".editable-cell").count()) === 0) {
+    await addButton.click();
+    await page.keyboard.type("Replace car");
+    await page.keyboard.press("Enter");
+  }
+
+  // The second editable cell is "Per year".
+  await page.locator(".editable-cell").nth(1).click();
+  await page.locator(".editable-cell-editor input").fill(values === "valid" ? "5" : "-5");
+  await page.keyboard.press("Enter");
+
+  if (values === "valid") {
+    await page.getByRole("button", { name: /^Actions for/ }).click();
+  }
+}
+
+/** Fills every input on `inputPage` (see fillEveryInput), then its dated expenses table if it has one. */
+async function fillPage(page: Page, inputPage: string, values: "valid" | "invalid") {
+  await page.goto(inputPage);
+  await fillEveryInput(page, values);
+  await fillDatedExpensesTable(page, values);
 }
 
 /** The text of the <label> that names `input`, or "" if it has none. */
@@ -184,8 +224,7 @@ test("every input page has readable text with valid and with invalid values", as
 
   for (const value of ["valid", "invalid"] as const) {
     for (const inputPage of inputPages) {
-      await page.goto(inputPage);
-      await fillEveryInput(page, value);
+      await fillPage(page, inputPage, value);
 
       // Makes sure each pass is what it says: errors to check in the invalid
       // pass, and none in the valid one.
@@ -205,8 +244,7 @@ test("the results page has readable text with every explanation open", async ({ 
   await startFresh(page);
 
   for (const inputPage of inputPages) {
-    await page.goto(inputPage);
-    await fillEveryInput(page, "valid");
+    await fillPage(page, inputPage, "valid");
   }
 
   await page.goto("#/results");
@@ -218,18 +256,110 @@ test("the results page has readable text with every explanation open", async ({ 
   expect(await findLowContrastWhileInteracting(page)).toEqual([]);
 });
 
+test("the results page with its chart has readable text in both dollar modes, with markers, a band and a tooltip", async ({
+  page,
+}) => {
+  // Fix "now" so the chart's years are the same on any day.
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B: the money runs out in 2031, so the chart has a shortfall band and a marker.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "60"],
+    ["#/household", "Target retirement age", "60"],
+    ["#/household", "Plan until age", "65"],
+    ["#/income-expenses", "Per year, after tax", "30000"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "10"],
+    ["#/assets", "Cash savings", "10000"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "5"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label).fill(value);
+    await page.getByLabel(label).press("Tab");
+  }
+
+  await page.goto("#/results");
+  await expect(page.locator(".chart-band")).toHaveCount(1);
+  await expect(page.locator(".chart-marker")).toHaveCount(1);
+
+  // Show the tooltip while checking, since it is text on its own background.
+  // The mouse can only reach what is in the viewport.
+  await page.locator(".chart-picture").scrollIntoViewIfNeeded();
+  const box = (await page.locator(".chart-picture").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    expect(await findLowContrastText(page), mode).toEqual([]);
+  }
+
+  // The hover/focus sweep moves the mouse off the chart, which is the tooltip-free state.
+  expect(await findLowContrastWhileInteracting(page)).toEqual([]);
+});
+
 test("the year by year table has readable text in both dollar modes, including the FI row", async ({
   page,
 }) => {
   await startFresh(page);
   for (const inputPage of inputPages) {
-    await page.goto(inputPage);
-    await fillEveryInput(page, "valid");
+    await fillPage(page, inputPage, "valid");
   }
   await page.goto("#/year-by-year");
 
   // The highlighted FI row is the one styled differently, so make sure it's there.
   await expect(page.locator("tr[data-highlighted='true']")).toHaveCount(1);
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});
+
+test("the results and year by year pages have readable text with a shortfall, its banners and an outlined row", async ({
+  page,
+}) => {
+  // Fix "now" so the shortfall year (2031) and the ?year= row are the same on any day.
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B (tests/worked-examples/m3-drawdown.json): the money runs out in 2031.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "60"],
+    ["#/household", "Target retirement age", "60"],
+    ["#/household", "Plan until age", "65"],
+    ["#/income-expenses", "Per year, after tax", "30000"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "10"],
+    ["#/assets", "Cash savings", "10000"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "5"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label).fill(value);
+    await page.getByLabel(label).press("Tab");
+  }
+
+  // Results with the "Money lasts" tile, the runs-out banner and every explanation open.
+  await page.goto("#/results");
+  await expect(page.getByRole("alert")).toContainText("Your money runs out at age 65");
+  for (const explainToggle of await page.getByRole("button", { name: /How is this/ }).all()) {
+    await explainToggle.click();
+  }
+  expect(await findLowContrastText(page), "results with a shortfall").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "results with a shortfall").toEqual([]);
+
+  // Opening with ?year= outlines that row for a few seconds, so check it straight away.
+  await page.goto("#/year-by-year?year=2029");
+  await expect(page.getByRole("alert")).toContainText("1 year can't be funded: 2031");
+  await expect(page.getByText("Shortfall −$6,729")).toBeVisible();
+  await expect(page.locator("tr[data-outlined='true']")).toHaveCount(1);
 
   for (const mode of ["Today's dollars", "Nominal"]) {
     await page.getByRole("button", { name: mode }).click();

@@ -153,6 +153,9 @@ describe("resolvePlanInputs: projection inputs", () => {
       expectedReturn: { value: 0.07, source: "default" },
       annualContribution: { value: 0, source: "default" },
       contributionsStopAge: { value: 50, source: "default" },
+      endAge: { value: 95, source: "default" },
+      interestRate: { value: 0.04, source: "default" },
+      datedExpenses: [],
     });
   });
 
@@ -173,5 +176,126 @@ describe("resolvePlanInputs: projection inputs", () => {
     expect(projection.inputs.expectedReturn).toEqual({ value: 0.05, source: "input" });
     expect(projection.inputs.annualContribution).toEqual({ value: 12000, source: "input" });
     expect(projection.inputs.contributionsStopAge).toEqual({ value: 45, source: "input" });
+  });
+});
+
+// Tests for the M3 inputs: end age, cash, interest and dated expenses.
+describe("resolvePlanInputs: drawdown inputs", () => {
+  /** A plan with ages 34 and 50, living expenses, and the M3 fields from the overrides. */
+  function planWithDrawdownInputs(overrides: {
+    currentAge?: number;
+    targetRetirementAge?: number;
+    projectionEndAge?: number;
+    cashBalance?: number;
+    interestRate?: number;
+    datedExpenses?: Plan["expenses"]["datedExpenses"];
+  }): Plan {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    return {
+      ...blank,
+      household: {
+        people: [
+          {
+            ...person,
+            currentAge: overrides.currentAge ?? 34,
+            targetRetirementAge: overrides.targetRetirementAge ?? 50,
+          },
+        ],
+        projectionEndAge: overrides.projectionEndAge,
+      },
+      cash: { balance: overrides.cashBalance },
+      expenses: { livingAnnual: 64000, datedExpenses: overrides.datedExpenses },
+      assumptions: { interestRate: overrides.interestRate },
+    };
+  }
+
+  /** Resolves a plan known to be complete overall. */
+  function resolved(plan: Plan) {
+    const result = resolvePlanInputs(plan);
+    if (result.status !== "complete") throw new Error("expected complete");
+    return result.inputs;
+  }
+
+  it("defaults cash to $0", () => {
+    expect(resolved(planWithDrawdownInputs({})).cashBalance).toEqual({
+      value: 0,
+      source: "default",
+    });
+  });
+
+  it("keeps an entered cash balance, interest rate and end age", () => {
+    const inputs = resolved(
+      planWithDrawdownInputs({ cashBalance: 20000, interestRate: 0.03, projectionEndAge: 90 }),
+    );
+    const projection = inputs.projection;
+
+    expect(inputs.cashBalance).toEqual({ value: 20000, source: "input" });
+    expect(projection.status).toBe("complete");
+    if (projection.status !== "complete") return;
+    expect(projection.inputs.interestRate).toEqual({ value: 0.03, source: "input" });
+    expect(projection.inputs.endAge).toEqual({ value: 90, source: "input" });
+  });
+
+  // An amount left blank counts as $0, and is marked as defaulted so the UI can show it dashed.
+  it("resolves dated expenses, with an unset amount counting as $0", () => {
+    const projection = resolved(
+      planWithDrawdownInputs({
+        datedExpenses: [
+          { id: "a", name: "Replace car", annual: 30000, fromYear: 2028, toYear: 2028 },
+          { id: "b", name: "", fromYear: 2029, toYear: 2030 },
+        ],
+      }),
+    ).projection;
+
+    expect(projection.status).toBe("complete");
+    if (projection.status !== "complete") return;
+    expect(projection.inputs.datedExpenses).toEqual([
+      {
+        id: "a",
+        name: "Replace car",
+        annual: { value: 30000, source: "input" },
+        fromYear: 2028,
+        toYear: 2028,
+      },
+      { id: "b", name: "", annual: { value: 0, source: "default" }, fromYear: 2029, toYear: 2030 },
+    ]);
+  });
+
+  it("reports an end age that isn't after the current age", () => {
+    expect(
+      resolved(
+        planWithDrawdownInputs({ currentAge: 40, targetRetirementAge: 40, projectionEndAge: 40 }),
+      ).projection,
+    ).toMatchObject({
+      status: "incomplete",
+      missing: expect.arrayContaining([
+        { field: "projectionEndAge", label: "Plan until age must be after your current age" },
+      ]),
+    });
+  });
+
+  it("reports a target retirement age that isn't before the end age", () => {
+    expect(
+      resolved(planWithDrawdownInputs({ targetRetirementAge: 90, projectionEndAge: 90 }))
+        .projection,
+    ).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "targetRetirementAge",
+          label: "Target retirement age must be before your plan-until age",
+        },
+      ],
+    });
+  });
+
+  it("accepts a retirement age one year before the end age", () => {
+    expect(
+      resolved(planWithDrawdownInputs({ targetRetirementAge: 89, projectionEndAge: 90 })).projection
+        .status,
+    ).toBe("complete");
   });
 });

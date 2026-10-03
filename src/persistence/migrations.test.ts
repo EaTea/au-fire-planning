@@ -61,6 +61,74 @@ describe("parsePlanDocument", () => {
     });
   });
 
+  // M3 fields were also added without a new schema version.
+  it("parses a document with the M3 drawdown fields and maps it to a plan", () => {
+    const result = parsePlanDocument(readFixture("v1-drawdown.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(planFromWire(result.document)).toStrictEqual({
+      household: {
+        people: [{ id: "person-1", label: "Person 1", currentAge: 40, targetRetirementAge: 45 }],
+        projectionEndAge: 90,
+      },
+      cash: { balance: 20000 },
+      expenses: {
+        livingAnnual: 40000,
+        datedExpenses: [
+          { id: "expense-1", name: "Replace car", annual: 30000, fromYear: 2028, toYear: 2028 },
+          { id: "expense-2", name: "School fees", annual: 10000, fromYear: 2029, toYear: 2030 },
+          { id: "expense-3", name: "", fromYear: 2031, toYear: 2031 },
+        ],
+      },
+      assumptions: { inflationRate: 0.02, interestRate: 0.035 },
+      portfolios: [
+        {
+          id: "portfolio-1",
+          name: "Share portfolio",
+          value: 200000,
+          expectedReturn: 0.05,
+          annualContribution: 20000,
+        },
+      ],
+    });
+  });
+
+  // A dated expense that ends before it starts is rejected, not repaired.
+  it("rejects a dated expense whose toYear is before its fromYear", () => {
+    const document = readFixture("v1-drawdown.json") as {
+      expenses: Record<string, unknown>;
+    };
+
+    const result = parsePlanDocument({
+      ...document,
+      expenses: {
+        ...document.expenses,
+        datedExpenses: [{ id: "e", name: "Bad", fromYear: 2030, toYear: 2029 }],
+      },
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
+  // Years are whole numbers from 1900 to 2200.
+  it.each([2030.5, 1899, 2201])("rejects a dated expense year of %s", (year) => {
+    const document = readFixture("v1-drawdown.json") as {
+      expenses: Record<string, unknown>;
+    };
+
+    const result = parsePlanDocument({
+      ...document,
+      expenses: {
+        ...document.expenses,
+        datedExpenses: [{ id: "e", name: "Bad", fromYear: year, toYear: 2200 }],
+      },
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
   // Ages are whole numbers from 0 to 120; anything else is rejected.
   it.each([-1, 121, 34.5])("rejects a current age of %s", (age) => {
     const document = readFixture("v1-growth.json") as {

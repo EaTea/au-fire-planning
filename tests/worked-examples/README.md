@@ -34,6 +34,14 @@ loads every file in this folder and checks the engine against it to the cent.
   worth checking, each with only the fields worth checking, and
   `expected.fiReached` is the first row where the balance reaches the FI
   number (absent if it's never reached).
+- M3 fixtures (`m3-drawdown.json`) add inputs `projectionEndAge`,
+  `cashBalance`, `interestRate` and `datedExpenses` (each
+  `{ name, annual, fromYear, toYear }`, `annual` in today's dollars), and
+  expected row fields `cashInterest`, `cashClosing`, `spending`, `fromCash`,
+  `fromPortfolio` and `shortfall`, `fiReached.investableClosing`, and a
+  `solvency` answer (`lasts` with `investableClosing`, or `runsOut` with
+  `year`, `age`, `shortfallYears` and `shortfall`), and an
+  `earliestRetirement` answer (`feasible` with `age` and `year`).
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.

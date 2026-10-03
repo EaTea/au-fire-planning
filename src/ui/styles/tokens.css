@@ -79,6 +79,19 @@
   --colour-input-background: var(--white);
   --colour-input-text: var(--green-deep);
 
+  /*
+   * Chart lines and shading (graphics, so 3:1 against the page rather than
+   * 4.5:1; checked in tokens.test.ts). Gold is the line that matters most,
+   * investable net worth. White, dashed or dotted, is for the FI number and
+   * the vertical markers. The band marking years that can't be funded is the
+   * error pink, drawn at --chart-band-opacity, and its label is text in
+   * --colour-text.
+   */
+  --colour-chart-primary: var(--aus-gold);
+  --colour-chart-reference: var(--white);
+  --colour-chart-band: var(--error-pink);
+  --chart-band-opacity: 0.2;
+
   /* ---------- Type and spacing ---------- */
 
   --font-body: "Helvetica Neue", Arial, sans-serif;

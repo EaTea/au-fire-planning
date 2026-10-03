@@ -25,6 +25,7 @@ function planWith(overrides: {
   retirementSpending?: Plan["expenses"]["retirementSpending"];
   safeWithdrawalRate?: number;
   portfolioValue?: number;
+  cashBalance?: number;
 }): Plan {
   let counter = 0;
   const blank = createNewPlan(() => `id-${++counter}`);
@@ -35,6 +36,7 @@ function planWith(overrides: {
       livingAnnual: overrides.livingAnnual,
       retirementSpending: overrides.retirementSpending,
     },
+    cash: { balance: overrides.cashBalance },
     assumptions: { safeWithdrawalRate: overrides.safeWithdrawalRate },
     portfolios: [{ id: "portfolio", name: "Share portfolio", value: overrides.portfolioValue }],
   };
@@ -314,5 +316,72 @@ describe("calculateFiNumberAtRetirement", () => {
       2375208.99,
       2,
     );
+  });
+});
+
+// M3: cash counts towards the investable amount, and the projection reports its end age and solvency.
+describe("summarisePlan: cash and solvency", () => {
+  /** A complete summary for a plan with ages 34 and 50, failing the test otherwise. */
+  function summaryWithAges(overrides: Parameters<typeof planWith>[0]) {
+    const plan = planWith(overrides);
+    const [person] = plan.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    const summary = summarisePlan({
+      ...plan,
+      household: { people: [{ ...person, currentAge: 34, targetRetirementAge: 50 }] },
+    });
+    if (summary.status !== "complete") throw new Error("expected complete");
+    return summary;
+  }
+
+  it("adds cash to the investable amount, with a Cash savings line", () => {
+    const summary = summaryWithAges({
+      livingAnnual: 64000,
+      portfolioValue: 720000,
+      cashBalance: 20000,
+    });
+
+    expect(summary.investable.value).toBe(740000);
+    expect(summary.investable.lines.map((line) => line.label)).toEqual([
+      "Share portfolio",
+      "Cash savings",
+      "Investable amount",
+    ]);
+    expect(summary.investable.lines[1]).toMatchObject({
+      value: 20000,
+      operator: "+",
+      source: "input",
+    });
+  });
+
+  it("gives the same investable amount as before when there is no cash", () => {
+    const summary = summaryWithAges({ livingAnnual: 64000, portfolioValue: 720000 });
+
+    expect(summary.investable.value).toBe(720000);
+    expect(summary.investable.lines[1]).toMatchObject({
+      label: "Cash savings",
+      value: 0,
+      source: "default",
+    });
+  });
+
+  it("reports the end age and whether the money lasts", () => {
+    const summary = summaryWithAges({
+      livingAnnual: 64000,
+      portfolioValue: 720000,
+      cashBalance: 20000,
+    });
+
+    if (summary.projection.status !== "complete") throw new Error("expected complete projection");
+    expect(summary.projection.endAge).toBe(95);
+    expect(summary.projection.solvency.status).toBe("lasts");
+  });
+
+  it("reports the money running out for a plan that can't fund its spending", () => {
+    const summary = summaryWithAges({ livingAnnual: 64000, portfolioValue: 1000 });
+
+    if (summary.projection.status !== "complete") throw new Error("expected complete projection");
+    expect(summary.projection.solvency).toMatchObject({ status: "runsOut", age: 51, year: 2043 });
   });
 });

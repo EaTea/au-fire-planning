@@ -14,4 +14,5 @@ export const missingInputSteps: Record<MissingInput["field"], StepId> = {
   retirementSpending: "income-expenses",
   currentAge: "household",
   targetRetirementAge: "household",
+  projectionEndAge: "household",
 };
