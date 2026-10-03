@@ -2091,7 +2091,7 @@ No new dependencies.
 
 #### Step 8 · Super on the Assets screen
 
-- [ ] Done
+- [x] Done
 
 1. Add a "Super" card, first on Assets as in mockup 03d, with:
    - "Super balance";
@@ -2119,6 +2119,32 @@ No new dependencies.
    years.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+**As built:**
+- `SuperSection` (first on Assets) uses `PerPersonFields`. Labels: "Super
+  balance", "Return, net of fees", "Employer contribution rate", "Salary
+  sacrifice per year", "Non-concessional contributions per year", "Tax on
+  earnings", and for the years "Salary sacrifice from year" / "to year" and
+  "Non-concessional contributions from year" / "to year" (the plan only said
+  "From and To"; the full names keep every label unique).
+- Limits follow the wire: money at least 0; return, employer rate and tax on
+  earnings 0% to 100%. Years: next year to 2200 (next year, not the wire's
+  1900, because row 0 has no flows).
+- The legislated defaults come from `rulesForYear(bundledRuleSet, startYear,
+  inflation)`. `NumberField` gained an optional `defaultText` (display only)
+  so an unset rate reads "12% (legislated)"; "Tax on earnings" reads "15%
+  (legislated)" the same way.
+- "To" shows its dashed default only when both the current and target
+  retirement ages are set (the retirement year needs both), and not if that
+  year is before next year.
+- `GrowthRateField` names its number box "Above inflation by", "Below
+  inflation by" or "Fixed rate", and has an optional `numberLabel` function so
+  `SalarySection` can add "Name: " for several people.
+- Advanced is a native `<details>` with `.advanced summary` styles in
+  `app.css`. The contrast sweep opens every `<details>`, checks Assets closed
+  and open, and hovers and focuses `<summary>` too.
+- The round-trip property test now generates salary as well.
+
 
 #### Step 9 · Super in the outputs
 

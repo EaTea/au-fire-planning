@@ -10,8 +10,8 @@ import { expect, startFresh, test } from "./fixtures";
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
 async function enter(page: Page, label: string, value: string): Promise<void> {
-  await page.getByLabel(label).fill(value);
-  await page.getByLabel(label).press("Tab");
+  await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
 /** The cell texts of the Year by year row for `year`. */
@@ -114,7 +114,7 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await page.getByRole("link", { name: "← Assumptions" }).click();
   await expect(page.getByLabel("Inflation per year")).toHaveValue("2.5%");
   await page.getByRole("link", { name: "← Assets" }).click();
-  await expect(page.getByLabel("Contributions per year")).toHaveValue("$30,000");
+  await expect(page.getByLabel("Contributions per year", { exact: true })).toHaveValue("$30,000");
   await page.goto("./#/household");
   await expect(page.getByLabel("Current age")).toHaveValue("34");
   await expect(page.getByLabel("Target retirement age")).toHaveValue("50");

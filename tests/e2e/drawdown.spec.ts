@@ -11,8 +11,8 @@ import { expect, startFresh, test } from "./fixtures";
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
 async function enter(page: Page, label: string, value: string): Promise<void> {
-  await page.getByLabel(label).fill(value);
-  await page.getByLabel(label).press("Tab");
+  await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
 /** The cell texts of the Year by year row for `year`. */

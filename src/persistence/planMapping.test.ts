@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import { createNewPlan } from "../plan/createNewPlan";
 import type {
   DatedExpense,
+  GrowthRate,
   Plan,
   RetirementSpending,
+  Salary,
   SuperAccount,
   SuperContribution,
 } from "../plan/types";
@@ -58,6 +60,35 @@ const datedExpenses: fc.Arbitrary<DatedExpense> = fc
     fromYear,
     toYear: Math.min(fromYear + extraYears, 2200),
   }));
+
+/** A signed fraction made from a whole-hundredth percent (−10% to +15%), as the growth field produces. */
+const signedFractions = fc
+  .integer({ min: -1_000, max: 1_500 })
+  .map((hundredthsOfPercent) => percentToFraction(hundredthsOfPercent / 100));
+
+/** Each kind of salary growth. */
+const growthRates: fc.Arbitrary<GrowthRate> = fc.oneof(
+  signedFractions.map((margin) => ({ kind: "inflationPlus" as const, margin })),
+  signedFractions.map((rate) => ({ kind: "fixed" as const, rate })),
+  fc.constant({ kind: "none" as const }),
+);
+
+/**
+ * Salaries with any subset of fields set, or none at all (an absent salary is
+ * how "nothing entered" is held, in memory and on the wire).
+ */
+const salaries: fc.Arbitrary<Salary | undefined> = fc
+  .record({
+    annual: fc.option(dollars, { nil: undefined }),
+    growth: fc.option(growthRates, { nil: undefined }),
+  })
+  .map(({ annual, growth }) => {
+    const salary: Salary = {
+      ...(annual !== undefined ? { annual } : {}),
+      ...(growth !== undefined ? { growth } : {}),
+    };
+    return Object.keys(salary).length === 0 ? undefined : salary;
+  });
 
 /**
  * A voluntary contribution with any subset of its fields set. A contribution
@@ -117,6 +148,7 @@ const plans: fc.Arbitrary<Plan> = fc
     expectedReturn: fc.option(wholeHundredthsFraction, { nil: undefined }),
     annualContribution: fc.option(dollars, { nil: undefined }),
     contributionsStopAge: fc.option(ages, { nil: undefined }),
+    salary: salaries,
     superAccount: superAccounts,
     personLabel: fc.string(),
     portfolioName: fc.string(),
@@ -139,6 +171,7 @@ const plans: fc.Arbitrary<Plan> = fc
           ...(generated.targetRetirementAge !== undefined
             ? { targetRetirementAge: generated.targetRetirementAge }
             : {}),
+          ...(generated.salary !== undefined ? { salary: generated.salary } : {}),
           ...(generated.superAccount !== undefined ? { superAccount: generated.superAccount } : {}),
         },
       ],

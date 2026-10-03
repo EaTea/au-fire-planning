@@ -47,7 +47,7 @@ test("a salary growing at inflation + 1% shows year by year until retirement, an
 
   await enter(page, "Gross salary per year", "145000");
   await page.getByLabel("Grows at", { exact: true }).selectOption({ label: "Inflation + …%" });
-  await enter(page, "Grows at percentage", "1");
+  await enter(page, "Above inflation by", "1");
   await enter(page, "Per year, after tax", "64000");
 
   await page.getByLabel("Grows at", { exact: true }).scrollIntoViewIfNeeded();
@@ -91,7 +91,7 @@ test("a salary growing at inflation + 1% shows year by year until retirement, an
   await page.goto("#/income-expenses");
   await expect(page.getByLabel("Gross salary per year")).toHaveValue("$145,000");
   await expect(page.getByLabel("Grows at", { exact: true })).toHaveValue("inflationPlus");
-  await expect(page.getByLabel("Grows at percentage")).toHaveValue("1%");
+  await expect(page.getByLabel("Above inflation by")).toHaveValue("1%");
 
   await page.goto("#/results?view=year-by-year");
   await page.getByRole("button", { name: "Nominal" }).click();
