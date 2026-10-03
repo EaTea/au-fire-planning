@@ -629,6 +629,21 @@ button:focus-visible {
   --series-colour: var(--colour-chart-reference);
 }
 
+/* The Coast FIRE chart's lines: gold for your savings, muted green-white for
+   today's savings, white (dashed) for the Coast FIRE number. The FI number
+   keeps chart (a)'s white class (dotted here). */
+.chart-series-savings {
+  --series-colour: var(--colour-chart-primary);
+}
+
+.chart-series-no-contributions {
+  --series-colour: var(--colour-chart-secondary);
+}
+
+.chart-series-coast-number {
+  --series-colour: var(--colour-chart-reference);
+}
+
 .time-series-chart .recharts-line-curve {
   stroke: var(--series-colour);
   stroke-width: 2.5px;
@@ -660,6 +675,10 @@ button:focus-visible {
 
 .chart-swatch-dashed {
   border-top-style: dashed;
+}
+
+.chart-swatch-dotted {
+  border-top-style: dotted;
 }
 
 /* The picture's text and strokes. SVG attributes can't use var(), so it's all set here. */
@@ -730,4 +749,64 @@ button:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: var(--space-medium);
+}
+
+/* ---------- Milestones timeline ---------- */
+
+/* One horizontal line of milestones; the line is each item's top border, so it
+   joins up across items and wraps cleanly on narrow screens. */
+.milestone-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-medium) 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.milestone {
+  position: relative;
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px var(--space-medium) 0 0;
+  border-top: 2px solid var(--colour-border);
+  font-size: 12px;
+  color: var(--colour-text-muted);
+}
+
+/* The marker sits on the line. Reached is a solid gold dot; projected is a
+   gold ring with the page showing through; not reached is a dashed grey ring.
+   The status is also written out in .milestone-status. */
+.milestone-marker {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--colour-accent);
+  background: var(--colour-page-background);
+}
+
+.milestone-reached .milestone-marker {
+  background: var(--colour-accent);
+}
+
+.milestone-notReached .milestone-marker {
+  border-style: dashed;
+  border-color: var(--colour-border);
+}
+
+.milestone-year {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--colour-text-highlight);
+}
+
+.milestone-label {
+  color: var(--colour-text);
+  font-weight: 700;
 }

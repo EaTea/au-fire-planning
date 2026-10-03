@@ -88,6 +88,15 @@ function explanationRows(): (string | null)[] {
     .map((row) => row.textContent);
 }
 
+/** Opens the "How is this calculated?" panel of the tile with this label, so tests don't depend on tile order. */
+async function openExplanation(user: ReturnType<typeof userEvent.setup>, tileLabel: string) {
+  const tile = screen
+    .getAllByText(tileLabel, { selector: ".metric .label" })[0]!
+    .closest<HTMLElement>(".metric")!;
+
+  await user.click(within(tile).getByRole("button", { name: "How is this calculated?" }));
+}
+
 /** The year in the first cell of the Year by year row currently outlined, if any. */
 function outlinedRowYear(): string | undefined {
   const outlined = document.querySelector<HTMLElement>('[data-outlined="true"]');
@@ -110,7 +119,7 @@ describe("ResultsScreen", () => {
     const user = userEvent.setup();
     renderResults(workedPlan);
 
-    await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[0]!);
+    await openExplanation(user, "FI number");
 
     const rows = explanationRows();
     expect(rows).toEqual([
@@ -124,7 +133,7 @@ describe("ResultsScreen", () => {
     const user = userEvent.setup();
     renderResults(workedPlan);
 
-    await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[1]!);
+    await openExplanation(user, "Progress to FI");
 
     const rows = explanationRows();
     expect(rows).toEqual([
@@ -188,7 +197,7 @@ describe("ResultsScreen", () => {
       const user = userEvent.setup();
       renderResults(exampleA);
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[0]!);
+      await openExplanation(user, "FI number");
 
       const rows = explanationRows();
       expect(rows).toEqual([
@@ -204,13 +213,14 @@ describe("ResultsScreen", () => {
       const user = userEvent.setup();
       renderResults(exampleA);
 
-      expect(screen.getByText("FI reached")).toBeInTheDocument();
-      // The chart's hidden table also has a 2038 cell, so look inside the tile.
-      const fiReachedTile = screen.getByText("FI reached").closest<HTMLElement>(".metric")!;
+      // The chart's hidden table and the Milestones card also show 2038 and age 46, so look inside the tile.
+      const fiReachedTile = screen
+        .getByText("FI reached", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
       expect(within(fiReachedTile).getByText("2038")).toBeInTheDocument();
-      expect(screen.getByText("Age 46")).toBeInTheDocument();
+      expect(within(fiReachedTile).getByText("Age 46")).toBeInTheDocument();
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[2]!);
+      await openExplanation(user, "FI reached");
       expect(explanationRows()).toEqual([
         "Balance at end of 2038 (age 46)$2,158,231",
         "− FI number in 2038$2,151,822",
@@ -227,8 +237,7 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("$24,101,430 left in 2087 (nominal dollars)")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-      // Tiles in order: FI number, Progress, FI reached, Earliest retirement, Money lasts.
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[4]!);
+      await openExplanation(user, "Money lasts");
       expect(explanationRows()).toEqual([
         "Cash at end of 2087 (age 95)$0",
         "+ Portfolio$24,101,430",
@@ -244,7 +253,7 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("Age 43")).toBeInTheDocument();
       expect(screen.getByText("2035 · your target is 50 (2042)")).toBeInTheDocument();
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      await openExplanation(user, "Earliest retirement");
       const rows = explanationRows();
       expect(rows).toHaveLength(3);
       expect(rows[0]).toMatch(/^Retiring at 42: runs short in 2085 \(age 93\)\$/);
@@ -278,11 +287,10 @@ describe("ResultsScreen", () => {
       const user = userEvent.setup();
       renderResults(exampleB);
 
-      // FI isn't reached in example B, so its tile has no breakdown: Earliest retirement is the third, Money lasts the fourth.
       expect(screen.getByText("Runs out at age 65")).toBeInTheDocument();
       expect(screen.getByText("2031 · 1 year can't be funded")).toBeInTheDocument();
 
-      await user.click(screen.getAllByRole("button", { name: "How is this calculated?" })[3]!);
+      await openExplanation(user, "Money lasts");
       expect(explanationRows()).toEqual([
         "Spending to fund in 2031$30,000",
         "− Cash and portfolio available$23,271",
@@ -357,6 +365,293 @@ describe("ResultsScreen", () => {
       ).toBeInTheDocument();
     });
   });
+  describe("the Coast FIRE tile", () => {
+    /** Example D from tests/worked-examples/m4-coast.json: already coasting today. */
+    const exampleAlreadyCoasting: Plan = {
+      ...blankPlan,
+      household: {
+        people: [{ id: "person-1", label: "Person 1", currentAge: 45, targetRetirementAge: 60 }],
+      },
+      expenses: { livingAnnual: 50000 },
+      portfolios: [
+        { id: "portfolio-1", name: "Share portfolio", value: 1_000_000, expectedReturn: 0.07 },
+      ],
+    };
+
+    /** Example E: never coasts before retirement. */
+    const exampleNeverCoasts: Plan = {
+      ...blankPlan,
+      household: {
+        people: [{ id: "person-1", label: "Person 1", currentAge: 30, targetRetirementAge: 40 }],
+      },
+      expenses: { livingAnnual: 80000 },
+      assumptions: { inflationRate: 0.03 },
+      portfolios: [
+        {
+          id: "portfolio-1",
+          name: "Share portfolio",
+          value: 10_000,
+          expectedReturn: 0.05,
+          annualContribution: 1000,
+        },
+      ],
+    };
+
+    /** The Coast FIRE tile's element, for scoping assertions to it. */
+    function coastTile(): HTMLElement {
+      return screen
+        .getByText("Coast FIRE", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
+    }
+
+    it("shows the number, the retirement-year figure and the year it is reached (example A)", () => {
+      renderResults(exampleAWithCash);
+
+      const tile = within(coastTile());
+      expect(tile.getByText("$811,877")).toBeInTheDocument();
+      expect(tile.getByText("$1,205,235 in 2042 dollars")).toBeInTheDocument();
+      expect(tile.getByText("Reached in 2029, at age 37")).toBeInTheDocument();
+    });
+
+    it("comes right after Progress to FI", () => {
+      renderResults(exampleAWithCash);
+
+      const labels = Array.from(document.querySelectorAll(".metric .label")).map(
+        (label) => label.textContent,
+      );
+      expect(labels.slice(0, 3)).toEqual(["FI number", "Progress to FI", "Coast FIRE"]);
+    });
+
+    it("reads the same in both dollar modes", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      const tile = within(coastTile());
+      expect(tile.getByText("$811,877")).toBeInTheDocument();
+      expect(tile.getByText("$1,205,235 in 2042 dollars")).toBeInTheDocument();
+    });
+
+    it("breaks the number into cash and portfolio, then the year it is reached (example A)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      await openExplanation(user, "Coast FIRE");
+
+      const rows = explanationRows();
+      expect(rows).toContain("= Portfolio needed today$791,877");
+      expect(rows).toContain("+ Your cash today$20,000");
+      expect(rows).toContain("= Coast FIRE number$811,877");
+      expect(rows).toContain("Investable at end of 2029 (age 37)$1,000,975");
+      expect(rows).toContain("− Coast FIRE number in 2029$992,580");
+      expect(rows[rows.length - 1]).toBe("= Coast FIRE reached$8,395");
+    });
+
+    it("includes the dated-expense line when one falls before retirement (example C)", async () => {
+      const user = userEvent.setup();
+      renderResults({
+        ...exampleAWithCash,
+        expenses: {
+          ...exampleAWithCash.expenses,
+          datedExpenses: [
+            { id: "one-off", name: "One-off", annual: 100_000, fromYear: 2030, toYear: 2030 },
+          ],
+        },
+      });
+
+      expect(within(coastTile()).getByText("$890,925")).toBeInTheDocument();
+
+      await openExplanation(user, "Coast FIRE");
+
+      expect(
+        explanationRows().some((row) => row?.startsWith("+ Dated expenses the portfolio")),
+      ).toBe(true);
+    });
+
+    it("says contributions are optional when Coast FIRE is already reached (example D)", () => {
+      renderResults(exampleAlreadyCoasting);
+
+      const tile = within(coastTile());
+      expect(tile.getByText("$656,162")).toBeInTheDocument();
+      expect(tile.getByText("$950,319 in 2041 dollars")).toBeInTheDocument();
+      expect(tile.getByText("Reached: contributions are now optional")).toBeInTheDocument();
+    });
+
+    it("says not before retirement, and ends the breakdown at the retirement year (example E)", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleNeverCoasts);
+
+      const tile = within(coastTile());
+      expect(tile.getByText("$1,650,096")).toBeInTheDocument();
+      expect(tile.getByText("$2,217,591 in 2036 dollars")).toBeInTheDocument();
+      expect(tile.getByText("Not before retirement at 40")).toBeInTheDocument();
+
+      await openExplanation(user, "Coast FIRE");
+
+      const rows = explanationRows();
+      expect(rows[rows.length - 3]).toMatch(/^Investable at end of 2036 \(age 40\)\$/);
+      expect(rows[rows.length - 2]).toMatch(/^− Coast FIRE number in 2036\$/);
+      expect(rows[rows.length - 1]).toMatch(/^= Short of Coast FIRE-\$/);
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(screen.queryByText("Coast FIRE")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the Milestones card", () => {
+    /** The text of each milestone, in the order the timeline shows them. */
+    function milestoneTexts(): (string | null)[] {
+      const card = screen.getByRole("heading", { name: "Milestones" }).closest("section")!;
+      return within(card)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent);
+    }
+
+    it("lists Coast FIRE, FI reached, retirement and money lasts in year order (example A)", () => {
+      renderResults(exampleAWithCash);
+
+      expect(milestoneTexts()).toEqual([
+        "2029Coast FIREAge 37Projected",
+        "2038FI reachedAge 46Projected",
+        "2042Retirement (your target)Age 50Projected",
+        "2087Money lasts to 95Projected",
+      ]);
+    });
+
+    it("marks a milestone reached today as reached (example D)", () => {
+      renderResults({
+        ...blankPlan,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 45, targetRetirementAge: 60 }],
+        },
+        expenses: { livingAnnual: 50000 },
+        portfolios: [
+          { id: "portfolio-1", name: "Share portfolio", value: 1_000_000, expectedReturn: 0.07 },
+        ],
+      });
+
+      expect(milestoneTexts()[0]).toBe("2026Coast FIREAge 45Reached");
+    });
+
+    it("puts milestones that never happen last, in words (examples E and B)", () => {
+      renderResults({
+        ...blankPlan,
+        household: {
+          people: [{ id: "person-1", label: "Person 1", currentAge: 30, targetRetirementAge: 40 }],
+        },
+        expenses: { livingAnnual: 80000 },
+        assumptions: { inflationRate: 0.03 },
+        portfolios: [
+          {
+            id: "portfolio-1",
+            name: "Share portfolio",
+            value: 10_000,
+            expectedReturn: 0.05,
+            annualContribution: 1000,
+          },
+        ],
+      });
+
+      const texts = milestoneTexts();
+      expect(texts.slice(-2)).toEqual([
+        "Coast FIRE: not before retirementNot reached",
+        "FI reached: not by age 95Not reached",
+      ]);
+    });
+
+    it("says when the money runs out, with the year (example B)", () => {
+      renderResults(exampleB);
+
+      expect(milestoneTexts()).toContain("2031Money runs out at 65Projected");
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(screen.queryByRole("heading", { name: "Milestones" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the Coast FIRE chart card", () => {
+    /** The chart card's element. */
+    function coastChartCard(): HTMLElement {
+      return screen
+        .getByRole("heading", { name: "When could you stop contributing?" })
+        .closest("section")!;
+    }
+
+    it("sits after chart (a) and before the Year by year section, with no toggle of its own", () => {
+      renderResults(exampleAWithCash);
+
+      const fireHeading = screen.getByRole("heading", {
+        name: "Investable net worth vs FI number",
+      });
+      const coastHeading = screen.getByRole("heading", {
+        name: "When could you stop contributing?",
+      });
+      const tableHeading = screen.getByRole("heading", { level: 2, name: "Year by year" });
+
+      expect(
+        fireHeading.compareDocumentPosition(coastHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        coastHeading.compareDocumentPosition(tableHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(within(coastChartCard()).queryByRole("group")).toBeNull();
+    });
+
+    it("has a caption in nominal dollars that says so", () => {
+      renderResults(exampleAWithCash);
+
+      expect(
+        within(coastChartCard()).getByText(/With no more contributions from today/),
+      ).toHaveTextContent(
+        /^With no more contributions from today, your savings reach \$[\d,]+ by 2042, against an FI number of \$2,375,209 \(nominal dollars\)\.$/,
+      );
+    });
+
+    it("follows the page's dollars toggle, with the same caption", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithCash);
+
+      const card = within(coastChartCard());
+      // Nominal: the Coast FIRE number in 2042 equals the nominal FI number.
+      expect(
+        card.getByRole("row", { name: /^2042 50 \$[\d,]+ \$[\d,]+ \$2,375,209 \$2,375,209$/ }),
+      ).toBeInTheDocument();
+      const caption = card.getByText(/With no more contributions/).textContent;
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      expect(
+        card.getByRole("row", { name: /^2042 50 \$[\d,]+ \$[\d,]+ \$1,600,000 \$1,600,000$/ }),
+      ).toBeInTheDocument();
+      expect(card.getByText(/With no more contributions/).textContent).toBe(caption);
+    });
+
+    it("links to it from the top of the page", () => {
+      renderResults(exampleA);
+
+      const jumpLinks = screen.getByRole("navigation", { name: "On this page" });
+      expect(within(jumpLinks).getByRole("link", { name: "Coast FIRE chart" })).toHaveAttribute(
+        "href",
+        "/results?view=coast-chart",
+      );
+    });
+
+    it("is left out when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(
+        screen.queryByRole("heading", { name: "When could you stop contributing?" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("the chart card", () => {
     it("shows the chart's name, a dollars toggle and the figures as a hidden table", () => {
       renderResults(exampleAWithCash);
@@ -428,6 +723,10 @@ describe("ResultsScreen", () => {
       renderResults(exampleA);
 
       const jumpLinks = screen.getByRole("navigation", { name: "On this page" });
+      expect(within(jumpLinks).getByRole("link", { name: "Milestones" })).toHaveAttribute(
+        "href",
+        "/results?view=milestones",
+      );
       expect(within(jumpLinks).getByRole("link", { name: "FIRE chart" })).toHaveAttribute(
         "href",
         "/results?view=fire-chart",

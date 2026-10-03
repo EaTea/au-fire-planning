@@ -22,6 +22,7 @@ import {
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
+import { calculateCoastFire, type CoastFire } from "./coastFire";
 import { findEarliestRetirementAge, type EarliestRetirement } from "./earliestRetirement";
 import { assessSolvency, type Solvency } from "./solvency";
 
@@ -47,6 +48,8 @@ export type ProjectionSummary =
       readonly solvency: Solvency;
       /** The first retirement age from today to the end age at which the money lasts (FIRE-3). */
       readonly earliestRetirement: EarliestRetirement;
+      /** The Coast FIRE number, its path to retirement and when it is reached (COAST-1, COAST-2). */
+      readonly coast: CoastFire;
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -309,6 +312,7 @@ function summariseProjection(
     retirementYear: startYear + yearsUntilRetirement,
     endAge: projectionInputs.endAge.value,
     solvency: assessSolvency(rows),
+    coast: calculateCoastFire(rows, projectionSettings),
     earliestRetirement: findEarliestRetirementAge(
       {
         ...projectionSettings,

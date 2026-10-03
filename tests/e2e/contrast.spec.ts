@@ -275,13 +275,13 @@ test("the results page with its chart has readable text in both dollar modes, wi
   }
 
   await page.goto("#/results");
-  await expect(page.locator(".chart-band")).toHaveCount(1);
-  await expect(page.locator(".chart-marker")).toHaveCount(1);
+  await expect(page.locator("#fire-chart .chart-band")).toHaveCount(1);
+  await expect(page.locator("#fire-chart .chart-marker")).toHaveCount(1);
 
   // Show the tooltip while checking, since it is text on its own background.
   // The mouse can only reach what is in the viewport.
-  await page.locator(".chart-picture").scrollIntoViewIfNeeded();
-  const box = (await page.locator(".chart-picture").boundingBox())!;
+  await page.locator("#fire-chart .chart-picture").scrollIntoViewIfNeeded();
+  const box = (await page.locator("#fire-chart .chart-picture").boundingBox())!;
   await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
   await expect(page.locator(".chart-tooltip")).toBeVisible();
 
@@ -293,6 +293,45 @@ test("the results page with its chart has readable text in both dollar modes, wi
 
   // The hover/focus sweep moves the mouse off the chart, which is the tooltip-free state.
   expect(await findLowContrastWhileInteracting(page)).toEqual([]);
+});
+
+test("the results page with the Coast FIRE chart has readable text in both dollar modes, with its markers and a tooltip", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example A: Coast FIRE is reached in 2029, so the chart has both markers.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "34"],
+    ["#/household", "Target retirement age", "50"],
+    ["#/income-expenses", "Per year, after tax", "64000"],
+    ["#/assets", "Current value", "720000"],
+    ["#/assets", "Expected return per year", "7"],
+    ["#/assets", "Contributions per year", "30000"],
+    ["#/assets", "Cash savings", "20000"],
+    ["#/assumptions", "Inflation per year", "2.5"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label).fill(value);
+    await page.getByLabel(label).press("Tab");
+  }
+
+  await page.goto("#/results");
+  await expect(page.locator("#coast-chart .chart-marker")).toHaveCount(2);
+
+  // Show the tooltip while checking, since it is text on its own background.
+  await page.locator("#coast-chart .chart-picture").scrollIntoViewIfNeeded();
+  const box = (await page.locator("#coast-chart .chart-picture").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    expect(await findLowContrastText(page), mode).toEqual([]);
+  }
 });
 
 test("the year by year table on results has readable text in both dollar modes, including the FI row", async ({

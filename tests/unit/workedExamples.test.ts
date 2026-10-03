@@ -52,7 +52,31 @@ interface WorkedScenario {
     /** M3 figures: present in M3 fixtures only. */
     readonly solvency?: ExpectedSolvency;
     readonly earliestRetirement?: ExpectedEarliestRetirement;
+    /** M4 figures: present in M4 fixtures only. */
+    readonly coast?: ExpectedCoast;
   };
+}
+
+/** The expected Coast FIRE figures. Only the listed fields are checked. */
+interface ExpectedCoast {
+  /** The Coast FIRE number in today's dollars. */
+  readonly number: number;
+  /** The same amount in the retirement year's dollars. */
+  readonly numberInRetirementYearDollars: number;
+  /** `null` means Coast FIRE is not reached before retirement. */
+  readonly reached: {
+    readonly yearIndex: number;
+    readonly calendarYear: number;
+    readonly age: number;
+    readonly investable: number;
+    readonly coastNumber: number;
+  } | null;
+  /** Rows of the Coast FIRE path worth checking by hand. */
+  readonly rows?: readonly {
+    readonly yearIndex: number;
+    readonly investable: number;
+    readonly coastNumber: number;
+  }[];
 }
 
 /** A dated expense as written in a fixture, in the user's own units. */
@@ -266,6 +290,42 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
   }
 }
 
+/** Checks the Coast FIRE number, the retirement-year figure, the reached row and any listed path rows. */
+function checkCoastFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.coast === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+  const { coast } = summary.projection;
+
+  expectToTheCent(coast.number.value, expected.coast.number);
+  expectToTheCent(
+    coast.numberInRetirementYearDollars,
+    expected.coast.numberInRetirementYearDollars,
+  );
+
+  if (expected.coast.reached === null) {
+    expect(coast.reached).toBeUndefined();
+  } else {
+    expect(coast.reached).toBeDefined();
+    if (coast.reached === undefined) return;
+
+    expect(coast.reached.yearIndex).toBe(expected.coast.reached.yearIndex);
+    expect(coast.reached.calendarYear).toBe(expected.coast.reached.calendarYear);
+    expect(coast.reached.age).toBe(expected.coast.reached.age);
+
+    const point = coast.path[coast.reached.yearIndex];
+    expectToTheCent(point?.investable ?? Number.NaN, expected.coast.reached.investable);
+    expectToTheCent(point?.coastNumber ?? Number.NaN, expected.coast.reached.coastNumber);
+  }
+
+  for (const expectedRow of expected.coast.rows ?? []) {
+    const point = coast.path[expectedRow.yearIndex];
+    expectToTheCent(point?.investable ?? Number.NaN, expectedRow.investable);
+    expectToTheCent(point?.coastNumber ?? Number.NaN, expectedRow.coastNumber);
+  }
+}
+
 /** Checks the "does the money last?" answer against a fixture, field by field. */
 function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
   expect(actual.status).toBe(expected.status);
@@ -313,6 +373,7 @@ describe("worked examples", () => {
 
           checkFiNumberFigures(summary, scenario.expected);
           checkProjectionFigures(summary, scenario.expected);
+          checkCoastFigures(summary, scenario.expected);
         },
       );
     });

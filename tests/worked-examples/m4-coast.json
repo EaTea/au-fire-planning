@@ -1,0 +1,266 @@
+{
+  "milestone": "M4",
+  "description": "Coast FIRE: the Coast FIRE number today and in retirement-year dollars, and the first year investable net worth reaches it (null: not before retirement).",
+  "startYear": 2026,
+  "scenarios": [
+    {
+      "name": "A: headline, M3's example A",
+      "checkedBy": "independent script (not the app's code), per the M4 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "FI number at 2042 = $1,600,000 x 1.025^16 = $2,375,208.99",
+        "Cash $20,000 x 1.04^16 = $37,459.62; portfolio needed = ($2,375,208.99 - $37,459.62) / 1.07^16 (2.9522) = $791,876.59",
+        "Coast FIRE number = $20,000 + $791,876.59 = $811,876.59; in 2042 dollars x 1.025^16 = $1,205,235.36",
+        "Reached in 2029 (age 37): investable $1,000,975.24 vs $992,580.16"
+      ],
+      "expected": {
+        "coast": {
+          "number": 811876.59,
+          "numberInRetirementYearDollars": 1205235.36,
+          "reached": {
+            "yearIndex": 3,
+            "calendarYear": 2029,
+            "age": 37,
+            "investable": 1000975.24,
+            "coastNumber": 992580.16
+          }
+        }
+      }
+    },
+    {
+      "name": "B: by hand, no cash, no inflation",
+      "checkedBy": "hand calculation",
+      "inputs": {
+        "currentAge": 40,
+        "targetRetirementAge": 50,
+        "portfolioValue": 150000,
+        "expectedReturn": 0.1,
+        "annualContribution": 10000,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "Coast FIRE number = $500,000 / 1.1^10 = $192,771.64",
+        "Reached in 2032 (age 46): $342,890.25 vs $341,506.73"
+      ],
+      "expected": {
+        "coast": {
+          "number": 192771.64,
+          "numberInRetirementYearDollars": 192771.64,
+          "reached": {
+            "yearIndex": 6,
+            "calendarYear": 2032,
+            "age": 46,
+            "investable": 342890.25,
+            "coastNumber": 341506.73
+          },
+          "rows": [
+            {
+              "yearIndex": 0,
+              "investable": 150000.0,
+              "coastNumber": 192771.64
+            },
+            {
+              "yearIndex": 1,
+              "investable": 175000.0,
+              "coastNumber": 212048.81
+            },
+            {
+              "yearIndex": 2,
+              "investable": 202500.0,
+              "coastNumber": 233253.69
+            },
+            {
+              "yearIndex": 3,
+              "investable": 232750.0,
+              "coastNumber": 256579.06
+            },
+            {
+              "yearIndex": 4,
+              "investable": 266025.0,
+              "coastNumber": 282236.97
+            },
+            {
+              "yearIndex": 5,
+              "investable": 302627.5,
+              "coastNumber": 310460.66
+            },
+            {
+              "yearIndex": 6,
+              "investable": 342890.25,
+              "coastNumber": 341506.73
+            },
+            {
+              "yearIndex": 10,
+              "investable": 548435.62,
+              "coastNumber": 500000.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "C: A plus a $100,000 one-off in 2030",
+      "checkedBy": "independent script (not the app's code), per the M4 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "datedExpenses": [
+          {
+            "name": "Car",
+            "annual": 100000,
+            "fromYear": 2030,
+            "toYear": 2030
+          }
+        ]
+      },
+      "arithmetic": [
+        "The car comes out of cash first, then the portfolio, so the number rises",
+        "Coast FIRE number $890,925.23; in 2042 dollars $1,322,583.51",
+        "Reached in 2033 (age 41): $1,309,224.01 vs $1,291,956.32"
+      ],
+      "expected": {
+        "coast": {
+          "number": 890925.23,
+          "numberInRetirementYearDollars": 1322583.51,
+          "reached": {
+            "yearIndex": 7,
+            "calendarYear": 2033,
+            "age": 41,
+            "investable": 1309224.01,
+            "coastNumber": 1291956.32
+          }
+        }
+      }
+    },
+    {
+      "name": "D: already coasting",
+      "checkedBy": "independent script (not the app's code), per the M4 plan",
+      "inputs": {
+        "currentAge": 45,
+        "targetRetirementAge": 60,
+        "portfolioValue": 1000000,
+        "expectedReturn": 0.07,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 50000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "FI number at 2041 = $1,250,000 x 1.025^15; with no cash, the portfolio needed today is that divided by 1.07^15",
+        "Coast FIRE number $656,162.38 is below the $1,000,000 held today, so it is reached now",
+        "In 2041 dollars $950,318.77"
+      ],
+      "expected": {
+        "coast": {
+          "number": 656162.38,
+          "numberInRetirementYearDollars": 950318.77,
+          "reached": {
+            "yearIndex": 0,
+            "calendarYear": 2026,
+            "age": 45,
+            "investable": 1000000.0,
+            "coastNumber": 656162.38
+          }
+        }
+      }
+    },
+    {
+      "name": "E: never reached before retirement",
+      "checkedBy": "independent script (not the app's code), per the M4 plan",
+      "inputs": {
+        "currentAge": 30,
+        "targetRetirementAge": 40,
+        "portfolioValue": 10000,
+        "expectedReturn": 0.05,
+        "annualContribution": 1000,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0.03,
+        "livingExpensesAnnual": 80000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "Coast FIRE number $1,650,096.15; in 2036 dollars $2,217,591.25",
+        "Savings never catch up before age 40"
+      ],
+      "expected": {
+        "coast": {
+          "number": 1650096.15,
+          "numberInRetirementYearDollars": 2217591.25,
+          "reached": null
+        }
+      }
+    },
+    {
+      "name": "F: lots of cash earning less than the portfolio",
+      "checkedBy": "independent script (not the app's code), per the M4 plan",
+      "inputs": {
+        "currentAge": 40,
+        "targetRetirementAge": 55,
+        "portfolioValue": 300000,
+        "expectedReturn": 0.07,
+        "annualContribution": 20000,
+        "cashBalance": 300000,
+        "interestRate": 0.03,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 50000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04
+      },
+      "arithmetic": [
+        "Cash $300,000 earns 3%, not 7%: $300,000 x 1.03^15 is subtracted, and $300,000 today is added back",
+        "Coast FIRE number $786,758.66 = $300,000 cash + $486,758.66 portfolio; in 2041 dollars $1,139,461.12",
+        "Treating the cash as earning 7% would give $656,162.38, about $130,000 too low"
+      ],
+      "expected": {
+        "coast": {
+          "number": 786758.66,
+          "numberInRetirementYearDollars": 1139461.12,
+          "reached": null
+        }
+      }
+    }
+  ]
+}
