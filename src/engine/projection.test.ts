@@ -147,33 +147,33 @@ describe("projectPortfolio: cash", () => {
   });
 });
 
-// Retired years are those after the retirement age; spending is drawn cash first.
+// Retired years are those after the retirement age; spending is drawn from
+// the portfolio first and cash last, so cash stays as a buffer.
 describe("projectPortfolio: retirement spending", () => {
   const rows = projectPortfolio(runsOutExample, 2026);
 
   // Age 60 is today and the retirement age itself, so the first retired row is age 61.
-  it("starts drawing spending in the year after the retirement age, cash first", () => {
+  it("starts drawing spending in the year after the retirement age, from the portfolio", () => {
     expect(rows[0]?.phase).toBe("working");
     expect(rows[1]).toMatchObject({
       phase: "retired",
       cashInterest: 500,
       portfolioGrowth: 10000,
       spending: 30000,
-      fromCash: 10500,
-      fromPortfolio: 19500,
+      fromPortfolio: 30000,
+      fromCash: 0,
       shortfall: 0,
-      cashClosing: 0,
-      portfolioClosing: 90500,
+      cashClosing: 10500,
+      portfolioClosing: 80000,
     });
   });
 
-  it("draws from the portfolio alone once cash is gone", () => {
-    expect(rows[2]).toMatchObject({
-      cashInterest: 0,
-      fromCash: 0,
-      fromPortfolio: 30000,
-      portfolioClosing: 69550,
-    });
+  // Cash keeps earning interest, untouched, while the portfolio can pay.
+  it("leaves cash alone while the portfolio can pay", () => {
+    expect(rows[2]).toMatchObject({ fromCash: 0, fromPortfolio: 30000, portfolioClosing: 58000 });
+    expect(rows[2]?.cashClosing).toBeCloseTo(11025, 8);
+    expect(rows[4]?.portfolioClosing).toBeCloseTo(7180, 8);
+    expect(rows[4]?.cashClosing).toBeCloseTo(12155.0625, 8);
   });
 
   // Spending a few years later keeps growing with inflation, like living expenses.
@@ -183,30 +183,31 @@ describe("projectPortfolio: retirement spending", () => {
     expect(inflated[2]?.spending).toBeCloseTo(30000 * 1.02 ** 2, 8);
   });
 
-  // The year the portfolio can't cover spending: cash and portfolio end at $0.
-  it("records the unfunded part as a shortfall and empties both balances", () => {
+  // 2031: the portfolio has $7,898, cash $12,762.82, and spending is $30,000.
+  it("draws cash once the portfolio is empty, and records the rest as a shortfall", () => {
     expect(rows[5]).toMatchObject({
       calendarYear: 2031,
       age: 65,
-      fromPortfolio: 23271.05,
       cashClosing: 0,
       portfolioClosing: 0,
     });
-    expect(rows[5]?.shortfall).toBeCloseTo(6728.95, 2);
+    expect(rows[5]?.fromPortfolio).toBeCloseTo(7898, 8);
+    expect(rows[5]?.fromCash).toBeCloseTo(12762.815625, 8);
+    expect(rows[5]?.shortfall).toBeCloseTo(9339.184375, 8);
   });
 
-  // Cash covering spending exactly leaves no draw on the portfolio and no shortfall.
-  it("handles cash exactly covering spending", () => {
+  // The portfolio covering spending exactly leaves cash untouched and no shortfall.
+  it("handles the portfolio exactly covering spending", () => {
     const [, row] = projectPortfolio(
-      { ...runsOutExample, cashOpening: 30000 / 1.05, retirementSpendingAnnual: 30000 },
+      { ...runsOutExample, portfolioOpening: 30000 / 1.1, retirementSpendingAnnual: 30000 },
       2026,
     );
 
-    expect(row?.fromCash).toBeCloseTo(30000, 8);
-    expect(row?.fromPortfolio).toBeCloseTo(0, 8);
-    expect(row?.shortfall).toBe(0);
-    expect(row?.cashClosing).toBeCloseTo(0, 8);
-    expect(row?.portfolioClosing).toBeCloseTo(110000, 8);
+    expect(row?.fromPortfolio).toBeCloseTo(30000, 8);
+    expect(row?.fromCash).toBeCloseTo(0, 8);
+    expect(row?.shortfall).toBeCloseTo(0, 8);
+    expect(row?.portfolioClosing).toBeCloseTo(0, 8);
+    expect(row?.cashClosing).toBeCloseTo(10500, 8);
   });
 
   // After the money runs out, each later year is a full shortfall.
@@ -254,6 +255,16 @@ describe("projectPortfolio: dated expenses", () => {
     expect(rows[2]?.spending).toBeCloseTo(31212, 6);
     expect(rows[2]?.fromPortfolio).toBeCloseTo(31212, 6);
     expect(rows[2]?.portfolioClosing).toBeCloseTo(230288, 6);
+  });
+
+  // With cash on hand, a working-year expense still comes from the portfolio:
+  // cash is the last thing drawn, so it keeps earning interest untouched.
+  it("leaves cash alone when paying an expense before retirement", () => {
+    const withCash = projectPortfolio({ ...exampleC, cashOpening: 50000 }, 2026);
+
+    expect(withCash[2]?.fromCash).toBe(0);
+    expect(withCash[2]?.fromPortfolio).toBeCloseTo(31212, 6);
+    expect(withCash[2]?.cashClosing).toBeCloseTo(50000 * 1.04 ** 2, 6);
   });
 
   // The range is inclusive at both ends.

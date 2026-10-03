@@ -1455,7 +1455,7 @@ expense in 2029):
 
 #### Step 1 · Engine: cash drawn last
 
-- [ ] Done
+- [x] Done
 
 1. In `projectPortfolio`, draw spending from the portfolio, then cash.
    Update the diagram and the doc comments for `fromCash` and
@@ -1469,7 +1469,8 @@ expense in 2029):
      from cash; a dated expense while working leaving cash alone;
    - a fixture with the sample plan above, to the dollar;
    - M3 and M4 worked-example fixtures recomputed where cash and the
-     portfolio are both drawn; the changes listed in the PR;
+     portfolio are both drawn; the changes listed in the PR. Done with an
+     independent script: M3 A and B and M4 C change, the sample is M3 D;
    - the existing property tests (balances never negative, Coast FIRE's
      "reached at row k") still pass.
 

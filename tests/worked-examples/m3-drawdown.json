@@ -24,9 +24,9 @@
       "arithmetic": [
         "Row 1 (2027): interest = $20,000 x 0.04 = $800; growth = $720,000 x 0.07 = $50,400; contribution $30,000; cash = $20,800; portfolio = $800,400",
         "FI reached in row 12 (2038, age 46): investable $2,190,252.13 vs FI number $1,600,000 x 1.025^12 = $2,151,822.12. Cash doesn't change the year",
-        "Row 17 (2043, age 51) is the first retired year: spending = $64,000 x 1.025^17 = $97,383.57; from cash $38,958.01; from the portfolio $58,425.56; cash ends at $0 and the portfolio at $3,111,127.91",
-        "The money lasts to age 95 (2087) with $24,101,430.35 investable (nominal)",
-        "Earliest retirement: age 43 (2035). Retiring at 42 runs short in 2085, at age 93"
+        "Row 17 (2043, age 51) is the first retired year: spending = $64,000 x 1.025^17 = $97,383.57, all from the portfolio (cash is drawn last); cash ends at $38,958.01 and the portfolio at $3,072,169.90 (investable $3,111,127.91)",
+        "The money lasts to age 95 (2087) with $23,555,552.88 investable (nominal)",
+        "Earliest retirement: age 43 (2035). Retiring at 42 runs short in 2083, at age 91"
       ],
       "expected": {
         "rows": [
@@ -41,10 +41,10 @@
           {
             "yearIndex": 17,
             "spending": 97383.57,
-            "fromCash": 38958.01,
-            "fromPortfolio": 58425.56,
-            "cashClosing": 0.0,
-            "portfolioClosing": 3111127.91
+            "fromCash": 0.0,
+            "fromPortfolio": 97383.57,
+            "cashClosing": 38958.01,
+            "portfolioClosing": 3072169.9
           }
         ],
         "fiReached": {
@@ -54,10 +54,7 @@
           "investableClosing": 2190252.13,
           "fiNumber": 2151822.12
         },
-        "solvency": {
-          "status": "lasts",
-          "investableClosing": 24101430.35
-        },
+        "solvency": { "status": "lasts", "investableClosing": 23555552.88 },
         "earliestRetirement": { "status": "feasible", "age": 43, "year": 2035 }
       }
     },
@@ -80,11 +77,12 @@
         "safeWithdrawalRate": 0.04
       },
       "arithmetic": [
-        "2027 (age 61): interest $500; growth $10,000; spending $30,000 = $10,500 from cash + $19,500 from the portfolio; portfolio = $110,000 - $19,500 = $90,500",
-        "2028 (age 62): growth $9,050; spending $30,000 from the portfolio; portfolio $69,550",
-        "2029 (age 63): growth $6,955; portfolio $46,505",
-        "2030 (age 64): growth $4,650.50; portfolio $21,155.50",
-        "2031 (age 65): growth $2,115.55; available $23,271.05 against spending $30,000, so the shortfall is $6,728.95 and the portfolio ends at $0",
+        "Spending is drawn from the portfolio first and cash last",
+        "2027 (age 61): interest $500; growth $10,000; spending $30,000 all from the portfolio; portfolio = $110,000 - $30,000 = $80,000; cash $10,500",
+        "2028 (age 62): growth $8,000; portfolio $58,000; cash $11,025",
+        "2029 (age 63): growth $5,800; portfolio $33,800; cash $11,576.25",
+        "2030 (age 64): growth $3,380; portfolio $7,180; cash $12,155.0625",
+        "2031 (age 65): growth $718; portfolio pays $7,898; cash (with $607.75 interest) pays $12,762.82; the shortfall is $30,000 - $7,898 - $12,762.82 = $9,339.18 and both end at $0",
         "FI number = $30,000 / 0.04 = $750,000, never reached",
         "Earliest retirement: age 61 (2027)"
       ],
@@ -95,21 +93,39 @@
             "cashInterest": 500.0,
             "portfolioGrowth": 10000.0,
             "spending": 30000.0,
-            "fromCash": 10500.0,
-            "fromPortfolio": 19500.0,
+            "fromCash": 0.0,
+            "fromPortfolio": 30000.0,
             "shortfall": 0.0,
-            "portfolioClosing": 90500.0
+            "cashClosing": 10500.0,
+            "portfolioClosing": 80000.0
           },
-          { "yearIndex": 2, "portfolioGrowth": 9050.0, "portfolioClosing": 69550.0 },
-          { "yearIndex": 3, "portfolioGrowth": 6955.0, "portfolioClosing": 46505.0 },
-          { "yearIndex": 4, "portfolioGrowth": 4650.5, "portfolioClosing": 21155.5 },
+          {
+            "yearIndex": 2,
+            "portfolioGrowth": 8000.0,
+            "cashClosing": 11025.0,
+            "portfolioClosing": 58000.0
+          },
+          {
+            "yearIndex": 3,
+            "portfolioGrowth": 5800.0,
+            "cashClosing": 11576.25,
+            "portfolioClosing": 33800.0
+          },
+          {
+            "yearIndex": 4,
+            "portfolioGrowth": 3380.0,
+            "cashClosing": 12155.06,
+            "portfolioClosing": 7180.0
+          },
           {
             "yearIndex": 5,
-            "portfolioGrowth": 2115.55,
+            "portfolioGrowth": 718.0,
+            "cashInterest": 607.75,
             "spending": 30000.0,
-            "fromCash": 0.0,
-            "fromPortfolio": 23271.05,
-            "shortfall": 6728.95,
+            "fromCash": 12762.82,
+            "fromPortfolio": 7898.0,
+            "shortfall": 9339.18,
+            "cashClosing": 0.0,
             "portfolioClosing": 0.0
           }
         ],
@@ -119,7 +135,7 @@
           "year": 2031,
           "age": 65,
           "shortfallYears": [2031],
-          "shortfall": 6728.95
+          "shortfall": 9339.18
         },
         "earliestRetirement": { "status": "feasible", "age": 61, "year": 2027 }
       }
@@ -169,11 +185,60 @@
           { "yearIndex": 10, "portfolioClosing": 132703.89 }
         ],
         "fiReached": null,
-        "solvency": {
-          "status": "lasts",
-          "investableClosing": 132703.89
-        },
+        "solvency": { "status": "lasts", "investableClosing": 132703.89 },
         "earliestRetirement": { "status": "feasible", "age": 44, "year": 2030 }
+      }
+    },
+    {
+      "name": "D: cash drawn last, with a dated expense while working",
+      "checkedBy": "independent script (not the app's code)",
+      "inputs": {
+        "currentAge": 35,
+        "targetRetirementAge": 45,
+        "projectionEndAge": 90,
+        "contributionsStopAge": null,
+        "portfolioValue": 200000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 50000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 60000,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "datedExpenses": [{ "name": "Car", "annual": 30000, "fromYear": 2029, "toYear": 2029 }]
+      },
+      "arithmetic": [
+        "2029 (age 38, working): the car costs $30,000 x 1.025^3 = $32,306.72, paid from the portfolio; cash is untouched at $50,000 x 1.04^3 = $56,243.20; portfolio $309,148.88",
+        "2036 (age 45, last working year): cash $74,012.21, portfolio $756,046.18",
+        "2037 (age 46, first retired year): spending $60,000 x 1.025^11 = $78,725.20, all from the portfolio; cash $76,972.70, portfolio $730,244.21",
+        "The portfolio runs out first, then cash, and the first shortfall is in 2051 (age 60): $71,126.04",
+        "Cash first (the old rule) ran out in 2052, at age 61: cash earns less than the portfolio, so keeping it longer costs a year here",
+        "Earliest retirement: age 54 (2045)"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 3,
+            "spending": 32306.72,
+            "fromCash": 0.0,
+            "fromPortfolio": 32306.72,
+            "cashClosing": 56243.2,
+            "portfolioClosing": 309148.88
+          },
+          { "yearIndex": 10, "cashClosing": 74012.21, "portfolioClosing": 756046.18 },
+          {
+            "yearIndex": 11,
+            "spending": 78725.2,
+            "fromCash": 0.0,
+            "fromPortfolio": 78725.2,
+            "cashClosing": 76972.7,
+            "portfolioClosing": 730244.21
+          }
+        ],
+        "fiReached": null,
+        "solvency": { "status": "runsOut", "year": 2051, "age": 60, "shortfall": 71126.04 },
+        "earliestRetirement": { "status": "feasible", "age": 54, "year": 2045 }
       }
     }
   ]
