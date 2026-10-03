@@ -1436,7 +1436,7 @@ expense in 2029):
 | --- | --- | --- |
 | Cash after the 2029 expense | $23,936 | $56,243 |
 | Cash / portfolio at retirement (2036) | $31,499 / $807,924 | $74,012 / $756,046 |
-| Money runs out | 2052, age 61 | 2050, age 59 |
+| Money runs out | 2052, age 61 | 2051, age 60 |
 
 **Considered and not chosen:**
 - **Keep a fixed buffer** (say two years of spending) and draw cash first
