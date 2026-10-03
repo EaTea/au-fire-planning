@@ -6,11 +6,36 @@
 // These are the only functions that know about both shapes. Neither type is
 // ever stored or used in place of the other.
 
-import type { Person, Plan, Portfolio, RetirementSpending } from "../plan/types";
+import type { DatedExpense, Person, Plan, Portfolio, RetirementSpending } from "../plan/types";
 import { CURRENT_SCHEMA_VERSION, type PlanDocumentV1 } from "./planDocument";
 
 /** The wire form of retirement spending, taken from the document type. */
 type WireRetirement = NonNullable<PlanDocumentV1["expenses"]["retirement"]>;
+
+/** The wire form of one dated expense, taken from the document type. */
+type WireDatedExpense = NonNullable<PlanDocumentV1["expenses"]["datedExpenses"]>[number];
+
+/** Maps a dated expense to its wire form; an unset amount is left out. */
+function datedExpenseToWire(expense: DatedExpense): WireDatedExpense {
+  return {
+    id: expense.id,
+    name: expense.name,
+    ...(expense.annual !== undefined ? { annualDollars: expense.annual } : {}),
+    fromYear: expense.fromYear,
+    toYear: expense.toYear,
+  };
+}
+
+/** Inverse of `datedExpenseToWire`. */
+function datedExpenseFromWire(wireExpense: WireDatedExpense): DatedExpense {
+  return {
+    id: wireExpense.id,
+    name: wireExpense.name,
+    ...(wireExpense.annualDollars !== undefined ? { annual: wireExpense.annualDollars } : {}),
+    fromYear: wireExpense.fromYear,
+    toYear: wireExpense.toYear,
+  };
+}
 
 /**
  * Rounds away floating-point noise. Dividing or multiplying by 100 can leave
@@ -64,6 +89,10 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
   if (plan.expenses.retirementSpending !== undefined) {
     expenses.retirement = retirementSpendingToWire(plan.expenses.retirementSpending);
   }
+  // An empty list is kept (as []), so a plan with the table emptied round-trips unchanged.
+  if (plan.expenses.datedExpenses !== undefined) {
+    expenses.datedExpenses = plan.expenses.datedExpenses.map(datedExpenseToWire);
+  }
 
   const assumptions: PlanDocumentV1["assumptions"] = {};
   if (plan.assumptions.safeWithdrawalRate !== undefined) {
@@ -73,10 +102,16 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
   if (plan.assumptions.inflationRate !== undefined) {
     assumptions.inflationPercent = fractionToPercent(plan.assumptions.inflationRate);
   }
+  if (plan.assumptions.interestRate !== undefined) {
+    assumptions.interestPercent = fractionToPercent(plan.assumptions.interestRate);
+  }
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     household: {
+      ...(plan.household.projectionEndAge !== undefined
+        ? { projectionEndAgeYears: plan.household.projectionEndAge }
+        : {}),
       people: plan.household.people.map((person) => {
         const wirePerson: PlanDocumentV1["household"]["people"][number] = {
           id: person.id,
@@ -91,6 +126,8 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
         return wirePerson;
       }),
     },
+    // The cash section is written only once a balance is set.
+    ...(plan.cash?.balance !== undefined ? { cash: { balanceDollars: plan.cash.balance } } : {}),
     expenses,
     assumptions,
     portfolios: plan.portfolios.map((portfolio) => {
@@ -147,13 +184,24 @@ export function planFromWire(document: PlanDocumentV1): Plan {
   }));
 
   return {
-    household: { people },
+    household: {
+      people,
+      ...(document.household.projectionEndAgeYears !== undefined
+        ? { projectionEndAge: document.household.projectionEndAgeYears }
+        : {}),
+    },
+    ...(document.cash?.balanceDollars !== undefined
+      ? { cash: { balance: document.cash.balanceDollars } }
+      : {}),
     expenses: {
       ...(document.expenses.livingAnnualDollars !== undefined
         ? { livingAnnual: document.expenses.livingAnnualDollars }
         : {}),
       ...(document.expenses.retirement !== undefined
         ? { retirementSpending: retirementSpendingFromWire(document.expenses.retirement) }
+        : {}),
+      ...(document.expenses.datedExpenses !== undefined
+        ? { datedExpenses: document.expenses.datedExpenses.map(datedExpenseFromWire) }
         : {}),
     },
     assumptions: {
@@ -162,6 +210,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
         : {}),
       ...(document.assumptions.inflationPercent !== undefined
         ? { inflationRate: percentToFraction(document.assumptions.inflationPercent) }
+        : {}),
+      ...(document.assumptions.interestPercent !== undefined
+        ? { interestRate: percentToFraction(document.assumptions.interestPercent) }
         : {}),
     },
     portfolios,

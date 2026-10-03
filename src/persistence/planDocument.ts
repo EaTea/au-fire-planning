@@ -22,6 +22,26 @@ export const CURRENT_SCHEMA_VERSION = 1;
 /** An age in whole years, 0 to 120. Shared by every stored age so the range is defined once. */
 const ageYearsSchema = z.number().int().min(0).max(120);
 
+/** A calendar year as stored: a whole number from 1900 to 2200. */
+const calendarYearSchema = z.number().int().min(1900).max(2200);
+
+/**
+ * One dated or one-off expense as stored (EXP-6). The refinement keeps the
+ * years in order; a document that breaks it is rejected rather than repaired.
+ */
+const datedExpenseSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    annualDollars: z.number().nonnegative().optional(),
+    fromYear: calendarYearSchema,
+    toYear: calendarYearSchema,
+  })
+  .refine((expense) => expense.toYear >= expense.fromYear, {
+    message: "toYear must not be before fromYear",
+    path: ["toYear"],
+  });
+
 /**
  * Zod schema for version 1 of the plan document. It is the single definition:
  * the TypeScript type below is inferred from it, and `parsePlanDocument`
@@ -38,7 +58,9 @@ export const planDocumentV1Schema = z.object({
         targetRetirementAgeYears: ageYearsSchema.optional(),
       }),
     ),
+    projectionEndAgeYears: ageYearsSchema.optional(),
   }),
+  cash: z.object({ balanceDollars: z.number().nonnegative().optional() }).optional(),
   expenses: z.object({
     livingAnnualDollars: z.number().nonnegative().optional(),
     retirement: z
@@ -47,10 +69,12 @@ export const planDocumentV1Schema = z.object({
         z.object({ kind: z.literal("percentOfToday"), percent: z.number().nonnegative() }),
       ])
       .optional(),
+    datedExpenses: z.array(datedExpenseSchema).optional(),
   }),
   assumptions: z.object({
     safeWithdrawalRatePercent: z.number().positive().optional(),
     inflationPercent: z.number().nonnegative().optional(),
+    interestPercent: z.number().nonnegative().optional(),
   }),
   portfolios: z.array(
     // Optional (unlike the first sketch in the plan): "store only what the user set".

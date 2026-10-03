@@ -2,7 +2,7 @@ import { fc, test } from "@fast-check/vitest";
 import { describe, expect, it } from "vitest";
 
 import { createNewPlan } from "../plan/createNewPlan";
-import type { Plan, RetirementSpending } from "../plan/types";
+import type { DatedExpense, Plan, RetirementSpending } from "../plan/types";
 import { fractionToPercent, percentToFraction, planFromWire, planToWire } from "./planMapping";
 
 // Tests for the Plan <-> PlanDocumentV1 mappers.
@@ -33,6 +33,26 @@ const wholeHundredthsFraction = fc
   .integer({ min: 0, max: 15_000 })
   .map((hundredthsOfPercent) => percentToFraction(hundredthsOfPercent / 100));
 
+/** Calendar years inside the stored range. */
+const years = fc.integer({ min: 1900, max: 2200 });
+
+/** Dated expenses whose "To" year is never before the "From" year, with the amount sometimes unset. */
+const datedExpenses: fc.Arbitrary<DatedExpense> = fc
+  .record({
+    id: fc.uuid(),
+    name: fc.string(),
+    annual: fc.option(dollars, { nil: undefined }),
+    fromYear: years,
+    extraYears: fc.integer({ min: 0, max: 50 }),
+  })
+  .map(({ id, name, annual, fromYear, extraYears }) => ({
+    id,
+    name,
+    ...(annual !== undefined ? { annual } : {}),
+    fromYear,
+    toYear: Math.min(fromYear + extraYears, 2200),
+  }));
+
 /** Arbitrary plans where every optional value may or may not be set. */
 const plans: fc.Arbitrary<Plan> = fc
   .record({
@@ -53,9 +73,17 @@ const plans: fc.Arbitrary<Plan> = fc
     contributionsStopAge: fc.option(ages, { nil: undefined }),
     personLabel: fc.string(),
     portfolioName: fc.string(),
+    projectionEndAge: fc.option(ages, { nil: undefined }),
+    cashBalance: fc.option(dollars, { nil: undefined }),
+    interestRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
+    // Absent, empty, or several expenses.
+    datedExpenseList: fc.option(fc.array(datedExpenses, { maxLength: 4 }), { nil: undefined }),
   })
   .map((generated) => ({
     household: {
+      ...(generated.projectionEndAge !== undefined
+        ? { projectionEndAge: generated.projectionEndAge }
+        : {}),
       people: [
         {
           id: "person-id",
@@ -67,7 +95,11 @@ const plans: fc.Arbitrary<Plan> = fc
         },
       ],
     },
+    ...(generated.cashBalance !== undefined ? { cash: { balance: generated.cashBalance } } : {}),
     expenses: {
+      ...(generated.datedExpenseList !== undefined
+        ? { datedExpenses: generated.datedExpenseList }
+        : {}),
       ...(generated.livingAnnual !== undefined ? { livingAnnual: generated.livingAnnual } : {}),
       ...(generated.retirementSpending !== undefined
         ? { retirementSpending: generated.retirementSpending }
@@ -78,6 +110,7 @@ const plans: fc.Arbitrary<Plan> = fc
         ? { safeWithdrawalRate: generated.safeWithdrawalRate }
         : {}),
       ...(generated.inflationRate !== undefined ? { inflationRate: generated.inflationRate } : {}),
+      ...(generated.interestRate !== undefined ? { interestRate: generated.interestRate } : {}),
     },
     portfolios: [
       {
@@ -178,6 +211,43 @@ describe("planToWire: growth fields", () => {
       annualContributionDollars: 30000,
       contributionsStopAgeYears: 50,
     });
+  });
+});
+
+describe("planToWire: drawdown fields", () => {
+  // Percent for the interest rate, dollars and years keep their values, units in the names.
+  it("writes the drawdown fields with units in the field names", () => {
+    const blank = blankPlan();
+
+    const document = planToWire({
+      ...blank,
+      household: { ...blank.household, projectionEndAge: 90 },
+      cash: { balance: 20000 },
+      expenses: {
+        datedExpenses: [
+          { id: "a", name: "Car", annual: 30000, fromYear: 2028, toYear: 2028 },
+          { id: "b", name: "", fromYear: 2029, toYear: 2030 },
+        ],
+      },
+      assumptions: { interestRate: 0.035 },
+    });
+
+    expect(document.household.projectionEndAgeYears).toBe(90);
+    expect(document.cash).toStrictEqual({ balanceDollars: 20000 });
+    expect(document.assumptions).toStrictEqual({ interestPercent: 3.5 });
+    expect(document.expenses.datedExpenses).toStrictEqual([
+      { id: "a", name: "Car", annualDollars: 30000, fromYear: 2028, toYear: 2028 },
+      { id: "b", name: "", fromYear: 2029, toYear: 2030 },
+    ]);
+  });
+
+  // An unset amount is omitted, and no cash section is written until a balance is set.
+  it("omits an unset amount and an unset cash balance", () => {
+    const blank = blankPlan();
+
+    const document = planToWire({ ...blank, cash: {} });
+
+    expect(document).not.toHaveProperty("cash");
   });
 });
 

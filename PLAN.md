@@ -1619,7 +1619,7 @@ changes to tests.
 
 #### Step 3 · Plan state and wire format
 
-- [ ] Done
+- [x] Done
 
 1. Add reducer actions. An `undefined` value clears back to the default.
    - `setProjectionEndAge { age? }`

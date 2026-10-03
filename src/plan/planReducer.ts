@@ -6,7 +6,7 @@
 // returns a new object, so React can detect the change and the engine's
 // derived summary can be recomputed from it.
 
-import type { Person, Plan, Portfolio, RetirementSpending } from "./types";
+import type { DatedExpense, Person, Plan, Portfolio, RetirementSpending } from "./types";
 
 /**
  * Every way the plan can change. Optional payload values mean "clear this
@@ -32,6 +32,17 @@ export type PlanAction =
       readonly portfolioId: string;
       readonly age?: number;
     }
+  | { readonly type: "setProjectionEndAge"; readonly age?: number }
+  | { readonly type: "setCashBalance"; readonly balance?: number }
+  | { readonly type: "setInterestRate"; readonly rate?: number }
+  | { readonly type: "addDatedExpense"; readonly id: string; readonly startYear: number }
+  | {
+      readonly type: "updateDatedExpense";
+      readonly id: string;
+      readonly changes: Partial<Pick<DatedExpense, "name" | "annual" | "fromYear" | "toYear">>;
+    }
+  | { readonly type: "duplicateDatedExpense"; readonly id: string; readonly newId: string }
+  | { readonly type: "removeDatedExpense"; readonly id: string }
   | { readonly type: "replacePlan"; readonly plan: Plan };
 
 /**
@@ -87,9 +98,80 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
     case "setContributionsStopAge":
       return updatePortfolio(plan, action.portfolioId, { contributionsStopAge: action.age });
 
+    case "setProjectionEndAge":
+      return { ...plan, household: { ...plan.household, projectionEndAge: action.age } };
+
+    case "setCashBalance":
+      return { ...plan, cash: { ...plan.cash, balance: action.balance } };
+
+    case "setInterestRate":
+      return { ...plan, assumptions: { ...plan.assumptions, interestRate: action.rate } };
+
+    case "addDatedExpense": {
+      // A new row is a valid one-off in the first year with flows (row 0 is today).
+      const firstYearWithFlows = action.startYear + 1;
+      const newExpense: DatedExpense = {
+        id: action.id,
+        name: "",
+        fromYear: firstYearWithFlows,
+        toYear: firstYearWithFlows,
+      };
+
+      return withDatedExpenses(plan, [...(plan.expenses.datedExpenses ?? []), newExpense]);
+    }
+
+    case "updateDatedExpense":
+      return withDatedExpenses(
+        plan,
+        (plan.expenses.datedExpenses ?? []).map((expense) =>
+          expense.id === action.id ? applyDatedExpenseChanges(expense, action.changes) : expense,
+        ),
+      );
+
+    case "duplicateDatedExpense": {
+      const expenses = plan.expenses.datedExpenses ?? [];
+      const originalIndex = expenses.findIndex((expense) => expense.id === action.id);
+      const original = expenses[originalIndex];
+      if (original === undefined) return plan;
+
+      // The copy sits straight after the original, so it is easy to find and edit.
+      return withDatedExpenses(plan, [
+        ...expenses.slice(0, originalIndex + 1),
+        { ...original, id: action.newId },
+        ...expenses.slice(originalIndex + 1),
+      ]);
+    }
+
+    case "removeDatedExpense":
+      return withDatedExpenses(
+        plan,
+        (plan.expenses.datedExpenses ?? []).filter((expense) => expense.id !== action.id),
+      );
+
     case "replacePlan":
       return action.plan;
   }
+}
+
+/** Returns the plan with its dated expenses list replaced. Used by the dated-expense actions. */
+function withDatedExpenses(plan: Plan, datedExpenses: readonly DatedExpense[]): Plan {
+  return { ...plan, expenses: { ...plan.expenses, datedExpenses } };
+}
+
+/**
+ * Applies edits to one dated expense and keeps its years in order: if the
+ * "From" year passes the "To" year, "To" moves up to match (so a one-off
+ * stays a one-off). A "To" year typed earlier than "From" is raised the same
+ * way, so the saved plan always satisfies the schema's `toYear >= fromYear`.
+ * A change with `annual: undefined` clears the amount back to unset ($0).
+ */
+function applyDatedExpenseChanges(
+  expense: DatedExpense,
+  changes: Partial<Pick<DatedExpense, "name" | "annual" | "fromYear" | "toYear">>,
+): DatedExpense {
+  const updated = { ...expense, ...changes };
+
+  return { ...updated, toYear: Math.max(updated.toYear, updated.fromYear) };
 }
 
 /** Returns the plan with the given changes applied to one person; other people are untouched. Used by the age actions. */
