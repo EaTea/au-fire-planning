@@ -19,7 +19,8 @@ They show one possible user flow and screen layout for the requirements in
   - **Tables:** click any cell to edit it in place. Hover a row for its ⋯
     menu (Duplicate, Delete). See screen 02.
   - **Charts:** hovering shows a guide line and a tooltip with that year's
-    values, and clicking opens the year in Year by year. See screen 03b.
+    values, and clicking jumps to that year in the Year by year table at the
+    bottom of Results. See screen 03b.
 
 ## Screens
 
@@ -33,10 +34,9 @@ They show one possible user flow and screen layout for the requirements in
 | 03c | [Assets: investment property](03c-assets-investment-property.png) | PROP-14 – PROP-17, TAX-5, TAX-6, FIRE-5 |
 | 03d | [Assets: super, cash & debts](03d-assets-super-cash-debts.png) | IN-21 – IN-27, SUPER-1 – SUPER-9 |
 | 04 | [Assumptions](04-assumptions.png) | IN-10 – IN-13, TAX-8, NFR-3 |
-| 05 | [Results dashboard](05-results.png) | FIRE-1 – FIRE-7, COAST-1 – COAST-7, OUT-2, OUT-4, NFR-1 |
-| 05b | [Inputs panel](05b-inputs-panel.png) | Editing any input from Results, Year by year or Scenarios without leaving the page |
-| 06 | [Year by year](06-projection.png) | OUT-1 – OUT-3 (shown for a scenario with a bridge-period shortfall) |
-| 07 | [Scenarios](07-scenarios.png) | OUT-5, OUT-6 |
+| 05 | [Results](05-results.png), ending with the year-by-year table | FIRE-1 – FIRE-7, COAST-1 – COAST-7, OUT-1 – OUT-4, NFR-1 |
+| 05b | [Inputs panel](05b-inputs-panel.png) | Editing any input from Results or Scenarios without leaving the page |
+| 06 | [Scenarios](06-scenarios.png) | OUT-5, OUT-6 |
 
 ### 00 · User flow
 ![User flow](00-user-flow.png)
@@ -62,17 +62,16 @@ They show one possible user flow and screen layout for the requirements in
 ### 04 · Assumptions
 ![Assumptions](04-assumptions.png)
 
-### 05 · Results dashboard
+### 05 · Results
+The headline numbers and charts, then every year of the plan on the same page.
+
 ![Results](05-results.png)
 
 ### 05b · Inputs panel
 ![Inputs panel open over the results](05b-inputs-panel.png)
 
-### 06 · Year by year
-![Year by year projection](06-projection.png)
-
-### 07 · Scenarios
-![Scenarios](07-scenarios.png)
+### 06 · Scenarios
+![Scenarios](06-scenarios.png)
 
 ## Editing the mockups
 
@@ -84,7 +83,7 @@ The PNGs are rendered from the HTML files in [`src/`](src/):
 | `wireframe.css` | Shared wireframe styles |
 | `header.js` | Shared app header and step navigation |
 | `assets-sidebar.js` | Shared asset list for the Assets screens (03a–03d) |
-| `render.js` | Renders the HTML files to PNGs in this folder |
+| `render.cjs` | Renders the HTML files to PNGs in this folder |
 
 To re-render after editing, you need Node.js and
 [Playwright](https://playwright.dev/) with Chromium:

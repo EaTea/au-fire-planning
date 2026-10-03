@@ -237,7 +237,7 @@ by ownership percentage.
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| OUT-1 | The app produces a **year-by-year projection** from today to the end age. For each year it shows each person's age, income, expenses by category, tax paid per person, contributions, withdrawals, and the balance of each asset (each person's super, each share portfolio, cash, each property and its mortgage). | Must |
+| OUT-1 | The app produces a **year-by-year projection** from today to the end age. For each year it shows each person's age, income, expenses by category, tax paid per person, contributions, withdrawals, and the balance of each asset (each person's super, each share portfolio, cash, each property and its mortgage). It is shown on the same page as the results, below the headline figures and charts, so the user reads the summary and the years behind it together without switching screens. | Must |
 | OUT-2 | Every output value can be shown in **today's dollars** or **nominal dollars**. | Must |
 | OUT-3 | The projection flags any year in which expenses can't be met, especially shortfalls during the bridge period, when super is still locked. | Must |
 | OUT-4 | The app reports the key milestones: FI number, FI age, Coast FIRE age, each person's preservation age, the age super converts to retirement phase, the year each mortgage is paid off, and the age at which money runs out (if it does). | Must |

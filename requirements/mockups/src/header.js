@@ -1,7 +1,7 @@
 /*
  * Builds the shared app header for every mockup screen.
  *
- * Each screen's <body> sets data-step to the step it represents (1-7).
+ * Each screen's <body> sets data-step to the step it represents (1-6).
  * This script fills the empty <header class="app-header"> with the logo,
  * the step navigation (marking earlier steps done and the current one
  * active) and the header actions: "Edit inputs" (from the results
@@ -17,7 +17,6 @@
     "Assets",
     "Assumptions",
     "Results",
-    "Projection",
     "Scenarios",
   ];
 
@@ -34,7 +33,7 @@
     })
     .join("");
 
-  // From the results onward (steps 5-7), inputs are edited in a panel that
+  // From the results onward (steps 5-6), inputs are edited in a panel that
   // drops down over the current screen (05b-inputs-panel.html), so the user
   // doesn't lose their place. data-panel="open" draws the button pressed.
   const panelOpen = document.body.dataset.panel === "open";
