@@ -1,23 +1,50 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  MAX_PROJECTION_AGE,
   findFiReached,
   projectPortfolio,
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
 
-/** Example B from the plan: $100,000 at 10%, $10,000 a year until 41, no inflation. */
+/**
+ * M2's example B: $100,000 at 10%, $10,000 a year until 41, no inflation. The
+ * retirement age is set past the end age and there is no cash, so these rows
+ * show only M2's growth rules (no spending is drawn).
+ */
 const exampleB: ProjectionInputs = {
   currentAge: 40,
+  endAge: 100,
+  retirementAge: 100,
   expectedReturn: 0.1,
+  interestRate: 0.04,
   inflationRate: 0,
   annualContribution: 10000,
   contributionsStopAge: 41,
-  openingBalance: 100000,
+  portfolioOpening: 100000,
+  cashOpening: 0,
   livingAnnual: 20000,
+  retirementSpendingAnnual: 20000,
+  datedExpenses: [],
   fiNumberToday: 400000,
+};
+
+/** The plan's example B (by hand, runs out): $100,000 at 10%, $10,000 cash at 5%, spending $30,000, age 60 to 65. */
+const runsOutExample: ProjectionInputs = {
+  currentAge: 60,
+  endAge: 65,
+  retirementAge: 60,
+  expectedReturn: 0.1,
+  interestRate: 0.05,
+  inflationRate: 0,
+  annualContribution: 0,
+  contributionsStopAge: 60,
+  portfolioOpening: 100000,
+  cashOpening: 10000,
+  livingAnnual: 30000,
+  retirementSpendingAnnual: 30000,
+  datedExpenses: [],
+  fiNumberToday: 750000,
 };
 
 // Tests for the year-by-year projection and its timing rules.
@@ -75,31 +102,207 @@ describe("projectPortfolio", () => {
     expect(row?.fiNumber).toBeCloseTo(400000 * 1.025 ** 3, 8);
   });
 
-  // The projection ends at the maximum age, inclusive.
-  it("runs up to and including the maximum age", () => {
-    const rows = projectPortfolio(exampleB, 2026);
+  // The projection ends at the end age, inclusive.
+  it("runs up to and including the end age", () => {
+    const rows = projectPortfolio({ ...exampleB, endAge: 95 }, 2026);
 
-    expect(rows).toHaveLength(MAX_PROJECTION_AGE - 40 + 1);
-    expect(rows[rows.length - 1]?.age).toBe(MAX_PROJECTION_AGE);
+    expect(rows).toHaveLength(95 - 40 + 1);
+    expect(rows[rows.length - 1]?.age).toBe(95);
   });
 
-  // Someone already past the maximum age still gets today's row.
-  it("returns only row 0 when the current age is past the maximum", () => {
+  // Someone already at or past the end age still gets today's row.
+  it("returns only row 0 when the current age is past the end age", () => {
     expect(projectPortfolio({ ...exampleB, currentAge: 105 }, 2026)).toHaveLength(1);
+  });
+
+  // Row 0 is today: no flows, and cash plus portfolio is the investable total.
+  it("starts cash and investable from today's balances", () => {
+    const [today] = projectPortfolio({ ...exampleB, cashOpening: 5000 }, 2026);
+
+    expect(today).toMatchObject({
+      phase: "working",
+      cashClosing: 5000,
+      cashInterest: 0,
+      spending: 0,
+      shortfall: 0,
+      investableClosing: 105000,
+    });
+  });
+});
+
+// Cash earns interest on its opening balance; interest doesn't touch the portfolio.
+describe("projectPortfolio: cash", () => {
+  it("earns interest on the opening cash", () => {
+    const row = projectPortfolio({ ...exampleB, cashOpening: 20000 }, 2026)[1];
+
+    expect(row).toMatchObject({
+      cashOpening: 20000,
+      cashInterest: 800,
+      cashClosing: 20800,
+      portfolioClosing: 120000,
+      investableClosing: 140800,
+    });
+  });
+});
+
+// Retired years are those after the retirement age; spending is drawn cash first.
+describe("projectPortfolio: retirement spending", () => {
+  const rows = projectPortfolio(runsOutExample, 2026);
+
+  // Age 60 is today and the retirement age itself, so the first retired row is age 61.
+  it("starts drawing spending in the year after the retirement age, cash first", () => {
+    expect(rows[0]?.phase).toBe("working");
+    expect(rows[1]).toMatchObject({
+      phase: "retired",
+      cashInterest: 500,
+      portfolioGrowth: 10000,
+      spending: 30000,
+      fromCash: 10500,
+      fromPortfolio: 19500,
+      shortfall: 0,
+      cashClosing: 0,
+      portfolioClosing: 90500,
+    });
+  });
+
+  it("draws from the portfolio alone once cash is gone", () => {
+    expect(rows[2]).toMatchObject({
+      cashInterest: 0,
+      fromCash: 0,
+      fromPortfolio: 30000,
+      portfolioClosing: 69550,
+    });
+  });
+
+  // Spending a few years later keeps growing with inflation, like living expenses.
+  it("grows retirement spending by the inflation index", () => {
+    const inflated = projectPortfolio({ ...runsOutExample, inflationRate: 0.02 }, 2026);
+
+    expect(inflated[2]?.spending).toBeCloseTo(30000 * 1.02 ** 2, 8);
+  });
+
+  // The year the portfolio can't cover spending: cash and portfolio end at $0.
+  it("records the unfunded part as a shortfall and empties both balances", () => {
+    expect(rows[5]).toMatchObject({
+      calendarYear: 2031,
+      age: 65,
+      fromPortfolio: 23271.05,
+      cashClosing: 0,
+      portfolioClosing: 0,
+    });
+    expect(rows[5]?.shortfall).toBeCloseTo(6728.95, 2);
+  });
+
+  // Cash covering spending exactly leaves no draw on the portfolio and no shortfall.
+  it("handles cash exactly covering spending", () => {
+    const [, row] = projectPortfolio(
+      { ...runsOutExample, cashOpening: 30000 / 1.05, retirementSpendingAnnual: 30000 },
+      2026,
+    );
+
+    expect(row?.fromCash).toBeCloseTo(30000, 8);
+    expect(row?.fromPortfolio).toBeCloseTo(0, 8);
+    expect(row?.shortfall).toBe(0);
+    expect(row?.cashClosing).toBeCloseTo(0, 8);
+    expect(row?.portfolioClosing).toBeCloseTo(110000, 8);
+  });
+
+  // After the money runs out, each later year is a full shortfall.
+  it("keeps flagging shortfall years after the money has run out", () => {
+    const longer = projectPortfolio({ ...runsOutExample, endAge: 68 }, 2026);
+
+    expect(longer.filter((row) => row.shortfall > 0).map((row) => row.age)).toEqual([
+      65, 66, 67, 68,
+    ]);
+    expect(longer[6]).toMatchObject({ spending: 30000, shortfall: 30000, investableClosing: 0 });
+  });
+});
+
+// Dated expenses are drawn from savings in any year they apply, working or retired.
+describe("projectPortfolio: dated expenses", () => {
+  // Plan example C, with its car in 2028 only and school fees 2029 to 2030.
+  const exampleC: ProjectionInputs = {
+    currentAge: 40,
+    endAge: 50,
+    retirementAge: 45,
+    expectedReturn: 0.05,
+    interestRate: 0.04,
+    inflationRate: 0.02,
+    annualContribution: 20000,
+    contributionsStopAge: 45,
+    portfolioOpening: 200000,
+    cashOpening: 0,
+    livingAnnual: 40000,
+    retirementSpendingAnnual: 40000,
+    datedExpenses: [
+      { annual: 30000, fromYear: 2028, toYear: 2028 },
+      { annual: 10000, fromYear: 2029, toYear: 2030 },
+    ],
+    fiNumberToday: 1000000,
+  };
+  const rows = projectPortfolio(exampleC, 2026);
+
+  // Before retirement the expense still comes out of savings: nothing else pays it until salary exists.
+  it("draws an expense before retirement from savings", () => {
+    expect(rows[2]).toMatchObject({
+      calendarYear: 2028,
+      age: 42,
+      phase: "working",
+    });
+    expect(rows[2]?.spending).toBeCloseTo(31212, 6);
+    expect(rows[2]?.fromPortfolio).toBeCloseTo(31212, 6);
+    expect(rows[2]?.portfolioClosing).toBeCloseTo(230288, 6);
+  });
+
+  // The range is inclusive at both ends.
+  it("applies an expense in every year from its From year to its To year", () => {
+    expect(rows[1]?.spending).toBe(0);
+    expect(rows[3]?.spending).toBeCloseTo(10612.08, 6);
+    expect(rows[4]?.spending).toBeCloseTo(10000 * 1.02 ** 4, 6);
+    expect(rows[5]?.spending).toBe(0);
+  });
+
+  // The first retired row is age 46 (2032); here only retirement spending applies.
+  it("starts retirement spending the year after the retirement age", () => {
+    expect(rows[6]).toMatchObject({ calendarYear: 2032, age: 46, phase: "retired" });
+    expect(rows[6]?.spending).toBeCloseTo(45046.5, 2);
+    expect(rows[6]?.portfolioClosing).toBeCloseTo(276853.88, 2);
+    expect(rows[10]?.portfolioClosing).toBeCloseTo(132703.89, 2);
+  });
+
+  // An expense that spans the retirement year adds to retirement spending from then on.
+  it("adds an expense that spans retirement to retirement spending", () => {
+    const spanning = projectPortfolio(
+      { ...exampleC, datedExpenses: [{ annual: 5000, fromYear: 2030, toYear: 2033 }] },
+      2026,
+    );
+
+    // 2031 is age 45 (working): only the expense. 2032 is age 46 (retired): both.
+    expect(spanning[5]?.spending).toBeCloseTo(5000 * 1.02 ** 5, 6);
+    expect(spanning[6]?.spending).toBeCloseTo((40000 + 5000) * 1.02 ** 6, 6);
   });
 });
 
 /** A minimal row for exercising `findFiReached`. */
-function row(yearIndex: number, portfolioClosing: number, fiNumber: number): ProjectionRow {
+function row(yearIndex: number, investableClosing: number, fiNumber: number): ProjectionRow {
   return {
     yearIndex,
     calendarYear: 2026 + yearIndex,
     age: 40 + yearIndex,
+    phase: "working",
     inflationIndex: 1,
+    cashOpening: 0,
+    cashInterest: 0,
+    cashClosing: 0,
     portfolioOpening: 0,
     portfolioGrowth: 0,
     contribution: 0,
-    portfolioClosing,
+    portfolioClosing: investableClosing,
+    spending: 0,
+    fromCash: 0,
+    fromPortfolio: 0,
+    shortfall: 0,
+    investableClosing,
     livingExpenses: 0,
     fiNumber,
   };

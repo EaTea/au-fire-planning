@@ -1561,7 +1561,7 @@ changes to tests.
 
 #### Step 2 · Engine: cash, spending, dated expenses and shortfalls
 
-- [ ] Done
+- [x] Done
 
 1. Add the new optional fields to `src/plan/types.ts` (`DatedExpense`, cash,
    interest rate, end age), and the defaults to `src/plan/defaults.ts`: end
@@ -1598,6 +1598,22 @@ changes to tests.
      - balances are never negative;
      - more cash never creates a shortfall that wasn't there;
      - a later end age never removes a shortfall year that's still in range.
+
+**As built:**
+- M2's example B in `m2-growth.json` retired at 41, so its row 2 (age 42)
+  became a retired year that draws spending. Its retirement age is now 45,
+  with the stop age still entered as 41. The scenario still tests what it
+  was for, contributions stopping, with the same by-hand figures.
+- Example C doesn't reach FI (`fiReached: null` in the fixture).
+- M2's property "each balance is the previous plus growth plus
+  contribution" was replaced by the money-conservation property, because
+  retired years now draw spending.
+- `ProjectionInputs.openingBalance` became `portfolioOpening`, alongside
+  `cashOpening`.
+- The `lasts` explanation lines are "Cash at end of {year}", "+ Portfolio"
+  and "= Investable net worth".
+- The FI reached tile's "no withdrawals" sub-line is now inaccurate. Step 7
+  fixes it with the rest of Results.
 
 **Check:** `npm run check` passes.
 

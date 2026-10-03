@@ -1,4 +1,3 @@
-import { MAX_PROJECTION_AGE } from "../../engine/projection";
 import type { Explained } from "../../engine/explained";
 import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
@@ -117,7 +116,7 @@ function FiReachedTile({
     return (
       <MetricTile
         label="FI reached"
-        value={`Not by age ${MAX_PROJECTION_AGE}`}
+        value={`Not by age ${projection.endAge}`}
         subLine="With today's inputs and no withdrawals"
       />
     );

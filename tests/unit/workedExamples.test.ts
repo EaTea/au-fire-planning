@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { summarisePlan } from "../../src/engine/fiNumber";
 import { createNewPlan } from "../../src/plan/createNewPlan";
-import type { Plan, RetirementSpending } from "../../src/plan/types";
+import type { DatedExpense, Plan, RetirementSpending } from "../../src/plan/types";
 
 // Checks the engine against the independently worked examples in
 // tests/worked-examples/ (NFR-6). Every *.json file there is picked up, so a
@@ -27,10 +27,16 @@ interface WorkedScenario {
     // M2 onwards; absent means "left unset".
     readonly currentAge?: number;
     readonly targetRetirementAge?: number;
-    readonly contributionsStopAge?: number;
+    /** `null` or absent means "left unset" (defaults to the retirement age). */
+    readonly contributionsStopAge?: number | null;
     readonly expectedReturn?: number;
     readonly annualContribution?: number;
     readonly inflationRate?: number;
+    // M3 onwards; absent or null means "left unset".
+    readonly projectionEndAge?: number | null;
+    readonly cashBalance?: number | null;
+    readonly interestRate?: number | null;
+    readonly datedExpenses?: readonly FixtureDatedExpense[];
   };
   /** M1 figures: present in M1 fixtures only. */
   readonly expected: {
@@ -43,7 +49,29 @@ interface WorkedScenario {
     /** `null` means FI is not reached by the end of the projection. */
     readonly fiReached?: ExpectedFiReached | null;
     readonly fiNumberAtRetirement?: number;
+    /** M3 figures: present in M3 fixtures only. */
+    readonly solvency?: ExpectedSolvency;
   };
+}
+
+/** A dated expense as written in a fixture, in the user's own units. */
+interface FixtureDatedExpense {
+  readonly name: string;
+  readonly annual: number;
+  readonly fromYear: number;
+  readonly toYear: number;
+}
+
+/** The expected answer to "does the money last?". Only the listed fields are checked. */
+interface ExpectedSolvency {
+  readonly status: "lasts" | "runsOut";
+  /** For "lasts": investable net worth at the end age. */
+  readonly investableClosing?: number;
+  /** For "runsOut": the first shortfall year, its age, every shortfall year and the first year's shortfall. */
+  readonly year?: number;
+  readonly age?: number;
+  readonly shortfallYears?: readonly number[];
+  readonly shortfall?: number;
 }
 
 /** The figures checked for one projection row; unlisted fields aren't checked. */
@@ -52,13 +80,23 @@ interface ExpectedRow {
   readonly portfolioGrowth?: number;
   readonly contribution?: number;
   readonly portfolioClosing: number;
+  // M3 fields.
+  readonly cashInterest?: number;
+  readonly cashClosing?: number;
+  readonly spending?: number;
+  readonly fromCash?: number;
+  readonly fromPortfolio?: number;
+  readonly shortfall?: number;
 }
 
 interface ExpectedFiReached {
   readonly yearIndex: number;
   readonly calendarYear: number;
   readonly age: number;
-  readonly portfolioClosing: number;
+  /** The portfolio alone (M2 fixtures, which have no cash). */
+  readonly portfolioClosing?: number;
+  /** Cash plus portfolio (M3 fixtures). */
+  readonly investableClosing?: number;
   readonly fiNumber: number;
 }
 
@@ -86,14 +124,21 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
           targetRetirementAge: inputs.targetRetirementAge,
         },
       ],
+      projectionEndAge: inputs.projectionEndAge ?? undefined,
     },
+    cash: { balance: inputs.cashBalance ?? undefined },
     expenses: {
       livingAnnual: inputs.livingExpensesAnnual ?? undefined,
       retirementSpending: inputs.retirementSpending ?? undefined,
+      datedExpenses: (inputs.datedExpenses ?? []).map((expense, index): DatedExpense => ({
+        id: `expense-${index}`,
+        ...expense,
+      })),
     },
     assumptions: {
       safeWithdrawalRate: inputs.safeWithdrawalRate ?? undefined,
       inflationRate: inputs.inflationRate,
+      interestRate: inputs.interestRate ?? undefined,
     },
     portfolios: [
       {
@@ -101,7 +146,7 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
         value: inputs.portfolioValue ?? undefined,
         expectedReturn: inputs.expectedReturn,
         annualContribution: inputs.annualContribution,
-        contributionsStopAge: inputs.contributionsStopAge,
+        contributionsStopAge: inputs.contributionsStopAge ?? undefined,
       },
     ],
   };
@@ -112,6 +157,9 @@ const DEFAULT_START_YEAR = 2026;
 
 /** The completed variant of the engine's summary. */
 type CompleteSummary = Extract<ReturnType<typeof summarisePlan>, { status: "complete" }>;
+
+/** The completed projection part of the summary. */
+type CompleteProjection = Extract<CompleteSummary["projection"], { status: "complete" }>;
 
 /** Checks M1's figures, when the scenario lists them. */
 function checkFiNumberFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
@@ -129,9 +177,16 @@ function checkFiNumberFigures(summary: CompleteSummary, expected: WorkedScenario
   );
 }
 
-/** Checks M2's figures (rows, FI year, FI number at retirement), when the scenario lists them. */
+/** Checks the projection's figures (rows, FI year, FI number at retirement, solvency), when the scenario lists them. */
 function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
-  if (expected.rows === undefined && expected.fiNumberAtRetirement === undefined) return;
+  if (
+    expected.rows === undefined &&
+    expected.fiReached === undefined &&
+    expected.fiNumberAtRetirement === undefined &&
+    expected.solvency === undefined
+  ) {
+    return;
+  }
 
   expect(summary.projection.status).toBe("complete");
   if (summary.projection.status !== "complete") return;
@@ -148,6 +203,19 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     if (expectedRow.contribution !== undefined) {
       expectToTheCent(row.contribution, expectedRow.contribution);
     }
+
+    // M3 fields: each is checked only when the fixture lists it.
+    const m3Checks = [
+      ["cashInterest", row.cashInterest, expectedRow.cashInterest],
+      ["cashClosing", row.cashClosing, expectedRow.cashClosing],
+      ["spending", row.spending, expectedRow.spending],
+      ["fromCash", row.fromCash, expectedRow.fromCash],
+      ["fromPortfolio", row.fromPortfolio, expectedRow.fromPortfolio],
+      ["shortfall", row.shortfall, expectedRow.shortfall],
+    ] as const;
+    for (const [, actual, expectedValue] of m3Checks) {
+      if (expectedValue !== undefined) expectToTheCent(actual, expectedValue);
+    }
   }
 
   if (expected.fiReached === null) {
@@ -162,13 +230,42 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     expect(fiReached.age).toBe(expected.fiReached.age);
 
     const row = projection.rows[fiReached.yearIndex];
-    expectToTheCent(row?.portfolioClosing ?? Number.NaN, expected.fiReached.portfolioClosing);
+    if (expected.fiReached.portfolioClosing !== undefined) {
+      expectToTheCent(row?.portfolioClosing ?? Number.NaN, expected.fiReached.portfolioClosing);
+    }
+    if (expected.fiReached.investableClosing !== undefined) {
+      expectToTheCent(row?.investableClosing ?? Number.NaN, expected.fiReached.investableClosing);
+    }
     expectToTheCent(row?.fiNumber ?? Number.NaN, expected.fiReached.fiNumber);
   }
 
   if (expected.fiNumberAtRetirement !== undefined) {
     expectToTheCent(projection.fiNumberAtRetirement.value, expected.fiNumberAtRetirement);
   }
+
+  if (expected.solvency !== undefined) {
+    checkSolvency(projection.solvency, expected.solvency);
+  }
+}
+
+/** Checks the "does the money last?" answer against a fixture, field by field. */
+function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
+  expect(actual.status).toBe(expected.status);
+
+  if (actual.status === "lasts") {
+    if (expected.investableClosing !== undefined) {
+      expectToTheCent(actual.explanation.value, expected.investableClosing);
+    }
+    return;
+  }
+
+  if (expected.year !== undefined) expect(actual.year).toBe(expected.year);
+  if (expected.age !== undefined) expect(actual.age).toBe(expected.age);
+  if (expected.shortfallYears !== undefined) {
+    expect(actual.shortfallYears).toEqual(expected.shortfallYears);
+  }
+  if (expected.shortfall !== undefined)
+    expectToTheCent(actual.explanation.value, expected.shortfall);
 }
 
 /** Asserts two figures agree to the cent (within half a cent). */

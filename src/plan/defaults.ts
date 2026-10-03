@@ -28,6 +28,15 @@ export const DEFAULT_EXPECTED_RETURN = 0.07;
 /** Regular contribution to a portfolio: $0 a year. */
 export const DEFAULT_ANNUAL_CONTRIBUTION = 0;
 
+/** The age the plan runs until: 95 (IN-4). */
+export const DEFAULT_PROJECTION_END_AGE = 95;
+
+/** General interest rate paid on cash: 4% a year (a fraction). */
+export const DEFAULT_INTEREST_RATE = 0.04;
+
+/** Cash savings: $0. */
+export const DEFAULT_CASH_BALANCE = 0;
+
 // The age contributions stop has no constant here: it defaults to the target
 // retirement age, so it depends on another input and is resolved in
 // resolvePlanInputs.ts.

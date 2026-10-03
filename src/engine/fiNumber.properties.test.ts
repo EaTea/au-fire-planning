@@ -249,27 +249,153 @@ test.prop([currentAges, yearsToRetirement, returns, inflations, contributions, c
   },
 );
 
-test.prop([currentAges, yearsToRetirement, returns, inflations, contributions])(
-  "every row's balance is the previous balance plus growth plus contribution",
-  (currentAge, years, expectedReturn, inflationRate, annualContribution) => {
-    const plan = projectionPlan({
-      currentAge,
-      yearsToRetirement: years,
-      expectedReturn,
-      inflationRate,
-      annualContribution,
-    });
-    const { rows } = completeProjection(plan);
+// ---- M3: drawdown properties ----
 
-    for (let index = 1; index < rows.length; index++) {
+/** A dated expense as generated: amount in today's dollars and a short range of calendar years. */
+const generatedDatedExpenses = fc.array(
+  fc.record({
+    annual: fc.integer({ min: 0, max: 100_000 }),
+    fromYear: fc.integer({ min: START_YEAR + 1, max: START_YEAR + 60 }),
+    extraYears: fc.integer({ min: 0, max: 5 }),
+  }),
+  { maxLength: 3 },
+);
+
+/** Everything a drawdown plan varies: ages, money, rates, cash and dated expenses. */
+const drawdownSettings = fc.record({
+  currentAge: currentAges,
+  yearsToRetirement,
+  yearsAfterRetirement: fc.integer({ min: 1, max: 30 }),
+  expectedReturn: returns,
+  inflationRate: inflations,
+  annualContribution: contributions,
+  livingAnnual: fc.integer({ min: 1, max: 150_000 }),
+  portfolioValue: fc.integer({ min: 0, max: 3_000_000 }),
+  cashBalance: fc.integer({ min: 0, max: 500_000 }),
+  datedExpenses: generatedDatedExpenses,
+});
+
+type DrawdownSettings =
+  typeof drawdownSettings extends fc.Arbitrary<infer Settings> ? Settings : never;
+
+/** Builds a complete plan with the generated ages, money, cash and dated expenses. */
+function drawdownPlan(
+  settings: DrawdownSettings,
+  overrides: { cashBalance?: number; endAge?: number } = {},
+): Plan {
+  const base = buildPlan(
+    settings.livingAnnual,
+    { kind: "percentOfToday", fraction: 1 },
+    0.04,
+    settings.portfolioValue,
+  );
+  const [person] = base.household.people;
+  const [portfolio] = base.portfolios;
+  if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+  const retirementAge = settings.currentAge + settings.yearsToRetirement;
+
+  return {
+    ...base,
+    household: {
+      people: [{ ...person, currentAge: settings.currentAge, targetRetirementAge: retirementAge }],
+      projectionEndAge: overrides.endAge ?? retirementAge + settings.yearsAfterRetirement,
+    },
+    cash: { balance: overrides.cashBalance ?? settings.cashBalance },
+    expenses: {
+      ...base.expenses,
+      datedExpenses: settings.datedExpenses.map((expense, index) => ({
+        id: `expense-${index}`,
+        name: "",
+        annual: expense.annual,
+        fromYear: expense.fromYear,
+        toYear: expense.fromYear + expense.extraYears,
+      })),
+    },
+    assumptions: { ...base.assumptions, inflationRate: settings.inflationRate },
+    portfolios: [
+      {
+        ...portfolio,
+        expectedReturn: settings.expectedReturn,
+        annualContribution: settings.annualContribution,
+      },
+    ],
+  };
+}
+
+// Money in = money out: every dollar is either still held at year end, spent, or unfunded.
+test.prop([drawdownSettings])(
+  "every row conserves money, and each row opens where the last one closed",
+  (settings) => {
+    const { rows } = completeProjection(drawdownPlan(settings));
+
+    for (const [index, row] of rows.entries()) {
+      const moneyIn =
+        row.cashOpening +
+        row.cashInterest +
+        row.portfolioOpening +
+        row.portfolioGrowth +
+        row.contribution;
+      const moneyOut = row.cashClosing + row.portfolioClosing + row.spending - row.shortfall;
+
+      // Tolerance scales with the size of the numbers: floating point, not a modelling gap.
+      expect(Math.abs(moneyIn - moneyOut)).toBeLessThanOrEqual(1e-6 * Math.max(1, moneyIn));
+      expect(row.investableClosing).toBe(row.cashClosing + row.portfolioClosing);
+
       const previous = rows[index - 1];
-      const current = rows[index];
-      if (previous === undefined || current === undefined) throw new Error("missing row");
-
-      expect(current.portfolioOpening).toBe(previous.portfolioClosing);
-      expect(current.portfolioClosing).toBe(
-        previous.portfolioClosing + current.portfolioGrowth + current.contribution,
-      );
+      if (previous !== undefined) {
+        expect(row.cashOpening).toBe(previous.cashClosing);
+        expect(row.portfolioOpening).toBe(previous.portfolioClosing);
+      }
     }
   },
 );
+
+test.prop([drawdownSettings])("balances and flows are never negative", (settings) => {
+  for (const row of completeProjection(drawdownPlan(settings)).rows) {
+    expect(row.cashClosing).toBeGreaterThanOrEqual(0);
+    expect(row.portfolioClosing).toBeGreaterThanOrEqual(0);
+    expect(row.fromCash).toBeGreaterThanOrEqual(0);
+    expect(row.fromPortfolio).toBeGreaterThanOrEqual(0);
+    expect(row.shortfall).toBeGreaterThanOrEqual(0);
+  }
+});
+
+// Cash is spent first and the portfolio is untouched until it's gone, so more cash only helps.
+test.prop([drawdownSettings, fc.integer({ min: 0, max: 500_000 })])(
+  "more cash never creates a shortfall that wasn't there",
+  (settings, extraCash) => {
+    const lessCash = completeProjection(drawdownPlan(settings)).rows;
+    const moreCash = completeProjection(
+      drawdownPlan(settings, { cashBalance: settings.cashBalance + extraCash }),
+    ).rows;
+
+    for (const [index, row] of moreCash.entries()) {
+      // A tiny tolerance absorbs floating-point noise in a year that is exactly funded.
+      expect(row.shortfall).toBeLessThanOrEqual((lessCash[index]?.shortfall ?? 0) + 1e-6);
+    }
+  },
+);
+
+// Extending the plan only adds years at the end; the earlier rows are identical.
+test.prop([drawdownSettings, fc.integer({ min: 1, max: 20 })])(
+  "a later end age never removes a shortfall year that's still in range",
+  (settings, extraYears) => {
+    const retirementAge = settings.currentAge + settings.yearsToRetirement;
+    const endAge = retirementAge + settings.yearsAfterRetirement;
+
+    const shortYears = shortfallYearsOf(drawdownPlan(settings, { endAge }));
+    const longYears = shortfallYearsOf(drawdownPlan(settings, { endAge: endAge + extraYears }));
+
+    for (const year of shortYears) {
+      expect(longYears).toContain(year);
+    }
+  },
+);
+
+/** The calendar years in which a plan's spending can't be fully funded. */
+function shortfallYearsOf(plan: Plan): number[] {
+  return completeProjection(plan)
+    .rows.filter((row) => row.shortfall > 0)
+    .map((row) => row.calendarYear);
+}

@@ -176,7 +176,7 @@ describe("ResultsScreen", () => {
     it("says FI isn't reached when no year gets there", () => {
       renderResults(exampleC);
 
-      expect(screen.getByText("Not by age 100")).toBeInTheDocument();
+      expect(screen.getByText("Not by age 95")).toBeInTheDocument();
       expect(screen.getByText("With today's inputs and no withdrawals")).toBeInTheDocument();
     });
 
