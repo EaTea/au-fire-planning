@@ -69,13 +69,13 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
     "true",
   );
   expect((await rowCells(page, 2027))[2]).toBe("$29,268");
-  expect((await rowCells(page, 2027))[4]).toBe("$780,878");
+  expect((await rowCells(page, 2027))[6]).toBe("$780,878");
 
   // Switching to nominal changes the balances to the engine's nominal figures.
   await page.getByRole("button", { name: "Nominal" }).click();
   expect((await rowCells(page, 2027))[2]).toBe("$30,000");
-  expect((await rowCells(page, 2027))[4]).toBe("$800,400");
-  expect((await rowCells(page, 2038))[4]).toBe("$2,158,231");
+  expect((await rowCells(page, 2027))[6]).toBe("$800,400");
+  expect((await rowCells(page, 2038))[6]).toBe("$2,158,231");
 
   // Autosave waits 500 ms after the last edit; reload once the plan is stored.
   await expect

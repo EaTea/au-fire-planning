@@ -274,3 +274,41 @@ test("the year by year table has readable text in both dollar modes, including t
     expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
   }
 });
+
+test("the year by year table has readable text with a shortfall, its banner and an outlined row", async ({
+  page,
+}) => {
+  // Fix "now" so the shortfall year (2031) and the ?year= row are the same on any day.
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B (tests/worked-examples/m3-drawdown.json): the money runs out in 2031.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "60"],
+    ["#/household", "Target retirement age", "60"],
+    ["#/household", "Plan until age", "65"],
+    ["#/income-expenses", "Per year, after tax", "30000"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "10"],
+    ["#/assets", "Cash savings", "10000"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "5"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label).fill(value);
+    await page.getByLabel(label).press("Tab");
+  }
+
+  // Opening with ?year= outlines that row for a few seconds, so check it straight away.
+  await page.goto("#/year-by-year?year=2029");
+  await expect(page.getByRole("alert")).toContainText("1 year can't be funded: 2031");
+  await expect(page.getByText("Shortfall −$6,729")).toBeVisible();
+  await expect(page.locator("tr[data-outlined='true']")).toHaveCount(1);
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});

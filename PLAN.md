@@ -1750,7 +1750,7 @@ changes to tests.
 
 #### Step 6 · Year by year: drawdown, phases and shortfalls
 
-- [ ] Done
+- [x] Done
 
 1. Replace the table's columns with the M3 set above, all money through
    `useMoneyFormatter`. Rows now run from today to the end age.
@@ -1768,6 +1768,21 @@ changes to tests.
    - the band rows;
    - the banner text for a range and for a single year;
    - `?year=` highlights the row.
+
+**As built:**
+- `ProjectionTable` gained `getBandText` (a full-width band row opens each
+  new band) and `scrollToKey` (scrolls to the row and outlines it for 4
+  seconds, marked `data-outlined`). The screen reads `?year=` with
+  `useSearchParams` and ignores a year that isn't in the table.
+- "Growth & interest" is the portfolio growth plus the cash interest.
+- The status cell is "Shortfall −$6,729" in a `projection-shortfall` span.
+  The banner reads "1 year can't be funded: 2031", or "3 years can't be
+  funded: 2031 – 2033"; separate runs are joined by commas.
+- Error text on the raised background (the FI row) is 3.9:1, so it isn't in
+  `tokens.test.ts`. A shortfall can't coincide with the FI row, because a
+  shortfall year ends with $0 investable. Band text (muted on raised) is.
+- The contrast sweep has a shortfall pass (example B, entered through the
+  screens), with the banner, the outlined row and both dollar modes.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 

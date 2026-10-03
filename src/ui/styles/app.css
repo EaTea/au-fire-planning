@@ -419,6 +419,26 @@ button:focus-visible {
   font-weight: 700;
 }
 
+/* The row a link pointed at (?year=): outlined in the accent colour for a few seconds. */
+.projection-row-outlined td {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: -2px;
+}
+
+/* A phase heading spanning the whole table, e.g. "Retired · ...". */
+.projection-table .projection-band td {
+  text-align: left;
+  font-weight: 700;
+  color: var(--colour-text-muted);
+  background: var(--colour-surface-raised);
+}
+
+/* A year whose spending can't be fully funded: the word "Shortfall" as well as the colour. */
+.projection-shortfall {
+  color: var(--colour-text-error);
+  font-weight: 700;
+}
+
 /* ---------- Editable table (cells edited in place, row menu) ---------- */
 
 .editable-table-grid {
