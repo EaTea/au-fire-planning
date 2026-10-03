@@ -25,8 +25,8 @@
     <h1 class="page-title">User flow</h1>
     <p class="page-intro">
       How a user moves through the app. First-time users go through the four input steps in order.
-      Returning users land straight on their results. From the results they can drill into the
-      projection or save and compare scenarios. To change an input, they open the inputs panel without leaving the screen they're on.
+      Returning users land straight on their results, which end with the year-by-year projection, so
+      there's nothing to switch to. From the results they can save and compare scenarios. To change an input, they open the inputs panel without leaving the screen they're on.
     </p>
 
     <svg class="flow" viewBox="0 96 1376 630" width="1376">
@@ -72,18 +72,14 @@
       <text class="req" x="1250" y="442" text-anchor="middle">IN-10 – IN-13</text>
 
       <rect class="node hub" x="840" y="372" width="230" height="92" rx="8"/>
-      <text class="title" x="955" y="400" text-anchor="middle">5 · Results dashboard</text>
-      <text class="sub" x="955" y="418" text-anchor="middle">FI &amp; Coast FIRE numbers,</text>
-      <text class="sub" x="955" y="434" text-anchor="middle">milestones, charts</text>
-      <text class="req" x="955" y="452" text-anchor="middle">FIRE-* · COAST-* · OUT-4</text>
+      <text class="title" x="955" y="400" text-anchor="middle">5 · Results</text>
+      <text class="sub" x="955" y="418" text-anchor="middle">FI &amp; Coast FIRE numbers, charts,</text>
+      <text class="sub" x="955" y="434" text-anchor="middle">then the year-by-year table</text>
+      <text class="req" x="955" y="452" text-anchor="middle">FIRE-* · COAST-* · OUT-1 – OUT-4</text>
 
-      <rect class="node step" x="540" y="380" width="200" height="76" rx="6"/>
-      <text class="title" x="640" y="406" text-anchor="middle">6 · Projection</text>
-      <text class="sub" x="640" y="424" text-anchor="middle">year-by-year table</text>
-      <text class="req" x="640" y="442" text-anchor="middle">OUT-1 – OUT-3</text>
 
       <rect class="node step" x="220" y="380" width="220" height="76" rx="6"/>
-      <text class="title" x="330" y="406" text-anchor="middle">7 · Scenarios</text>
+      <text class="title" x="330" y="406" text-anchor="middle">6 · Scenarios</text>
       <text class="sub" x="330" y="424" text-anchor="middle">compare &amp; sensitivity</text>
       <text class="req" x="330" y="442" text-anchor="middle">OUT-5 · OUT-6</text>
 
@@ -120,8 +116,8 @@
       <!-- Inputs panel: edit any input without leaving the results or scenarios -->
       <rect class="node panel" x="590" y="226" width="270" height="76" rx="6"/>
       <text class="title" x="725" y="250" text-anchor="middle">Inputs panel</text>
-      <text class="sub" x="725" y="267" text-anchor="middle">drops down over Results, Projection</text>
-      <text class="sub" x="725" y="282" text-anchor="middle">or Scenarios; results update live</text>
+      <text class="sub" x="725" y="267" text-anchor="middle">drops down over Results</text>
+      <text class="sub" x="725" y="282" text-anchor="middle">or Scenarios; figures update live</text>
       <text class="req" x="725" y="296" text-anchor="middle">05b</text>
 
       <path class="edge" d="M1000,372 L1000,264 L862,264"/>
@@ -130,14 +126,9 @@
       <path class="edge loop" d="M790,226 L790,198"/>
       <text class="edge-label" x="800" y="216">open full step</text>
 
-      <!-- Drill-downs from the results hub -->
-      <path class="edge" d="M840,408 L742,408"/>
-      <path class="edge" d="M742,430 L838,430"/>
-      <text class="edge-label" x="752" y="398">year by year</text>
-      <text class="edge-label" x="760" y="448">back</text>
-
-      <path class="edge" d="M540,418 L442,418"/>
-      <text class="edge-label" x="458" y="408">compare</text>
+      <!-- From the results to scenarios -->
+      <path class="edge" d="M840,418 L442,418"/>
+      <text class="edge-label" x="600" y="408">compare</text>
 
       <path class="edge" d="M955,464 L955,588"/>
       <path class="edge" d="M955,660 L955,700 L330,700 L330,458"/>

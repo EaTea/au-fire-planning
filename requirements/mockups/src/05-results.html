@@ -28,6 +28,20 @@
 
   .trace { position: absolute; width: 300px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 4px; padding: 10px 12px; font-size: 12px; box-shadow: 4px 4px 0 rgba(0,0,0,.12); z-index: 2; }
   .trace table td { padding: 3px 4px; font-size: 12px; }
+
+  /* In-page links: the page is long now that it ends with the projection. */
+  .jump { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; font-size: 13px; }
+  .jump .learn { font-size: 13px; }
+
+  /* Year by year section (OUT-1 – OUT-3), formerly its own step. */
+  .projection th, .projection td { padding: 6px 7px; font-size: 12.5px; }
+  .projection th { vertical-align: bottom; white-space: normal; }
+  .projection td.gap { text-align: center; color: var(--ink-faint); letter-spacing: 4px; }
+  .projection .ok { color: var(--ink-faint); }
+  .projection .flag { display: inline-block; border: 1.5px solid var(--ink); padding: 0 5px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .projection tr.selected td { background: #e6e6e6; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+  .projection tr.selected td:first-child { border-left: 4px solid var(--ink); }
+  .colgroup-toggle span { margin-right: 4px; }
 </style>
 </head>
 <body data-step="5">
@@ -37,12 +51,21 @@
     <div class="row" style="align-items: center; margin-bottom: 16px">
       <div class="col">
         <h1 class="page-title">Results</h1>
-        <p class="page-intro" style="margin: 0">Based on your inputs and assumptions. Everything recalculates as soon as you change an input.</p>
+        <p class="page-intro" style="margin: 0">Based on your inputs and assumptions. The headline numbers and charts come first, then every year of the plan. Everything recalculates as soon as you change an input.</p>
       </div>
       <span class="toggle"><span class="on">Today's dollars</span><span>Nominal</span></span> <span class="req">OUT-2</span>
-      <span class="btn">Year by year →</span>
       <span class="btn primary">Save as scenario</span>
     </div>
+
+    <nav class="jump">
+      <span class="muted">On this page:</span>
+      <span class="learn">Headline numbers</span>
+      <span class="learn">Milestones</span>
+      <span class="learn">FIRE</span>
+      <span class="learn">Coast FIRE</span>
+      <span class="learn"><b>Year by year ↓</b></span>
+      <span class="muted small">The today's / nominal toggle applies to the whole page, table included.</span>
+    </nav>
 
     <!-- Headline numbers -->
     <div class="grid-4" style="margin-bottom: 20px">
@@ -111,7 +134,7 @@
       </div>
 
     <!-- FIRE visualisations (FIRE-7). -->
-    <div class="section-title">FIRE <span class="req">FIRE-7</span> <span class="muted small" style="font-weight: 400">Hover any chart for exact values</span> <span class="learn" style="font-size: 12px; font-weight: 400">What is FIRE? <span class="req">NFR-7</span></span></div>
+    <div class="section-title">FIRE <span class="req">FIRE-7</span> <span class="muted small" style="font-weight: 400">Hover any chart for exact values. Click a year to jump to it in Year by year below.</span> <span class="learn" style="font-size: 12px; font-weight: 400">What is FIRE? <span class="req">NFR-7</span></span></div>
     <div class="grid-3">
       <div class="card">
         <h3>(a) Investable net worth vs FI number</h3>
@@ -232,10 +255,71 @@
       <div class="hint" style="margin-top: 6px">Voluntary contributions are the ETF contributions plus salary sacrifice. Choose an option to save it as a scenario.</div>
     </div>
 
+    <!-- Year by year (OUT-1 – OUT-3): the projection, on the same page as the results. -->
+    <div class="section-title">Year by year <span class="req">OUT-1</span> <span class="muted small" style="font-weight: 400">Every year of the plan, from today to 2089. Click a row to see how it was worked out.</span></div>
+
+    <div class="row" style="align-items: center; margin-bottom: 10px">
+      <span class="small muted">Columns:</span>
+      <span class="colgroup-toggle"><span class="chip dark">Income</span><span class="chip dark">Spending &amp; tax</span><span class="chip dark">Contributions &amp; withdrawals</span><span class="chip dark">Balances</span><span class="chip">Per-person tax</span><span class="chip">Per-asset balances</span></span>
+      <span style="flex: 1"></span>
+      <span class="toggle"><span class="on">All years</span><span>Milestones only</span></span>
+      <span class="btn">Export this table <span class="req">OUT-7</span></span>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden">
+      <table class="projection">
+        <tr>
+          <th>Year</th><th>Ages<br>Alex · Sam</th><th>Salaries</th><th>Rent &amp;<br>dividends</th><th>Spending<br><span class="req">EXP-*</span></th><th>Tax<br><span class="req">TAX-*</span></th>
+          <th>Into super</th><th>Withdrawn<br>outside · super</th><th>Outside super</th><th>Super<br>Alex · Sam</th><th>Home loan</th><th>Investable<br>net worth</th><th>Status <span class="req">OUT-3</span></th>
+        </tr>
+        <tr class="phase"><td colspan="13">Working · both earning</td></tr>
+        <tr><td>2026</td><td>34 · 32</td><td>$255k</td><td>$26k</td><td>$60k</td><td>$62k</td><td>$60k</td><td>—</td><td>$290k</td><td>$205k · $140k</td><td>$628k</td><td>$720k</td><td class="ok">✓</td></tr>
+        <tr><td>2027</td><td>35 · 33</td><td>$259k</td><td>$27k</td><td>$84k</td><td>$63k</td><td>$61k</td><td>—</td><td>$330k</td><td>$228k · $162k</td><td>$614k</td><td>$800k</td><td class="ok">✓</td></tr>
+        <tr><td colspan="13" class="gap">⋯</td></tr>
+        <tr><td>2041</td><td>49 · 47</td><td>$300k</td><td>$34k</td><td>$74k</td><td>$76k</td><td>$69k</td><td>—</td><td>$905k</td><td>$700k · $565k</td><td>$190k</td><td>$2.05M</td><td class="ok">✓</td></tr>
+        <tr class="phase"><td colspan="13">Bridge · both retired, super locked · funded from outside super only</td></tr>
+        <tr class="selected"><td>2042</td><td>50 · 48</td><td>—</td><td>$36k</td><td>$64k</td><td>$4k</td><td>—</td><td>$32k · —</td><td>$885k</td><td>$735k · $595k</td><td>$170k</td><td>$2.10M</td><td class="ok">✓</td></tr>
+        <tr><td>2043</td><td>51 · 49</td><td>—</td><td>$35k</td><td>$64k</td><td>$4k</td><td>—</td><td>$33k · —</td><td>$860k</td><td>$770k · $625k</td><td>$145k</td><td>$2.14M</td><td class="ok">✓</td></tr>
+        <tr><td colspan="13" class="gap">⋯</td></tr>
+        <tr><td>2053</td><td>61 · 59</td><td>—</td><td>$12k</td><td>$58k</td><td>$0</td><td>—</td><td>$46k · —</td><td>$95k</td><td>$1.20M · $1.02M</td><td>$0</td><td>$2.31M</td><td class="ok">✓</td></tr>
+        <tr class="phase"><td colspan="13">Super accessible · Sam from 2054, Alex from 2057 · retirement phase, minimum drawdowns apply</td></tr>
+        <tr><td>2054</td><td>62 · 60</td><td>—</td><td>$10k</td><td>$58k</td><td>$0</td><td>—</td><td>$10k · $48k</td><td>$85k</td><td>$1.26M · $1.03M</td><td>$0</td><td>$2.37M</td><td class="ok">✓</td></tr>
+        <tr><td colspan="13" class="gap">⋯</td></tr>
+        <tr><td>2089</td><td>97 · 95</td><td>—</td><td>$2k</td><td>$52k</td><td>$0</td><td>—</td><td>— · $50k</td><td>$20k</td><td>$410k · $520k</td><td>$0</td><td>$0.95M</td><td class="ok">✓</td></tr>
+      </table>
+    </div>
+
+    <div class="row" style="margin-top: 20px; align-items: stretch">
+      <!-- Drill-down for the selected row (NFR-1). -->
+      <div class="card col">
+        <h3>2042 in detail <span class="req">NFR-1</span></h3>
+        <div class="grid-3">
+          <table>
+            <tr><th>Tax</th><th>Alex</th><th>Sam</th></tr>
+            <tr><td>Rent (net, negatively geared)</td><td>−$9k</td><td>—</td></tr>
+            <tr><td>Dividends + franking</td><td>$14k</td><td>$14k</td></tr>
+            <tr><td>Capital gains (after 50% discount)</td><td>$7k</td><td>$7k</td></tr>
+            <tr><td><b>Tax payable</b></td><td><b>$0.4k</b></td><td><b>$3.6k</b></td></tr>
+          </table>
+          <table>
+            <tr><th>Where spending came from</th><th></th></tr>
+            <tr><td>Rent &amp; dividends (cash)</td><td>$36k</td></tr>
+            <tr><td>Sold ETF units (lowest gains first)</td><td>$28k</td></tr>
+            <tr><td>Cash buffer</td><td>$4k</td></tr>
+            <tr><td><b>Total</b></td><td><b>$68k</b></td></tr>
+          </table>
+          <div class="banner" style="display: block">Withdrawal order and tax rules come from <b>Assumptions</b>. Each figure links back to the input or rule behind it. <span class="learn">How CGT on shares works</span> <span class="req">NFR-7</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="howto" style="margin-top: 14px"><b>When a year can't be funded:</b> a SHORTFALL banner appears at the top of Results, above the headline numbers, naming the years (e.g. "3 years can't be funded: 2051 – 2053") and linking down to them. Those rows show the unfunded amount, e.g. <b>−$6k</b>, in Status. <span class="req">OUT-3 · FIRE-4</span>
+      <br><b>Getting here:</b> clicking a year in a chart or the milestones, or "Year by year ↓" above, scrolls to the row and outlines it briefly (2042 here).</div>
+
     <div class="footer-nav">
       <span class="btn">← Assumptions</span>
       <span class="muted small">Click any number to see how it was calculated.</span>
-      <span class="btn primary">Year by year →</span>
+      <span class="btn primary">Compare scenarios →</span>
     </div>
   </div>
 </div>
