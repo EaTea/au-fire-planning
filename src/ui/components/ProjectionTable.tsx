@@ -37,10 +37,10 @@ interface ProjectionTableProps<Row> {
 const OUTLINE_DURATION_MS = 4000;
 
 /**
- * A table with one row per projection year (mockup 06, OUT-1), built from column
+ * A table with one row per projection year (mockup 05, OUT-1), built from column
  * definitions so later milestones add columns without changing this component.
  * It knows nothing about dollars modes or the engine: each column's `cell`
- * decides how a row's value is shown. Used by YearByYearScreen. A highlighted
+ * decides how a row's value is shown. Used by YearByYearSection. A highlighted
  * row is drawn on a raised background and in bold, and carries
  * `data-highlighted="true"` so it can be found without relying on colour.
  * Bands (`getBandText`) and scroll-to-a-row (`scrollToKey`, outlined briefly

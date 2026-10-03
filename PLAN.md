@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M3 and the colour scheme are done. The one-page Results plan is approved, not yet implemented. M4 plan drafted, awaiting approval.
+**Current status:** M0 to M3 and the colour scheme are done. Results and Year by year on one page is implemented and awaiting verification. The M4 plan is approved (PR #22) and comes next.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 done. One-page Results approved. M4 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 done. One-page Results awaiting verification. M4 plan approved |
 
 ## 1. Requirement ordering
 
@@ -1299,8 +1299,9 @@ Conventions settled while building M3, which later milestones rely on:
 
 ### Results and Year by year on one page: step-by-step plan
 
-**Status:** approved (merged in PR #20). Not yet implemented. It comes
-before M4, which builds on the one-page layout.
+**Status:** approved in PR #20. Steps A and B are done, awaiting the
+owner's verification. It comes before M4, which builds on the one-page
+layout.
 
 **Kind:** behavior change. It changes what the user sees and where, not
 any figure.
@@ -1390,7 +1391,15 @@ them to the "On this page" links.
 
 #### Step A · Year by year as a section of Results
 
-- [ ] Done
+- [x] Done
+
+Notes from building it:
+- `?view=` scrolling landed here, not in step B, because the "On this
+  page" links need it. The links are "FIRE chart" and "Year by year ↓":
+  the headline numbers sit just under them, so a link to them adds nothing.
+- `StepPage` gained a `headerAction` slot for the toggle, and `Card` an
+  `id` for the chart's link target.
+- `YearByYearScreen` is a thin wrapper around the section until step B.
 
 1. Turn `YearByYearScreen` into `YearByYearSection`: same table, bands,
    status cells, shortfall banner and `?year=` scrolling, but no
@@ -1420,7 +1429,7 @@ them to the "On this page" links.
 
 #### Step B · Remove the Year by year step (end of PR)
 
-- [ ] Done
+- [x] Done
 
 1. Remove `year-by-year` from `steps.ts`, and its entry in `App`'s screen
    map. Scenarios becomes step 6.
@@ -1871,7 +1880,8 @@ for the owner to verify.
       8 to 10), then open it for verification.
 - [x] Owner verifies and merges M3 PR B.
 - [x] Approve the one-page Results plan.
-- [ ] Implement the one-page Results (steps A and B), then open it for
+- [x] Implement the one-page Results (steps A and B), then open it for
       verification.
-- [ ] Approve the M4 step-by-step plan (this PR).
+- [ ] Owner verifies and merges the one-page Results PR.
+- [x] Approve the M4 step-by-step plan.
 - [ ] Implement M4 (steps 1 to 5), then open the M4 PR for verification.

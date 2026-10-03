@@ -108,8 +108,8 @@ export interface FiMilestone {
 /**
  * Projects cash and the portfolio year by year from today to the end age.
  *
- * Called by `summarisePlan` (src/engine/fiNumber.ts); the Year by year and
- * Results screens show its rows, and `assessSolvency` reads the shortfalls.
+ * Called by `summarisePlan` (src/engine/fiNumber.ts); the Results screen
+ * shows its rows (chart and Year by year table), and `assessSolvency` reads the shortfalls.
  * Row 0 is today (no flows). Each later row follows the timing rules in the
  * diagram at the top of this file. If the end age is not after the current
  * age, only row 0 is returned.

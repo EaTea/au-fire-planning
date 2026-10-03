@@ -7,7 +7,7 @@ import { StepNav } from "./StepNav";
 // Component tests for the header step navigation.
 describe("StepNav", () => {
   // One link per step, and only the link for the current route is marked.
-  it("renders 7 links and marks only the current one with aria-current", () => {
+  it("renders 6 links and marks only the current one with aria-current", () => {
     render(
       <MemoryRouter initialEntries={["/assets"]}>
         <StepNav />
@@ -15,7 +15,7 @@ describe("StepNav", () => {
     );
 
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(7);
+    expect(links).toHaveLength(6);
 
     const currentLinks = links.filter((link) => link.getAttribute("aria-current") === "page");
     expect(currentLinks).toHaveLength(1);

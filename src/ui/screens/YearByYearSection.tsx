@@ -1,51 +1,39 @@
 import { useSearchParams } from "react-router";
 
+import type { ProjectionSummary } from "../../engine/fiNumber";
 import type { ProjectionRow } from "../../engine/projection";
-import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { ProjectionTable, type ProjectionColumn } from "../components/ProjectionTable";
-import { StepPage } from "../components/StepPage";
-import { DollarsModeToggle, useMoneyFormatter } from "../dollarsMode";
-import { steps } from "../navigation/steps";
-import { MissingInputsBanner } from "./MissingInputsBanner";
+import { useMoneyFormatter } from "../dollarsMode";
 
-const step = steps.find((candidate) => candidate.id === "year-by-year")!;
+/** The complete variant of the projection summary: the only one with rows to show. */
+type CompleteProjection = Extract<ProjectionSummary, { status: "complete" }>;
+
+/** The id of the section's heading, the target of Results' "Year by year" link and `?view=year-by-year`. */
+export const YEAR_BY_YEAR_SECTION_ID = "year-by-year";
+
+/** What YearByYearSection needs. */
+interface YearByYearSectionProps {
+  readonly projection: CompleteProjection;
+}
 
 /**
- * The Year by year step (OUT-1, OUT-2): the projection of cash and the
- * portfolio as a table, in today's or nominal dollars, from today to the plan-until
- * age. Bands mark the working and retired phases, the FI row is highlighted,
- * years that can't be funded say "Shortfall" and are summarised in a banner
- * above the table, and `?year=` scrolls to and outlines a row. If the
- * plan isn't complete it lists what's missing, like Results. Reads the
- * engine's summary via usePlanSummary(); routed from App.
+ * The Year by year section at the bottom of Results (OUT-1 – OUT-3): the
+ * projection of cash and the portfolio as a table, from today to the
+ * plan-until age, in whichever dollars the page's toggle shows. Bands mark
+ * the working and retired phases, the FI row is highlighted, years that
+ * can't be funded say "Shortfall" and are summarised in a banner above the
+ * table, and `?year=` scrolls to and outlines a row (the chart and the
+ * runs-out banner link there). Rendered by ResultsScreen only when the
+ * projection is complete, so it has no missing-inputs state of its own.
  */
-export function YearByYearScreen() {
-  const summary = usePlanSummary();
+export function YearByYearSection({ projection }: YearByYearSectionProps) {
   const formatMoney = useMoneyFormatter();
   const [searchParams] = useSearchParams();
 
-  if (summary.status === "incomplete") {
-    return (
-      <StepPage step={step} intro={introText}>
-        <MissingInputsBanner missing={summary.missing} />
-      </StepPage>
-    );
-  }
-
-  const { projection } = summary;
-
-  if (projection.status === "incomplete") {
-    return (
-      <StepPage step={step} intro={introText}>
-        <MissingInputsBanner missing={projection.missing} />
-      </StepPage>
-    );
-  }
-
   const fiYearIndex = projection.fiReached?.yearIndex;
 
-  // `?year=2038` (from the Results chart) asks for that year's row to be scrolled to and outlined.
+  // `?year=2038` (from the chart or the runs-out banner) asks for that year's row to be scrolled to and outlined.
   const requestedYear = Number(searchParams.get("year"));
   const requestedRow = projection.rows.find((row) => row.calendarYear === requestedYear);
 
@@ -87,25 +75,27 @@ export function YearByYearScreen() {
   ];
 
   return (
-    <StepPage step={step} intro={introText}>
-      <div className="results-stack">
-        <DollarsModeToggle />
+    <section className="year-by-year-section" aria-labelledby={YEAR_BY_YEAR_SECTION_ID}>
+      <h2 id={YEAR_BY_YEAR_SECTION_ID}>Year by year</h2>
+      <p className="section-intro">
+        Your cash and portfolio each year: contributions, growth, spending and whether the money
+        lasts.
+      </p>
 
-        {shortfallYears.length > 0 && (
-          <Banner tone="warning">{describeShortfallYears(shortfallYears)}</Banner>
-        )}
+      {shortfallYears.length > 0 && (
+        <Banner tone="warning">{describeShortfallYears(shortfallYears)}</Banner>
+      )}
 
-        <ProjectionTable
-          label="Year by year projection"
-          rows={projection.rows}
-          columns={columns}
-          getRowKey={(row) => row.yearIndex}
-          isHighlighted={(row) => row.yearIndex === fiYearIndex}
-          getBandText={(row) => phaseBandText[row.phase]}
-          scrollToKey={requestedRow?.yearIndex}
-        />
-      </div>
-    </StepPage>
+      <ProjectionTable
+        label="Year by year projection"
+        rows={projection.rows}
+        columns={columns}
+        getRowKey={(row) => row.yearIndex}
+        isHighlighted={(row) => row.yearIndex === fiYearIndex}
+        getBandText={(row) => phaseBandText[row.phase]}
+        scrollToKey={requestedRow?.yearIndex}
+      />
+    </section>
   );
 }
 
@@ -118,7 +108,7 @@ const phaseBandText: Record<ProjectionRow["phase"], string> = {
 /**
  * Words for the shortfall banner: "3 years can't be funded: 2051 – 2053", with
  * consecutive years collapsed into ranges and separate runs joined by commas
- * ("2031, 2035 – 2036"). Used by YearByYearScreen when the money runs out.
+ * ("2031, 2035 – 2036"). Used by YearByYearSection when the money runs out.
  */
 function describeShortfallYears(years: readonly number[]): string {
   const sortedYears = [...years].sort((first, second) => first - second);
@@ -141,7 +131,3 @@ function describeShortfallYears(years: readonly number[]): string {
 
   return `${countText} can't be funded: ${rangeText}`;
 }
-
-/** The sentence under the page title, shared by every state of the screen. */
-const introText =
-  "Your cash and portfolio year by year: contributions, growth, spending and whether the money lasts.";

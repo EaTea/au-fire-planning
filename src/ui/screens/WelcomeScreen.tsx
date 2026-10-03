@@ -8,7 +8,7 @@ import { firstStep } from "../navigation/steps";
 const FIRST_INPUT_STEP_PATH = firstStep.path;
 
 /**
- * The first-run welcome page at `#/welcome` (not one of the seven steps). It
+ * The first-run welcome page at `#/welcome` (not one of the six steps). It
  * explains what the app does, shows the disclaimer (NFR-5) and the privacy
  * note (NFR-4), and its "Start planning" button records acceptance and moves
  * on to the first step (Household).

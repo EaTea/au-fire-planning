@@ -81,6 +81,33 @@ body {
   font-size: 24px;
 }
 
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-small) var(--space-medium);
+  margin-bottom: 4px;
+}
+
+.page-header .page-title {
+  margin: 0;
+}
+
+/* "On this page" links on Results, which is long once it ends with the table. */
+.page-jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-small) var(--space-medium);
+  margin: 0 0 var(--space-medium);
+  font-size: 14px;
+  color: var(--colour-text-muted);
+}
+
+.page-jump-links a {
+  color: var(--colour-text);
+}
+
 .page-intro {
   color: var(--colour-text-muted);
   margin: 0 0 20px;
@@ -381,6 +408,24 @@ button:focus-visible {
 }
 
 /* ---------- Year by year table ---------- */
+
+/* The Year by year section at the bottom of Results: heading, intro, banner and table, evenly spaced. */
+.year-by-year-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+  margin-top: var(--space-medium);
+}
+
+.year-by-year-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.year-by-year-section .section-intro {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
 
 /* Wide tables scroll sideways inside their own box instead of widening the page. */
 .projection-table-wrapper {

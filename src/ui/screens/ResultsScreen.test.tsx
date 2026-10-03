@@ -69,7 +69,6 @@ function renderResults(plan: Plan) {
           <Routes>
             <Route path="/results" element={<ResultsScreen />} />
             <Route path="/income-expenses" element={<p>Income and expenses page</p>} />
-            <Route path="/year-by-year" element={<p>Year by year page</p>} />
           </Routes>
         </MemoryRouter>
       </DollarsModeProvider>
@@ -79,13 +78,22 @@ function renderResults(plan: Plan) {
 
 /**
  * The text of every row of the open explanation panels, in order. The chart's
- * visually hidden data table also has rows, so those are left out.
+ * visually hidden data table and the Year by year table also have rows, so
+ * those are left out.
  */
 function explanationRows(): (string | null)[] {
   return screen
     .getAllByRole("row")
-    .filter((row) => !row.closest(".time-series-chart"))
+    .filter((row) => !row.closest(".time-series-chart") && !row.closest(".projection-table"))
     .map((row) => row.textContent);
+}
+
+/** The year in the first cell of the Year by year row currently outlined, if any. */
+function outlinedRowYear(): string | undefined {
+  const outlined = document.querySelector<HTMLElement>('[data-outlined="true"]');
+  return outlined === null
+    ? undefined
+    : (within(outlined).getAllByRole("cell")[0]?.textContent ?? "");
 }
 
 describe("ResultsScreen", () => {
@@ -288,16 +296,19 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("2031 · 3 years can't be funded")).toBeInTheDocument();
     });
 
-    it("warns with a link to Year by year when the money runs out", async () => {
+    it("warns when the money runs out, linking down to the first unfunded year's row", async () => {
       const user = userEvent.setup();
       renderResults(exampleB);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(
+      // The first alert is under the tiles; the Year by year section has its own below.
+      const [runsOutBanner, shortfallBanner] = screen.getAllByRole("alert");
+      expect(runsOutBanner).toHaveTextContent(
         "Your money runs out at age 65 (2031). See the years that can't be funded.",
       );
+      expect(shortfallBanner).toHaveTextContent("1 year can't be funded: 2031");
 
       await user.click(screen.getByRole("link", { name: "See the years that can't be funded." }));
-      expect(screen.getByText("Year by year page")).toBeInTheDocument();
+      expect(outlinedRowYear()).toBe("2031");
     });
 
     it("says FI isn't reached when no year gets there", () => {
@@ -381,6 +392,58 @@ describe("ResultsScreen", () => {
 
       expect(screen.queryByRole("heading", { name: /Investable net worth vs/ })).toBeNull();
       expect(screen.queryByRole("img")).toBeNull();
+    });
+  });
+
+  describe("the one-page layout", () => {
+    it("has one dollars toggle, in the page header, that also changes the table", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleA);
+
+      expect(screen.getAllByRole("group", { name: "Show values in" })).toHaveLength(1);
+      const table = screen.getByRole("table", { name: "Year by year projection" });
+      expect(within(table).getAllByText("$800,400").length).toBeGreaterThan(0);
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      // 2027's portfolio (and investable), $800,400 ÷ 1.025.
+      expect(within(table).queryByText("$800,400")).not.toBeInTheDocument();
+      expect(within(table).getAllByText("$780,878").length).toBeGreaterThan(0);
+    });
+
+    it("ends with the Year by year section, after the chart", () => {
+      renderResults(exampleA);
+
+      const chartHeading = screen.getByRole("heading", {
+        name: "Investable net worth vs FI number",
+      });
+      const tableHeading = screen.getByRole("heading", { level: 2, name: "Year by year" });
+
+      expect(
+        chartHeading.compareDocumentPosition(tableHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("links to the chart and the table from the top of the page", () => {
+      renderResults(exampleA);
+
+      const jumpLinks = screen.getByRole("navigation", { name: "On this page" });
+      expect(within(jumpLinks).getByRole("link", { name: "FIRE chart" })).toHaveAttribute(
+        "href",
+        "/results?view=fire-chart",
+      );
+      expect(within(jumpLinks).getByRole("link", { name: "Year by year ↓" })).toHaveAttribute(
+        "href",
+        "/results?view=year-by-year",
+      );
+    });
+
+    it("leaves out the table and the links, with one missing-inputs banner, when the projection is incomplete", () => {
+      renderResults(workedPlan);
+
+      expect(screen.queryByRole("table", { name: "Year by year projection" })).toBeNull();
+      expect(screen.queryByRole("navigation", { name: "On this page" })).toBeNull();
+      expect(screen.getAllByRole("link", { name: "Current age → Household" })).toHaveLength(1);
     });
   });
 });

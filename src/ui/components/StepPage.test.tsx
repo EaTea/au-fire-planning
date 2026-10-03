@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { steps, type Step } from "../navigation/steps";
 import { StepPage } from "./StepPage";
 
-/** Renders StepPage for the step with the given number (1-7). */
+/** Renders StepPage for the step with the given number (1-6). */
 function renderStepPage(stepNumber: number) {
   const step = steps[stepNumber - 1] as Step;
 
@@ -39,10 +39,10 @@ describe("StepPage", () => {
 
   // Last step: nothing to go forward to.
   it("has no Next link on the last step", () => {
-    renderStepPage(7);
+    renderStepPage(6);
 
     expect(screen.queryByText(/^Next:/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "← Year by year" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "← Results" })).toBeInTheDocument();
   });
 
   // Middle step: both neighbours, pointing at the right routes.
@@ -54,5 +54,20 @@ describe("StepPage", () => {
       "href",
       "/results",
     );
+  });
+
+  // A page-wide control, such as the dollars toggle on Results, sits beside the title.
+  it("shows a header action beside the title when given one", () => {
+    render(
+      <MemoryRouter>
+        <StepPage step={steps[4] as Step} intro="Intro text" headerAction={<button>Toggle</button>}>
+          <p>Page content</p>
+        </StepPage>
+      </MemoryRouter>,
+    );
+
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title.parentElement).toHaveClass("page-header");
+    expect(title.parentElement).toContainElement(screen.getByRole("button", { name: "Toggle" }));
   });
 });

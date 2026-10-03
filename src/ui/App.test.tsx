@@ -136,4 +136,34 @@ describe("App", () => {
     await renderApp();
     expect(screen.getByRole("navigation", { name: "Steps" })).toBeInTheDocument();
   });
+
+  // Year by year is a section of Results now; its old route still leads there.
+  it("sends the old Year by year route to Results", async () => {
+    window.location.hash = "#/year-by-year";
+
+    await renderApp();
+
+    expect(screen.getByRole("heading", { level: 1, name: "Results" })).toBeInTheDocument();
+    expect(window.location.hash).toBe("#/results?view=year-by-year");
+  });
+
+  it("keeps the requested year when redirecting the old Year by year route", async () => {
+    window.location.hash = "#/year-by-year?year=2038";
+
+    await renderApp();
+
+    expect(screen.getByRole("heading", { level: 1, name: "Results" })).toBeInTheDocument();
+    expect(window.location.hash).toBe("#/results?year=2038");
+  });
+
+  // Results is followed directly by Scenarios now.
+  it("goes from Results to Scenarios with Next", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/results";
+    await renderApp();
+
+    await user.click(screen.getByRole("link", { name: "Next: Scenarios →" }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Scenarios" })).toBeInTheDocument();
+  });
 });

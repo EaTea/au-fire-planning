@@ -5,7 +5,7 @@ import { expect, startFresh, test } from "./fixtures";
 // End-to-end test for M3's headline flow (OUT-3, OUT-4, EXP-3, IN-4, IN-12,
 // IN-26): enter worked example B (tests/worked-examples/m3-drawdown.json)
 // through the real screens, see that the money runs out in 2031 on Results and
-// Year by year, add a dated expense and see that year's spending change, and
+// in its Year by year table, add a dated expense and see that year's spending change, and
 // check that everything survives a reload. The clock is fixed in 2026 so the
 // calendar years don't depend on the real date.
 
@@ -17,7 +17,9 @@ async function enter(page: Page, label: string, value: string): Promise<void> {
 
 /** The cell texts of the Year by year row for `year`. */
 async function rowCells(page: Page, year: number): Promise<string[]> {
+  // Scoped to the table: the chart's hidden data table on Results has a row per year too.
   const row = page
+    .getByRole("table", { name: "Year by year projection" })
     .getByRole("row")
     .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
 
@@ -67,18 +69,21 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
   await enter(page, "Inflation per year", "0");
   await enter(page, "General interest rate", "5");
 
-  // Results: the money runs out at 65, with a warning linking to Year by year.
+  // Results: the money runs out at 65, with a warning linking down to the table.
   await page.getByRole("link", { name: "Next: Results →" }).click();
   await expect(page.getByText("Runs out at age 65", { exact: true })).toBeVisible();
   await expect(page.getByText("2031 · 1 year can't be funded")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("alert").first()).toContainText(
     "Your money runs out at age 65 (2031). See the years that can't be funded.",
   );
 
-  // Year by year: 2031 is flagged, with the banner above the table.
+  // Year by year, on the same page: 2031 is flagged and outlined, with the banner above the table.
   await page.getByRole("link", { name: "See the years that can't be funded." }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Year by year" })).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveText("1 year can't be funded: 2031");
+  await expect(page.locator("tr[data-outlined='true']").getByRole("cell").first()).toHaveText(
+    "2031",
+  );
+  const yearByYearSection = page.locator(".year-by-year-section");
+  await expect(yearByYearSection.getByRole("alert")).toHaveText("1 year can't be funded: 2031");
   expect((await rowCells(page, 2031)).at(-1)).toBe("Shortfall −$6,729");
   expect((await rowCells(page, 2030)).at(-1)).toBe("✓");
   expect((await rowCells(page, 2027))[4]).toBe("$30,000");
@@ -94,9 +99,9 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
   await expect(page.getByRole("button", { name: "Per year for Boat" })).toHaveText("$5,000");
 
   // 2027's spending is now $30,000 + $5,000, and the plan runs out sooner.
-  await page.goto("./#/year-by-year");
+  await page.goto("./#/results");
   expect((await rowCells(page, 2027))[4]).toBe("$35,000");
-  await expect(page.getByRole("alert")).toContainText("can't be funded");
+  await expect(yearByYearSection.getByRole("alert")).toContainText("can't be funded");
 
   // Autosave waits 500 ms after the last edit; reload once the expense is stored.
   await expect.poll(() => savedDatedExpenseCount(page)).toBe(1);

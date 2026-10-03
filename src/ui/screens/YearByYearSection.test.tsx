@@ -3,11 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { PlanProvider } from "../../plan/PlanProvider";
+import { PlanProvider, usePlanSummary } from "../../plan/PlanProvider";
 import type { Plan } from "../../plan/types";
-import { DollarsModeProvider } from "../dollarsMode";
+import { DollarsModeProvider, DollarsModeToggle } from "../dollarsMode";
 import { blankPlan } from "../sections/sectionTestHelpers";
-import { YearByYearScreen } from "./YearByYearScreen";
+import { YearByYearSection } from "./YearByYearSection";
 
 /** Worked example A from tests/worked-examples/m2-growth.json: FI in 2038 at age 46, retiring at 50. */
 const exampleA: Plan = {
@@ -78,18 +78,34 @@ const exampleCDated: Plan = {
 };
 
 /**
- * Renders the screen for a plan with the start year fixed at 2026, starting in
+ * Stands in for Results: the dollars toggle and the section for the plan's
+ * complete projection. Every plan in this file has one.
+ */
+function SectionWithToggle() {
+  const summary = usePlanSummary();
+  if (summary.status !== "complete" || summary.projection.status !== "complete") {
+    throw new Error("The test plan's projection should be complete");
+  }
+
+  return (
+    <>
+      <DollarsModeToggle />
+      <YearByYearSection projection={summary.projection} />
+    </>
+  );
+}
+
+/**
+ * Renders the section for a plan with the start year fixed at 2026, starting in
  * the default (nominal) dollars. `route` can add a query such as `?year=2029`.
  */
-function renderYearByYear(plan: Plan, route = "/year-by-year") {
+function renderYearByYear(plan: Plan, route = "/results") {
   return render(
     <PlanProvider initialPlan={plan} startYear={2026}>
       <DollarsModeProvider>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
-            <Route path="/year-by-year" element={<YearByYearScreen />} />
-            <Route path="/household" element={<p>Household page</p>} />
-            <Route path="/income-expenses" element={<p>Income and expenses page</p>} />
+            <Route path="/results" element={<SectionWithToggle />} />
           </Routes>
         </MemoryRouter>
       </DollarsModeProvider>
@@ -110,7 +126,16 @@ function rowFor(year: number): string[] {
     .map((cell) => cell.textContent ?? "");
 }
 
-describe("YearByYearScreen", () => {
+describe("YearByYearSection", () => {
+  it("has a Year by year heading that in-page links can target", () => {
+    renderYearByYear(exampleA);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Year by year" })).toHaveAttribute(
+      "id",
+      "year-by-year",
+    );
+  });
+
   it("shows the headers and a row for every year to the plan-until age", () => {
     renderYearByYear(exampleA);
 
@@ -272,7 +297,7 @@ describe("YearByYearScreen", () => {
   });
 
   it("scrolls to and outlines the row named by ?year=", () => {
-    renderYearByYear(exampleA, "/year-by-year?year=2038");
+    renderYearByYear(exampleA, "/results?year=2038");
 
     const outlined = screen
       .getAllByRole("row")
@@ -283,24 +308,8 @@ describe("YearByYearScreen", () => {
   });
 
   it("ignores a ?year= that isn't in the table", () => {
-    renderYearByYear(exampleA, "/year-by-year?year=1999");
+    renderYearByYear(exampleA, "/results?year=1999");
 
     expect(document.querySelector("[data-outlined]")).toBeNull();
-  });
-
-  it("asks for the ages when the projection is incomplete, linking to Household", () => {
-    renderYearByYear({ ...blankPlan, expenses: { livingAnnual: 64000 } });
-
-    expect(screen.getByRole("alert")).toHaveTextContent("Current age");
-    expect(screen.getByRole("link", { name: "Current age → Household" })).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-  });
-
-  it("asks for living expenses when the plan is empty", () => {
-    renderYearByYear(blankPlan);
-
-    expect(
-      screen.getByRole("link", { name: "Living expenses → Income & expenses" }),
-    ).toBeInTheDocument();
   });
 });

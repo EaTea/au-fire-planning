@@ -1,14 +1,17 @@
-import { Link } from "react-router";
+import { useEffect } from "react";
+import { Link, useLocation, useSearchParams } from "react-router";
 
 import type { Explained } from "../../engine/explained";
 import { usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
+import { DollarsModeToggle } from "../dollarsMode";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
-import { FireChartSection } from "../sections/FireChartSection";
+import { FIRE_CHART_SECTION_ID, FireChartSection } from "../sections/FireChartSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
+import { YEAR_BY_YEAR_SECTION_ID, YearByYearSection } from "./YearByYearSection";
 
 const step = steps.find((candidate) => candidate.id === "results")!;
 
@@ -23,20 +26,30 @@ function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explaine
 }
 
 /**
- * The Results step (FIRE-1, FIRE-2): the FI number and progress to FI, each
- * with its breakdown, or a list of what's still missing, linked to the steps
- * where it is entered. Always shows what isn't modelled yet so the figures
- * aren't over-trusted. Reads the engine's summary via usePlanSummary(); routed
- * from App.
+ * The Results step: the headline tiles (FIRE-1 – FIRE-3, OUT-3, OUT-4), each
+ * with its breakdown, the FIRE chart, and then every year of the plan in the
+ * Year by year section (OUT-1), all following the one dollars toggle in the
+ * page header (OUT-2). If the plan is incomplete it lists what's still
+ * missing instead, linked to the steps where it is entered. Always shows what
+ * isn't modelled yet so the figures aren't over-trusted. `?view=` scrolls to
+ * a section and `?year=` to a row of the table. Reads the engine's summary
+ * via usePlanSummary(); routed from App.
  */
 export function ResultsScreen() {
   const summary = usePlanSummary();
+  const projection = summary.status === "complete" ? summary.projection : undefined;
+  const projectionComplete = projection?.status === "complete";
+
+  useScrollToRequestedSection();
 
   return (
     <StepPage
       step={step}
-      intro="Your FI number: how much you need invested to fund your retirement, when you could reach it, and how far along you are."
+      intro="Your FI number, when you could reach it and retire, whether the money lasts, and every year of the plan behind those figures."
+      headerAction={<DollarsModeToggle />}
     >
+      {projectionComplete && <JumpLinks />}
+
       <div className="results-stack">
         {summary.status === "complete" ? (
           <>
@@ -69,8 +82,45 @@ export function ResultsScreen() {
           Not yet modelled: super (M5), the bridge to super (M6), tax (M8), property (M12) and more.
         </Banner>
       </div>
+
+      {projection?.status === "complete" && <YearByYearSection projection={projection} />}
     </StepPage>
   );
+}
+
+/**
+ * The "On this page" links under the title: Results is long once it ends
+ * with the table, so these jump to the chart and the table. They set
+ * `?view=`, which useScrollToRequestedSection acts on. Shown only when the
+ * projection is complete, since both targets need it.
+ */
+function JumpLinks() {
+  return (
+    <nav className="page-jump-links" aria-label="On this page">
+      <span>On this page:</span>
+      <Link to={`${step.path}?view=${FIRE_CHART_SECTION_ID}`}>FIRE chart</Link>
+      <Link to={`${step.path}?view=${YEAR_BY_YEAR_SECTION_ID}`}>Year by year ↓</Link>
+    </nav>
+  );
+}
+
+/**
+ * Scrolls the element named by `?view=` (a section id, e.g. "year-by-year")
+ * into view. Keyed on the location as well, so following the same link twice
+ * scrolls again. Called by ResultsScreen; rows (`?year=`) are scrolled by the
+ * table itself.
+ */
+function useScrollToRequestedSection() {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const requestedSection = searchParams.get("view");
+
+  useEffect(() => {
+    if (requestedSection === null) return;
+
+    // jsdom has no layout and no scrollIntoView.
+    document.getElementById(requestedSection)?.scrollIntoView?.({ block: "start" });
+  }, [requestedSection, location.key]);
 }
 
 /** The complete variant of the plan summary, as ResultsScreen receives it. */
@@ -212,21 +262,23 @@ function MoneyLastsTile({ projection }: { readonly projection: CompleteProjectio
 }
 
 /**
- * A warning above the tiles' notes when the money runs out, linking to the
- * Year by year step where the unfunded years are flagged. Renders nothing when
- * the money lasts.
+ * A warning under the tiles when the money runs out, linking down to the
+ * first unfunded year's row in the Year by year section (`?year=`). Renders
+ * nothing when the money lasts.
  */
 function RunsOutBanner({ projection }: { readonly projection: CompleteProjection }) {
   const { solvency } = projection;
   if (solvency.status !== "runsOut") return null;
 
-  const yearByYearStep = steps.find((candidate) => candidate.id === "year-by-year")!;
+  const firstShortfallYear = Math.min(...solvency.shortfallYears);
 
   return (
     <Banner tone="warning">
       <div>
         Your money runs out at age {solvency.age} ({solvency.year}).{" "}
-        <Link to={yearByYearStep.path}>See the years that can&apos;t be funded.</Link>
+        <Link to={`${step.path}?year=${firstShortfallYear}`}>
+          See the years that can&apos;t be funded.
+        </Link>
       </div>
     </Banner>
   );

@@ -2,18 +2,17 @@ import type { Page } from "@playwright/test";
 
 import { expect, startFresh, test } from "./fixtures";
 
-// End-to-end tests for the M0 walking skeleton (the header, the seven-step
+// End-to-end tests for the M0 walking skeleton (the header, the six-step
 // navigation and the placeholder pages) and the colour scheme, driven through
 // a real browser against the production build (see playwright.config.ts).
 
-/** The seven steps in journey order, matching src/ui/navigation/steps.ts. */
+/** The six steps in journey order, matching src/ui/navigation/steps.ts. */
 const stepLabels = [
   "Household",
   "Income & expenses",
   "Assets",
   "Assumptions",
   "Results",
-  "Year by year",
   "Scenarios",
 ];
 
@@ -37,15 +36,13 @@ function collectBrowserErrors(page: Page): string[] {
   return errors;
 }
 
-test("opening the app shows the header, all seven steps and the Household page", async ({
-  page,
-}) => {
+test("opening the app shows the header, all six steps and the Household page", async ({ page }) => {
   await startFresh(page);
 
   await expect(page.getByText("AU FIRE Planner")).toBeVisible();
 
   const stepLinks = page.getByRole("navigation", { name: "Steps" }).getByRole("link");
-  await expect(stepLinks).toHaveCount(7);
+  await expect(stepLinks).toHaveCount(6);
   for (const [index, label] of stepLabels.entries()) {
     await expect(stepLinks.nth(index)).toContainText(label);
   }
@@ -53,7 +50,7 @@ test("opening the app shows the header, all seven steps and the Household page",
   await expect(page.getByRole("heading", { level: 1, name: "Household" })).toBeVisible();
 });
 
-test("pressing Next six times visits every step in order and ends on Scenarios", async ({
+test("pressing Next five times visits every step in order and ends on Scenarios", async ({
   page,
 }) => {
   await startFresh(page);
@@ -81,6 +78,35 @@ test("opening #/results directly shows Results as the current step", async ({ pa
   await expect(
     page.getByRole("navigation", { name: "Steps" }).getByRole("link", { name: /Results/ }),
   ).toHaveAttribute("aria-current", "page");
+});
+
+test("the old Year by year route opens Results at the table, or at the requested row", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // A complete plan, so Results has its Year by year table.
+  for (const [route, label, value] of [
+    ["./#/household", "Current age", "34"],
+    ["./#/household", "Target retirement age", "50"],
+    ["./#/income-expenses", "Per year, after tax", "64000"],
+    ["./#/assets", "Current value", "720000"],
+  ]) {
+    await page.goto(route!);
+    await page.getByLabel(label!).fill(value!);
+    await page.getByLabel(label!).press("Tab");
+  }
+
+  await page.goto("./#/year-by-year");
+  await expect(page).toHaveURL(/#\/results\?view=year-by-year$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Year by year" })).toBeInViewport();
+
+  await page.goto("./#/year-by-year?year=2060");
+  await expect(page).toHaveURL(/#\/results\?year=2060$/);
+  const outlinedRow = page.locator("tr[data-outlined='true']");
+  await expect(outlinedRow.getByRole("cell").first()).toHaveText("2060");
+  await expect(outlinedRow).toBeInViewport();
 });
 
 test("no errors are logged to the browser console on any page", async ({ page }) => {

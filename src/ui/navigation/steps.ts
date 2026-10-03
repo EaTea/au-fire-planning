@@ -1,5 +1,5 @@
 /**
- * The seven steps of the app, defined once. The router (src/ui/App.tsx), the
+ * The six steps of the app, defined once. The router (src/ui/App.tsx), the
  * header navigation (StepNav), the Back/Next footer (StepPage) and the
  * placeholder screens all derive from this list, so adding or reordering a
  * step happens here and nowhere else.
@@ -7,13 +7,7 @@
 
 /** Identifies one step; also the last segment of the step's route. */
 export type StepId =
-  | "household"
-  | "income-expenses"
-  | "assets"
-  | "assumptions"
-  | "results"
-  | "year-by-year"
-  | "scenarios";
+  "household" | "income-expenses" | "assets" | "assumptions" | "results" | "scenarios";
 
 /** One step of the planning journey, as shown in the header and routed to. */
 export interface Step {
@@ -47,14 +41,7 @@ export const steps: readonly Step[] = [
     arrivesIn: "M1",
   },
   { number: 5, id: "results", label: "Results", path: "/results", arrivesIn: "M1" },
-  {
-    number: 6,
-    id: "year-by-year",
-    label: "Year by year",
-    path: "/year-by-year",
-    arrivesIn: "M2",
-  },
-  { number: 7, id: "scenarios", label: "Scenarios", path: "/scenarios", arrivesIn: "M16" },
+  { number: 6, id: "scenarios", label: "Scenarios", path: "/scenarios", arrivesIn: "M16" },
 ];
 
 /** The step the app opens on, and where unknown routes redirect to. */
