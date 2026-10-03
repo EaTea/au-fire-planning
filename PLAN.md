@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M3 and the colour scheme are done. Results and Year by year on one page is implemented and awaiting verification. The M4 plan is approved (PR #22) and comes next.
+**Current status:** M0 to M3, the colour scheme and the one-page Results are done. M4 is in progress.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 done. One-page Results awaiting verification. M4 plan approved |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M3 and one-page Results done. M4 in progress |
 
 ## 1. Requirement ordering
 
@@ -1297,164 +1297,44 @@ Conventions settled while building M3, which later milestones rely on:
   Only charts and Year by year follow the today's/nominal toggle, which
   starts on nominal.
 
-### Results and Year by year on one page: step-by-step plan
+### Results and Year by year on one page: done
 
-**Status:** approved in PR #20. Steps A and B are done, awaiting the
-owner's verification. It comes before M4, which builds on the one-page
-layout.
+Delivered in PR #23 (plan in PR #20). Results and Year by year are one
+step, so the app has six steps, and Scenarios is step 6. The full plan is
+in git history.
 
-**Kind:** behavior change. It changes what the user sees and where, not
-any figure.
+Conventions every later milestone follows:
 
-**Why:** Results and Year by year answer one question, "does my plan
-work?", at two levels of detail. As separate steps, the user flips
-between tabs to see the years behind a headline number, and since M3 the
-chart, the "runs out" banner and the shortfall banner send them across to
-the other tab. OUT-1 now says the projection is shown on the same page as
-the results, below the headline figures and charts, and mockup 05 shows
-the combined page (mockup 06 Projection is gone, and Scenarios is now 06).
+- **The Results page, top to bottom:**
+  - page header with the dollars toggle;
+  - "On this page" links;
+  - the missing-inputs banner (only if incomplete);
+  - the tiles;
+  - the runs-out banner;
+  - the charts;
+  - the "Not yet modelled" banner;
+  - the Year by year section.
 
-**Goal:** one Results step: the tiles and chart first, then the Year by
-year table, with one dollars toggle for the whole page. The app has six
-steps instead of seven.
-
-**The page, top to bottom:**
-
-```
-  ┌ Results ─────────────────────────────── [Nominal | Today's $] ┐
-  │ intro                                                          │
-  │ On this page: Headline numbers · FIRE chart · Year by year ↓   │
-  ├────────────────────────────────────────────────────────────────┤
-  │ [missing inputs banner, only if the plan is incomplete]        │
-  │ FI number · Progress · FI reached · Earliest retirement ·      │
-  │ Money lasts tiles                                              │
-  │ [runs-out banner, links down to the first shortfall row]       │
-  │ FIRE chart (a): click a year to jump to its row below          │
-  │ "Not yet modelled" banner                                      │
-  ├─ Year by year ─────────────────────────────────────────────────┤
-  │ one line on what the table shows                               │
-  │ [shortfall banner with the year ranges]                        │
-  │ Year | Age | ... table (the M3 columns, bands, FI row, status) │
-  ├────────────────────────────────────────────────────────────────┤
-  │ ← Assumptions                                    Scenarios →   │
-  └────────────────────────────────────────────────────────────────┘
-```
-
-Later milestones slot their sections (milestones, more charts, Coast
-FIRE) between the chart and Year by year, as mockup 05 shows, and add
-them to the "On this page" links.
-
-**Design decisions:**
-
-- **One step, one route.** `steps.ts` loses `year-by-year`, and Scenarios
-  becomes step 6. The header, the Back/Next footer and the placeholders
-  all follow from that list, so Results' Next becomes "Scenarios".
-- **Scrolling within the page.** `#/results?year=2038` scrolls to that
-  row and outlines it briefly, using the M3 logic that
-  `YearByYearScreen` has today. `#/results?view=year-by-year` scrolls to
-  the section heading.
-- **Old links still work.** `#/year-by-year?year=2038` redirects to
-  `#/results?year=2038`, and a bare `#/year-by-year` to
-  `#/results?view=year-by-year`.
-- **Links that crossed tabs now stay on the page.** The chart's click
-  goes to `#/results?year={year}`. The runs-out banner's link goes to the
-  first shortfall year's row.
-- **The dollars toggle moves to the Results page header** and covers the
-  tiles, the chart and the table. Figures that are nominal by definition
-  (the FI number at retirement) still say so and don't follow it.
-- **The table becomes a section, not a screen.** `YearByYearScreen`
-  becomes `YearByYearSection` in `src/ui/screens/`. It keeps its columns,
-  bands, FI row highlight, status cells and shortfall banner, and gains an
-  `<h2>` heading with `id="year-by-year"` for the in-page link.
-- **One "Enter these" banner per page.** If the plan is incomplete, the
-  `MissingInputsBanner` at the top already lists what's missing, so the
-  Year by year section isn't shown until the projection is complete.
-- **"On this page" links** are plain in-page links, worth having now
-  because every later milestone makes the page longer.
-- **Styles:** the table keeps its `app.css` rules. The new heading and the
-  links use existing role variables, so no new colour pairs are needed. The
-  contrast sweep's Year by year passes move onto Results.
-- **Not changed:** the engine, the plan state, the wire format and saved
-  plans. No new dependencies.
-
-**One PR.** Two steps, each leaving the app working.
-
-**Definition of done:**
-
-- The header shows six steps, ending "5 Results" and "6 Scenarios".
-- Results shows the tiles, the chart and then the Year by year table, with
-  one dollars toggle at the top that changes all of them.
-- Clicking a year in the chart scrolls to its row on the same page.
-- Old `#/year-by-year` links land on Results, at the table or the row.
-- The README describes the six steps.
-- `npm run check` and `npm run test:e2e` pass, and CI is green.
-
-#### Step A · Year by year as a section of Results
-
-- [x] Done
-
-Notes from building it:
-- `?view=` scrolling landed here, not in step B, because the "On this
-  page" links need it. The links are "FIRE chart" and "Year by year ↓":
-  the headline numbers sit just under them, so a link to them adds nothing.
-- `StepPage` gained a `headerAction` slot for the toggle, and `Card` an
-  `id` for the chart's link target.
-- `YearByYearScreen` is a thin wrapper around the section until step B.
-
-1. Turn `YearByYearScreen` into `YearByYearSection`: same table, bands,
-   status cells, shortfall banner and `?year=` scrolling, but no
-   `StepPage`, no toggle and no missing-inputs banner of its own. It
-   renders nothing while the projection is incomplete.
-2. On `ResultsScreen`:
-   - put the `DollarsModeToggle` in the page header, beside the title;
-   - add the "On this page" links;
-   - render `YearByYearSection` after the "Not yet modelled" banner;
-   - point the chart's click and the runs-out banner's link at
-     `#/results?year={year}`.
-3. Leave the Year by year step in place for now, so this step changes
-   nothing else. It will briefly show the table in two places; step B
-   removes the old one.
-4. Tests:
-   - move the table tests from `YearByYearScreen.test.tsx` into a
-     `YearByYearSection.test.tsx`;
-   - in `ResultsScreen.test.tsx`: the table appears after the chart with a
-     complete plan; it is absent, and the banner appears once, with an
-     incomplete projection; switching the toggle on Results changes a
-     table cell;
-   - update the E2E specs that followed "Next: Year by year" or clicked a
-     chart year (`growth`, `drawdown`, `fireChart`) to check the table on
-     Results instead.
-
-**Check:** `npm run check` and `npm run test:e2e` pass.
-
-#### Step B · Remove the Year by year step (end of PR)
-
-- [x] Done
-
-1. Remove `year-by-year` from `steps.ts`, and its entry in `App`'s screen
-   map. Scenarios becomes step 6.
-2. Add the `/year-by-year` redirects described above. On Results,
-   `?view=year-by-year` scrolls the section's heading into view once the
-   page has rendered.
-3. Update the doc comments that mention the Year by year screen
-   (`MissingInputsBanner`, `ProjectionTable`, `dollarsMode`) and the
-   README's list of steps.
-4. Tests:
-   - `steps.test.ts` and `StepPage.test.tsx` for six steps, with Results'
-     Next being Scenarios;
-   - `tests/e2e/navigation.spec.ts` for six steps;
-   - `tests/e2e/contrast.spec.ts` visits Results with a complete plan, in
-     both dollar modes, instead of `#/year-by-year`;
-   - E2E: `#/year-by-year` lands on Results with the Year by year heading
-     in view, and `#/year-by-year?year=2038` with that row outlined.
-
-**Check:** `npm run check` and `npm run test:e2e` pass. **Open the PR**
-for the owner to verify.
+  New sections (milestones, more charts) go between the charts and Year by
+  year, and each adds an "On this page" link.
+- **One dollars toggle**, in `StepPage`'s `headerAction` slot, covers the
+  tiles, the charts and the table. Figures that are nominal by definition
+  still say so and don't follow it.
+- **In-page links:**
+  - `#/results?year=2038` scrolls to that row and outlines it;
+  - `#/results?view=<section-id>` scrolls to a section, which is a `Card`
+    with an `id`;
+  - chart clicks and the runs-out banner use these.
+- **Old routes redirect:** `#/year-by-year` (with or without `?year=`)
+  lands on Results.
+- **`YearByYearSection`** renders only when the projection is complete.
+  The page shows one missing-inputs banner, at the top.
 
 ### M4 · Coast FIRE: step-by-step plan
 
-**Status:** draft, revised after review (cash grows at its own rate while
-coasting). Awaiting the owner's approval. Do not implement yet.
+**Status:** approved (PR #22). Implementation in progress, one step at a
+time. Step 1 is done. Steps 2 to 5 build on the one-page Results, which
+is now merged (PR #23).
 
 **Kind:** behavior change.
 
@@ -1489,8 +1369,8 @@ From then on, contributions are optional. Results shows:
 **One PR**, five steps. It's smaller than M3, and each step leaves the app
 working.
 
-**Builds on the one-page Results page.** M4 is implemented after the
-one-page Results plan above. Everything M4 adds is a section of that page:
+**Builds on the one-page Results page** (done, PR #23; see its summary
+above). Everything M4 adds is a section of that page:
 - **Order:** the tiles, the milestones, chart (a), the Coast FIRE chart,
   then Year by year.
 - **Dollars:** the page's single dollars toggle covers it all.
@@ -1734,7 +1614,7 @@ No new dependencies.
 
 #### Step 1 · Engine: Coast FIRE
 
-- [ ] Done
+- [x] Done
 
 1. Add `src/engine/coastFire.ts` with the types above and
    `calculateCoastFire`, following the design decisions exactly.
@@ -1764,6 +1644,32 @@ No new dependencies.
        lowers the Coast FIRE number.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `calculateCoastFire(rows, inputs)` takes the full `ProjectionInputs` (the
+  same object the projection was run with), and reads the start year from
+  row 0. It reads each pre-retirement row's `spending` for dated expenses,
+  which is only dated expenses before the retirement row, instead of
+  recomputing them.
+- The breakdown's dated-expense line shows whenever a dated expense falls
+  between today and retirement, even if cash pays it in full (the line is
+  then $0.00). The cash line then reads "Your cash, growing at 4% to 2042,
+  after paying the dated expenses it can".
+- Worked examples A to F match the plan's figures to the cent, including
+  example B's rows. The fixture adds an `expected.coast` block
+  (`number`, `numberInRetirementYearDollars`, `reached` or `null`, `rows`).
+- Property-test judgement calls:
+  - "Coast FIRE reached no later than FI" needs the interest rate on cash
+    to be at least inflation as well as `r ≥ i`. Otherwise cash that loses
+    value against the rising FI number can make Coast FIRE later than FI.
+    The generator raises both rates to at least inflation.
+  - "`coast(n)` equals the FI number" is tested as `max(FI number, cash at
+    retirement)`, because cash above the FI number makes it larger (as the
+    design says).
+  - "Reached means stoppable" uses its own generator, tuned so Coast FIRE
+    is reached after today in about 40% of runs. With the general
+    generator it was reached in about 7%, so the test mostly skipped.
+  - Comparisons use a relative tolerance of 1e-6 for floating-point noise.
 
 #### Step 2 · Results: Coast FIRE tile
 
@@ -1882,6 +1788,6 @@ for the owner to verify.
 - [x] Approve the one-page Results plan.
 - [x] Implement the one-page Results (steps A and B), then open it for
       verification.
-- [ ] Owner verifies and merges the one-page Results PR.
+- [x] Owner verifies and merges the one-page Results PR.
 - [x] Approve the M4 step-by-step plan.
 - [ ] Implement M4 (steps 1 to 5), then open the M4 PR for verification.

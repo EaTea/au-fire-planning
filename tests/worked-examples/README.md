@@ -42,6 +42,12 @@ loads every file in this folder and checks the engine against it to the cent.
   `solvency` answer (`lasts` with `investableClosing`, or `runsOut` with
   `year`, `age`, `shortfallYears` and `shortfall`), and an
   `earliestRetirement` answer (`feasible` with `age` and `year`).
+- M4 fixtures (`m4-coast.json`) add an `expected.coast` answer: `number` (the
+  Coast FIRE number in today's dollars), `numberInRetirementYearDollars`,
+  `reached` (`yearIndex`, `calendarYear`, `age`, `investable` and
+  `coastNumber` in that year, or `null` when it isn't reached before
+  retirement) and optionally `rows` (`yearIndex`, `investable`,
+  `coastNumber`) for rows worth checking by hand.
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.
