@@ -7,6 +7,7 @@ import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { FireChartSection } from "../sections/FireChartSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
 
 const step = steps.find((candidate) => candidate.id === "results")!;
@@ -54,6 +55,7 @@ export function ResultsScreen() {
                 <EarliestRetirementTile projection={summary.projection} />
                 <MoneyLastsTile projection={summary.projection} />
                 <RunsOutBanner projection={summary.projection} />
+                <FireChartSection projection={summary.projection} />
               </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />

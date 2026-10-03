@@ -49,10 +49,13 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
 
   // Results: the FI year and the nominal FI number at the retirement age.
   await page.getByRole("link", { name: "Next: Results →" }).click();
-  await expect(page.getByText("$1,600,000", { exact: true })).toBeVisible();
+  // The chart's hidden data table repeats some figures, so look inside the tiles.
+  const fiNumberTile = page.locator(".metric", { hasText: "FI number" });
+  await expect(fiNumberTile.getByText("$1,600,000", { exact: true })).toBeVisible();
   await expect(page.getByText("$2,375,209 at age 50 (2042)")).toBeVisible();
-  await expect(page.getByText("2038", { exact: true })).toBeVisible();
-  await expect(page.getByText("Age 46", { exact: true })).toBeVisible();
+  const fiReachedTile = page.locator(".metric", { hasText: "FI reached" });
+  await expect(fiReachedTile.getByText("2038", { exact: true })).toBeVisible();
+  await expect(fiReachedTile.getByText("Age 46", { exact: true })).toBeVisible();
 
   // Year by year: the 2038 row is the only highlighted one.
   await page.getByRole("link", { name: "Next: Year by year →" }).click();

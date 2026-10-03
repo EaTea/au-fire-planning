@@ -12,3 +12,13 @@ import { afterEach } from "vitest";
 afterEach(() => {
   cleanup();
 });
+
+// jsdom has no ResizeObserver, which Recharts' ResponsiveContainer needs on
+// Results. This stand-in never reports a size, so the chart draws nothing
+// there; the chart's own tests give it a fixed width and height instead.
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub;

@@ -256,6 +256,52 @@ test("the results page has readable text with every explanation open", async ({ 
   expect(await findLowContrastWhileInteracting(page)).toEqual([]);
 });
 
+test("the results page with its chart has readable text in both dollar modes, with markers, a band and a tooltip", async ({
+  page,
+}) => {
+  // Fix "now" so the chart's years are the same on any day.
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B: the money runs out in 2031, so the chart has a shortfall band and a marker.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "60"],
+    ["#/household", "Target retirement age", "60"],
+    ["#/household", "Plan until age", "65"],
+    ["#/income-expenses", "Per year, after tax", "30000"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "10"],
+    ["#/assets", "Cash savings", "10000"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "5"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label).fill(value);
+    await page.getByLabel(label).press("Tab");
+  }
+
+  await page.goto("#/results");
+  await expect(page.locator(".chart-band")).toHaveCount(1);
+  await expect(page.locator(".chart-marker")).toHaveCount(1);
+
+  // Show the tooltip while checking, since it is text on its own background.
+  // The mouse can only reach what is in the viewport.
+  await page.locator(".chart-picture").scrollIntoViewIfNeeded();
+  const box = (await page.locator(".chart-picture").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    expect(await findLowContrastText(page), mode).toEqual([]);
+  }
+
+  // The hover/focus sweep moves the mouse off the chart, which is the tooltip-free state.
+  expect(await findLowContrastWhileInteracting(page)).toEqual([]);
+});
+
 test("the year by year table has readable text in both dollar modes, including the FI row", async ({
   page,
 }) => {

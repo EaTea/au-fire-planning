@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is merged. PR B (steps 8–10) is in progress.
+**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is merged. PR B (steps 8–10) is implemented and awaiting verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A merged, PR B in progress |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A merged, PR B awaiting verification |
 
 ## 1. Requirement ordering
 
@@ -1219,7 +1219,7 @@ Conventions settled while building M2, which later milestones rely on:
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
 **Status:** approved. PR A (steps 1 to 7) done, merged in PR #19. PR B
-(steps 8 to 10) in progress, one step at a time.
+(steps 8 to 10) is implemented and awaiting the owner's verification.
 
 **Kind:** behavior change.
 
@@ -1882,7 +1882,7 @@ the owner to verify.
 
 #### Step 10 · FIRE chart (a) (end of PR B)
 
-- [ ] Done
+- [x] Done
 
 1. Install `recharts` 3.10.1 and `react-is` 19.3.0 with `--save-exact`.
    Add a `ResizeObserver` stub to the Vitest setup.
@@ -1912,6 +1912,35 @@ the owner to verify.
    - Results shows "Earliest retirement: Age 43";
    - hovering the chart shows a tooltip with a year and two dollar values;
    - clicking a year opens Year by year with that row outlined.
+
+**As built:**
+- `recharts` 3.10.1 and `react-is` 19.3.0 are installed. The Vitest setup has
+  a `ResizeObserver` stub that never reports a size, so on Results in jsdom
+  the responsive chart draws nothing. `TimeSeriesChart` takes optional
+  `width`/`height` for tests.
+- `TimeSeriesChart` is the only file that imports Recharts. Its points are
+  `{ year, age, values }`, with a value per series key. Series colours come
+  from a class that sets `--series-colour` (`chart-series-investable`,
+  `chart-series-fi-number`), which both the line and the HTML legend swatch
+  read. The FI number is dashed and the markers are dotted, so lines differ by
+  more than colour. The chart is a `role="img"` with a name, followed by a
+  visually hidden data table (`<name>: data`).
+- `FireChartSection` puts `DollarsModeToggle` in the card header. `Card` gained
+  an optional `headerAction`. A click navigates to
+  `/year-by-year?year={year}`.
+- A band's x range is the shortfall years ± 0.5, clamped to the chart. If the
+  FI year and retirement year coincide, they share one marker, "FI reached ·
+  retirement".
+- New roles: `--colour-chart-primary` (gold), `--colour-chart-reference`
+  (white), `--colour-chart-band` (error pink, drawn at
+  `--chart-band-opacity: 0.2`). `tokens.test.ts` has a separate 3:1 list for
+  graphics (the three roles plus `--colour-border` for axes). The band label
+  uses `--colour-text`, not error pink: pink on the tinted band is only 4.2:1,
+  so a test checks the plain text colour on the blended band.
+- The hidden table repeats figures (the year-0 FI number, years), so tests and
+  specs that looked for those on Results by text now look inside the tile.
+- The contrast sweep has a Results-with-chart pass (example B: band, marker
+  and tooltip, both dollar modes).
 
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye that
 the chart reads clearly on the deep green page. **Open PR B** for the owner
@@ -1947,5 +1976,6 @@ to verify.
 - [x] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
 - [x] Owner verifies and merges M3 PR A.
-- [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
+- [x] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.
+- [ ] Owner verifies and merges M3 PR B.

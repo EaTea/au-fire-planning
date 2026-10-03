@@ -37,6 +37,22 @@ const textOnBackgroundPairs: ReadonlyArray<readonly [text: string, background: s
   ["--colour-text-highlight", "--colour-page-background"],
 ];
 
+/** WCAG 1.4.11 minimum contrast for graphics: chart lines, markers and axis lines. */
+const minimumGraphicsContrast = 3;
+
+/**
+ * Every graphic (not text) role against the background it is drawn on. Kept
+ * apart from the text pairs above because the minimum is 3:1, not 4.5:1. The
+ * band is drawn at low opacity, so its visible fill is lighter than this full
+ * colour; its label is text and is checked separately below.
+ */
+const graphicOnBackgroundPairs: ReadonlyArray<readonly [graphic: string, background: string]> = [
+  ["--colour-chart-primary", "--colour-page-background"],
+  ["--colour-chart-reference", "--colour-page-background"],
+  ["--colour-chart-band", "--colour-page-background"],
+  ["--colour-border", "--colour-page-background"],
+];
+
 /**
  * Reads every `--name: value;` declaration in a stylesheet into a map from
  * variable name to its raw value (which may itself be a `var(--other)`).
@@ -127,6 +143,40 @@ describe("colour tokens", () => {
       expect(ratio).toBeGreaterThanOrEqual(minimumTextContrast);
     },
   );
+
+  it.each(graphicOnBackgroundPairs)(
+    "%s on %s meets the 3:1 graphics contrast",
+    (graphicVariable, backgroundVariable) => {
+      const ratio = contrastRatio(
+        resolveVariable(properties, graphicVariable),
+        resolveVariable(properties, backgroundVariable),
+      );
+
+      expect(ratio).toBeGreaterThanOrEqual(minimumGraphicsContrast);
+    },
+  );
+
+  // The "Shortfall" label (plain text colour: error pink on the band is only
+  // 4.2:1) sits on top of the band, not on the bare page, so
+  // check the text against the page with the band blended in at its opacity.
+  it("keeps the band label readable on the band at its opacity", () => {
+    const opacity = Number(properties.get("--chart-band-opacity"));
+    const page = resolveVariable(properties, "--colour-page-background");
+    const band = resolveVariable(properties, "--colour-chart-band");
+
+    const channel = (hex: string, start: number) => parseInt(hex.slice(start, start + 2), 16);
+    const blended = [1, 3, 5]
+      .map((start) =>
+        Math.round(opacity * channel(band, start) + (1 - opacity) * channel(page, start)),
+      )
+      .map((value) => value.toString(16).padStart(2, "0"))
+      .join("");
+
+    const ratio = contrastRatio(resolveVariable(properties, "--colour-text"), `#${blended}`);
+
+    expect(opacity).toBeGreaterThan(0);
+    expect(ratio).toBeGreaterThanOrEqual(minimumTextContrast);
+  });
 
   // Gold text on the header green would be unreadable (3.2:1), which is why
   // the header uses white text and gold only as a fill or underline there.
