@@ -51,6 +51,7 @@ interface WorkedScenario {
     readonly fiNumberAtRetirement?: number;
     /** M3 figures: present in M3 fixtures only. */
     readonly solvency?: ExpectedSolvency;
+    readonly earliestRetirement?: ExpectedEarliestRetirement;
   };
 }
 
@@ -72,6 +73,13 @@ interface ExpectedSolvency {
   readonly age?: number;
   readonly shortfallYears?: readonly number[];
   readonly shortfall?: number;
+}
+
+/** The expected earliest feasible retirement age, and the calendar year it falls in. */
+interface ExpectedEarliestRetirement {
+  readonly status: "feasible";
+  readonly age: number;
+  readonly year: number;
 }
 
 /** The figures checked for one projection row; unlisted fields aren't checked. */
@@ -183,7 +191,8 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
     expected.rows === undefined &&
     expected.fiReached === undefined &&
     expected.fiNumberAtRetirement === undefined &&
-    expected.solvency === undefined
+    expected.solvency === undefined &&
+    expected.earliestRetirement === undefined
   ) {
     return;
   }
@@ -245,6 +254,15 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
 
   if (expected.solvency !== undefined) {
     checkSolvency(projection.solvency, expected.solvency);
+  }
+
+  if (expected.earliestRetirement !== undefined) {
+    const { earliestRetirement } = projection;
+    expect(earliestRetirement.status).toBe(expected.earliestRetirement.status);
+    if (earliestRetirement.status === "feasible") {
+      expect(earliestRetirement.age).toBe(expected.earliestRetirement.age);
+      expect(earliestRetirement.year).toBe(expected.earliestRetirement.year);
+    }
   }
 }
 

@@ -8,7 +8,8 @@ interface ExplainPanelProps {
 
 /**
  * Formats one line's value according to its unit, so a rate prints as a
- * percentage, an amount as dollars and a growth multiplier as a factor. Used for each row of the breakdown.
+ * percentage, an amount as dollars and a growth multiplier as a factor, and an age or
+ * number of years as a plain whole number. Used for each row of the breakdown.
  */
 function formatLineValue(line: ExplanationLine): string {
   switch (line.unit) {
@@ -18,6 +19,8 @@ function formatLineValue(line: ExplanationLine): string {
       return formatFactor(line.value);
     case "fraction":
       return formatPercent(line.value);
+    case "years":
+      return String(line.value);
   }
 }
 

@@ -90,4 +90,28 @@ describe("ExplainPanel", () => {
     expect(row).toHaveTextContent("1.4845");
     expect(row).not.toHaveTextContent("%");
   });
+
+  // An age or a count of years is a plain whole number: no dollar sign, no percent, no decimals.
+  it("shows a years line as a plain whole number", () => {
+    const ageExplained: Explained = {
+      value: 43,
+      unit: "years",
+      lines: [
+        {
+          label: "Earliest feasible retirement age",
+          value: 43,
+          unit: "years",
+          operator: "=",
+          source: "calculated",
+        },
+      ],
+    };
+
+    render(<ExplainPanel explained={ageExplained} />);
+
+    const row = screen.getAllByRole("row")[0];
+    expect(row).toHaveTextContent("Earliest feasible retirement age43");
+    expect(row).not.toHaveTextContent("$");
+    expect(row).not.toHaveTextContent("%");
+  });
 });

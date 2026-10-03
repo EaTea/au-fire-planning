@@ -1,6 +1,6 @@
 {
   "milestone": "M3",
-  "description": "Retirement drawdown and solvency: cash, spending in retirement, dated expenses, shortfalls. Earliest retirement age is added with its step (FIRE-3).",
+  "description": "Retirement drawdown and solvency: cash, spending in retirement, dated expenses, shortfalls. The earliest retirement age (FIRE-3) is included.",
   "startYear": 2026,
   "scenarios": [
     {
@@ -25,7 +25,8 @@
         "Row 1 (2027): interest = $20,000 x 0.04 = $800; growth = $720,000 x 0.07 = $50,400; contribution $30,000; cash = $20,800; portfolio = $800,400",
         "FI reached in row 12 (2038, age 46): investable $2,190,252.13 vs FI number $1,600,000 x 1.025^12 = $2,151,822.12. Cash doesn't change the year",
         "Row 17 (2043, age 51) is the first retired year: spending = $64,000 x 1.025^17 = $97,383.57; from cash $38,958.01; from the portfolio $58,425.56; cash ends at $0 and the portfolio at $3,111,127.91",
-        "The money lasts to age 95 (2087) with $24,101,430.35 investable (nominal)"
+        "The money lasts to age 95 (2087) with $24,101,430.35 investable (nominal)",
+        "Earliest retirement: age 43 (2035). Retiring at 42 runs short in 2085, at age 93"
       ],
       "expected": {
         "rows": [
@@ -56,7 +57,8 @@
         "solvency": {
           "status": "lasts",
           "investableClosing": 24101430.35
-        }
+        },
+        "earliestRetirement": { "status": "feasible", "age": 43, "year": 2035 }
       }
     },
     {
@@ -83,7 +85,8 @@
         "2029 (age 63): growth $6,955; portfolio $46,505",
         "2030 (age 64): growth $4,650.50; portfolio $21,155.50",
         "2031 (age 65): growth $2,115.55; available $23,271.05 against spending $30,000, so the shortfall is $6,728.95 and the portfolio ends at $0",
-        "FI number = $30,000 / 0.04 = $750,000, never reached"
+        "FI number = $30,000 / 0.04 = $750,000, never reached",
+        "Earliest retirement: age 61 (2027)"
       ],
       "expected": {
         "rows": [
@@ -117,7 +120,8 @@
           "age": 65,
           "shortfallYears": [2031],
           "shortfall": 6728.95
-        }
+        },
+        "earliestRetirement": { "status": "feasible", "age": 61, "year": 2027 }
       }
     },
     {
@@ -147,7 +151,8 @@
         "2029: spending = $10,000 x 1.02^3 = $10,612.08; portfolio = $230,288 x 1.05 + $20,000 - $10,612.08 = $251,190.32",
         "2032 (age 46, the first retired year): spending = $40,000 x 1.02^6 = $45,046.50; portfolio ends at $276,853.88",
         "2036 (age 50, the end): portfolio $132,703.89, so the money lasts",
-        "FI number today = $40,000 / 0.04 = $1,000,000, far above the portfolio, so FI is never reached"
+        "FI number today = $40,000 / 0.04 = $1,000,000, far above the portfolio, so FI is never reached",
+        "Earliest retirement: age 44 (2030). Retiring at 43 runs short in 2036, at age 50"
       ],
       "expected": {
         "rows": [
@@ -167,7 +172,8 @@
         "solvency": {
           "status": "lasts",
           "investableClosing": 132703.89
-        }
+        },
+        "earliestRetirement": { "status": "feasible", "age": 44, "year": 2030 }
       }
     }
   ]

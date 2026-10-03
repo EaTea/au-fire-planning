@@ -7,9 +7,10 @@
 
 /**
  * The unit of a figure: whole dollars, a fraction (0.45 means 45%), or a
- * factor to multiply by (1.3213 means "× 1.3213", e.g. inflation growth).
+ * factor to multiply by (1.3213 means "× 1.3213", e.g. inflation growth), or
+ * a count of whole years or an age (shown as a plain number, e.g. 43).
  */
-export type ExplainedUnit = "dollars" | "fraction" | "factor";
+export type ExplainedUnit = "dollars" | "fraction" | "factor" | "years";
 
 /** One line of working, e.g. "Safe withdrawal rate  ÷  4%". */
 export interface ExplanationLine {

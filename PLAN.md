@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is implemented and awaiting verification. PR B (steps 8–10) is not started.
+**Current status:** M0, M1, M2 and the colour scheme are done. M3 PR A (steps 1–7) is merged. PR B (steps 8–10) is in progress.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A implemented, awaiting verification |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0, M1 and M2 done. M3 PR A merged, PR B in progress |
 
 ## 1. Requirement ordering
 
@@ -1218,8 +1218,8 @@ Conventions settled while building M2, which later milestones rely on:
 
 ### M3 · Retirement drawdown and solvency: step-by-step plan
 
-**Status:** approved. PR A (steps 1 to 7) implemented, awaiting the owner's
-verification. PR B (steps 8 to 10) not started.
+**Status:** approved. PR A (steps 1 to 7) done, merged in PR #19. PR B
+(steps 8 to 10) in progress, one step at a time.
 
 **Kind:** behavior change.
 
@@ -1825,7 +1825,7 @@ the owner to verify.
 
 #### Step 8 · Engine: earliest feasible retirement age
 
-- [ ] Done
+- [x] Done
 
 1. Add `findEarliestRetirementAge(inputs, startYear)` in
    `src/engine/earliestRetirement.ts`, following the design decisions above.
@@ -1841,6 +1841,21 @@ the owner to verify.
    - an explicit stop age is kept;
    - a property test: the plan is solvent at the returned age, and not
      solvent at the age before it, unless that is below the current age.
+
+**As built:**
+- The search tries ages from the current age up to **end age − 1**, because
+  validation requires the retirement age to be before the plan-until age.
+  If none works the result is `notFeasible`, with one explanation line: the
+  failure at end age − 1.
+- Explanation lines: the last failing age ("Retiring at 42: runs short in
+  2085 (age 93)", valued at the shortfall), then "Retiring at 43: lasts to
+  age 95" (valued at investable net worth at the end), then "= Earliest
+  feasible retirement age" (unit `years`). The first two have no operator.
+  When the plan is solvent at the current age there is no failing line.
+- `EarliestRetirementInputs` is `ProjectionInputs` plus
+  `contributionsStopAgeFollowsRetirementAge`, true when the stop age's source
+  is "default", so each tried age is also the stop age. A stop age the user
+  entered is kept.
 
 **Check:** `npm run check` passes.
 
@@ -1920,6 +1935,6 @@ to verify.
 - [x] Approve the M3 step-by-step plan.
 - [x] Implement M3 PR A, drawdown and solvency (steps 1 to 7), then open it
       for verification.
-- [ ] Owner verifies and merges M3 PR A.
+- [x] Owner verifies and merges M3 PR A.
 - [ ] Implement M3 PR B, earliest retirement age and the FIRE chart (steps
       8 to 10), then open it for verification.
