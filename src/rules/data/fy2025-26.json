@@ -3,8 +3,8 @@
   "financialYear": "2025-26",
   "effectiveFrom": "2025-07-01",
   "verification": {
-    "status": "unverified",
-    "note": "Values match ATO search results. The pages could not be opened from the build environment (the ATO site blocks automated clients). The owner checks them before M5 PR A merges."
+    "status": "verified",
+    "note": "Checked by the owner against the ATO pages in sources on 2026-10-03."
   },
   "superannuation": {
     "guaranteeRatePercent": 12,
