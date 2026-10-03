@@ -77,7 +77,10 @@ const exampleCDated: Plan = {
   ],
 };
 
-/** Renders the screen for a plan with the start year fixed at 2026, in today's dollars unless told otherwise. */
+/**
+ * Renders the screen for a plan with the start year fixed at 2026, starting in
+ * the default (nominal) dollars. `route` can add a query such as `?year=2029`.
+ */
 function renderYearByYear(plan: Plan, route = "/year-by-year") {
   return render(
     <PlanProvider initialPlan={plan} startYear={2026}>
@@ -129,20 +132,10 @@ describe("YearByYearScreen", () => {
     expect(screen.getAllByRole("row")).toHaveLength(65);
   });
 
-  it("starts in today's dollars: row 1's contribution is $30,000 ÷ 1.025", () => {
+  it("starts in nominal dollars, matching worked example A", () => {
     renderYearByYear(exampleA);
 
-    const row = rowFor(2027);
-    expect(row[0]).toBe("2027");
-    expect(row[1]).toBe("35");
-    expect(row[2]).toBe("$29,268");
-  });
-
-  it("shows nominal dollars after switching, matching worked example A", async () => {
-    const user = userEvent.setup();
-    renderYearByYear(exampleA);
-
-    await user.click(screen.getByRole("button", { name: "Nominal" }));
+    expect(screen.getByRole("button", { name: "Nominal" })).toHaveAttribute("aria-pressed", "true");
 
     // Row 1: growth $50,400, contribution $30,000, portfolio $800,400. Row 2's portfolio is $886,428.
     expect(rowFor(2027).slice(2, 4)).toEqual(["$30,000", "$50,400"]);
@@ -155,6 +148,18 @@ describe("YearByYearScreen", () => {
     expect(fiRow[7]).toBe("$2,158,231");
     expect(fiRow[8]).toBe("$2,151,822");
     expect(fiRow[9]).toBe("✓");
+  });
+
+  it("shows today's dollars after switching: row 1's contribution is $30,000 ÷ 1.025", async () => {
+    const user = userEvent.setup();
+    renderYearByYear(exampleA);
+
+    await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+    const row = rowFor(2027);
+    expect(row[0]).toBe("2027");
+    expect(row[1]).toBe("35");
+    expect(row[2]).toBe("$29,268");
   });
 
   it("highlights only the FI row", () => {
@@ -194,10 +199,8 @@ describe("YearByYearScreen", () => {
     expect(rows[rows.indexOf(bandRows[1]!) - 1]).toHaveTextContent(/^2042/);
   });
 
-  it("shows example B's five years and flags the 2031 shortfall, in nominal dollars", async () => {
-    const user = userEvent.setup();
+  it("shows example B's five years and flags the 2031 shortfall, in nominal dollars", () => {
     renderYearByYear(exampleB);
-    await user.click(screen.getByRole("button", { name: "Nominal" }));
 
     // [year, age, contributions, growth & interest, spending, cash, portfolio, investable, FI number, status]
     expect(rowFor(2027)).toEqual([
@@ -233,10 +236,8 @@ describe("YearByYearScreen", () => {
     expect(screen.getAllByText("Shortfall", { exact: false })).toHaveLength(1);
   });
 
-  it("shows a dated expense while still working (example C, 2028)", async () => {
-    const user = userEvent.setup();
+  it("shows a dated expense while still working (example C, 2028)", () => {
     renderYearByYear(exampleCDated);
-    await user.click(screen.getByRole("button", { name: "Nominal" }));
 
     // $30,000 × 1.02² = $31,212 spent from the portfolio in a working year; portfolio $230,288.
     const row = rowFor(2028);

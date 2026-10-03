@@ -63,19 +63,19 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await expect(highlightedRows.getByRole("cell").first()).toHaveText("2038");
   await expect(highlightedRows.getByRole("cell").nth(1)).toHaveText("46");
 
-  // The toggle starts on today's dollars: row 1's contribution is $30,000 ÷ 1.025.
-  await expect(page.getByRole("button", { name: "Today's dollars" })).toHaveAttribute(
+  // The toggle starts on nominal: the balances are the engine's nominal figures.
+  await expect(page.getByRole("button", { name: "Nominal" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  expect((await rowCells(page, 2027))[2]).toBe("$29,268");
-  expect((await rowCells(page, 2027))[6]).toBe("$780,878");
-
-  // Switching to nominal changes the balances to the engine's nominal figures.
-  await page.getByRole("button", { name: "Nominal" }).click();
   expect((await rowCells(page, 2027))[2]).toBe("$30,000");
   expect((await rowCells(page, 2027))[6]).toBe("$800,400");
   expect((await rowCells(page, 2038))[6]).toBe("$2,158,231");
+
+  // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025.
+  await page.getByRole("button", { name: "Today's dollars" }).click();
+  expect((await rowCells(page, 2027))[2]).toBe("$29,268");
+  expect((await rowCells(page, 2027))[6]).toBe("$780,878");
 
   // Autosave waits 500 ms after the last edit; reload once the plan is stored.
   await expect

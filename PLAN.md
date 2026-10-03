@@ -1202,7 +1202,7 @@ Conventions settled while building M2, which later milestones rely on:
   `PlanProvider`'s `startYear` prop. The engine never reads the date. Unit
   tests pass 2026. E2E tests fix it with `page.clock.install`.
 - **Money on screen goes through `useMoneyFormatter()`**, which follows the
-  `DollarsModeProvider` (in memory, starting on today's dollars).
+  `DollarsModeProvider` (in memory, starting on nominal dollars).
   Figures that are nominal by definition, such as "FI number at
   retirement", say so and don't follow the toggle.
 - **Explanation units** are `dollars`, `fraction` (shown as a percentage)
