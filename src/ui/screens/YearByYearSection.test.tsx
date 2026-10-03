@@ -143,6 +143,7 @@ describe("YearByYearSection", () => {
     expect(headers).toEqual([
       "Year",
       "Age",
+      "Salary",
       "Contributions",
       "Growth & interest",
       "Spending",
@@ -163,16 +164,16 @@ describe("YearByYearSection", () => {
     expect(screen.getByRole("button", { name: "Nominal" })).toHaveAttribute("aria-pressed", "true");
 
     // Row 1: growth $50,400, contribution $30,000, portfolio $800,400. Row 2's portfolio is $886,428.
-    expect(rowFor(2027).slice(2, 4)).toEqual(["$30,000", "$50,400"]);
-    expect(rowFor(2027)[6]).toBe("$800,400");
-    expect(rowFor(2028)[6]).toBe("$886,428");
+    expect(rowFor(2027).slice(3, 5)).toEqual(["$30,000", "$50,400"]);
+    expect(rowFor(2027)[7]).toBe("$800,400");
+    expect(rowFor(2028)[7]).toBe("$886,428");
 
     // Row 12 (2038, age 46): investable $2,158,231 against an FI number of $2,151,822.
     const fiRow = rowFor(2038);
-    expect(fiRow[6]).toBe("$2,158,231");
     expect(fiRow[7]).toBe("$2,158,231");
-    expect(fiRow[8]).toBe("$2,151,822");
-    expect(fiRow[9]).toBe("✓");
+    expect(fiRow[8]).toBe("$2,158,231");
+    expect(fiRow[9]).toBe("$2,151,822");
+    expect(fiRow[10]).toBe("✓");
   });
 
   it("shows today's dollars after switching: row 1's contribution is $30,000 ÷ 1.025", async () => {
@@ -184,7 +185,40 @@ describe("YearByYearSection", () => {
     const row = rowFor(2027);
     expect(row[0]).toBe("2027");
     expect(row[1]).toBe("35");
-    expect(row[2]).toBe("$29,268");
+    expect(row[3]).toBe("$29,268");
+  });
+
+  it("shows the salary until retirement, then a dash, and follows the dollars toggle", async () => {
+    const user = userEvent.setup();
+    // Example A plus $145,000 at inflation + 1% (tests/worked-examples/m5-super.json).
+    const [person] = exampleA.household.people;
+    renderYearByYear({
+      ...exampleA,
+      household: {
+        ...exampleA.household,
+        people: [
+          {
+            ...person!,
+            salary: { annual: 145000, growth: { kind: "inflationPlus", margin: 0.01 } },
+          },
+        ],
+      },
+    });
+
+    expect(rowFor(2027)[2]).toBe("$150,075");
+    expect(rowFor(2042)[2]).toBe("$251,428");
+    // 2043 is the first retired year (age 51).
+    expect(rowFor(2043)[2]).toBe("—");
+
+    // Today's dollars: $150,075 ÷ 1.025.
+    await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+    expect(rowFor(2027)[2]).toBe("$146,415");
+  });
+
+  it("shows a dash in the salary column when there is no salary", () => {
+    renderYearByYear(exampleA);
+
+    expect(rowFor(2027)[2]).toBe("—");
   });
 
   it("highlights only the FI row", () => {
@@ -227,10 +261,11 @@ describe("YearByYearSection", () => {
   it("shows example B's five years and flags the 2031 shortfall, in nominal dollars", () => {
     renderYearByYear(exampleB);
 
-    // [year, age, contributions, growth & interest, spending, cash, portfolio, investable, FI number, status]
+    // [year, age, salary, contributions, growth & interest, spending, cash, portfolio, investable, FI number, status]
     expect(rowFor(2027)).toEqual([
       "2027",
       "61",
+      "—",
       "$0",
       "$10,500",
       "$30,000",
@@ -240,14 +275,15 @@ describe("YearByYearSection", () => {
       "$750,000",
       "✓",
     ]);
-    expect(rowFor(2028).slice(3, 7)).toEqual(["$9,050", "$30,000", "$0", "$69,550"]);
-    expect(rowFor(2029)[6]).toBe("$46,505");
-    expect(rowFor(2030)[6]).toBe("$21,156");
+    expect(rowFor(2028).slice(4, 8)).toEqual(["$9,050", "$30,000", "$0", "$69,550"]);
+    expect(rowFor(2029)[7]).toBe("$46,505");
+    expect(rowFor(2030)[7]).toBe("$21,156");
 
     // 2031: $23,271 available against $30,000 spending, so $6,729 is unfunded and everything ends at $0.
     expect(rowFor(2031)).toEqual([
       "2031",
       "65",
+      "—",
       "$0",
       "$2,116",
       "$30,000",
@@ -267,11 +303,11 @@ describe("YearByYearSection", () => {
     // $30,000 × 1.02² = $31,212 spent from the portfolio in a working year; portfolio $230,288.
     const row = rowFor(2028);
     expect(row[1]).toBe("42");
-    expect(row[2]).toBe("$20,000");
-    expect(row[4]).toBe("$31,212");
-    expect(row[5]).toBe("$0");
-    expect(row[6]).toBe("$230,288");
-    expect(row[9]).toBe("✓");
+    expect(row[3]).toBe("$20,000");
+    expect(row[5]).toBe("$31,212");
+    expect(row[6]).toBe("$0");
+    expect(row[7]).toBe("$230,288");
+    expect(row[10]).toBe("✓");
   });
 
   it("shows a banner with the unfunded years as a single year", () => {

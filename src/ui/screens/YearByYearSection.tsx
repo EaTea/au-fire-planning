@@ -45,6 +45,11 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
     { header: "Year", cell: (row) => row.calendarYear },
     { header: "Age", cell: (row) => row.age },
     {
+      header: "Salary",
+      // "—" rather than $0 once retired, so a blank year doesn't read as a zero salary.
+      cell: (row) => (row.salary > 0 ? formatMoney(row.salary, row.inflationIndex) : "—"),
+    },
+    {
       header: "Contributions",
       cell: (row) => formatMoney(row.contribution, row.inflationIndex),
     },

@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 is in progress.
+**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is implemented and awaiting the owner's verification; PR B (super) is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 in progress |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A awaiting verification, PR B not started |
 
 ## 1. Requirement ordering
 
@@ -1378,8 +1378,8 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** approved (PR #25). PR A (steps 1 to 4) in progress, one step
-at a time.
+**Status:** approved (PR #25). PR A (steps 1 to 4) is implemented and
+awaiting the owner's verification. PR B (steps 5 to 10) is not started.
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -1878,7 +1878,7 @@ No new dependencies.
 
 #### Step 4 · Salary on screen (end of PR A)
 
-- [ ] Done
+- [x] Done
 
 1. Income & expenses: a "Salary" card, first on the page as in mockup 02,
    with "Gross salary per year" and "Grows at". Use the hint above.
@@ -1893,6 +1893,19 @@ No new dependencies.
    owner verified them on 2026-10-03, and the file says so.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR A.**
+
+**As built:**
+- `SalarySection` (`src/ui/sections/SalarySection.tsx`) is the first card on
+  Income & expenses. Its tests are in `SalarySection.test.tsx`.
+- Year by year gets a "Salary" column after "Age" (a dash instead of $0 once
+  retired). Existing tests and E2E specs that index cells by position moved up
+  by one.
+- Contrast sweep: `<select>` elements are now checked as text elements and
+  hovered and focused. A new test chooses every growth option with its
+  percentage box showing, checks the select's background is transparent over
+  the `.input` box (not the browser's grey), and checks the error text.
+- `tests/e2e/salary.spec.ts` also saves a screenshot of the card to
+  `test-results/salary-card.png`.
 
 ---
 
@@ -2086,7 +2099,8 @@ No new dependencies.
 - [x] Implement M4 (steps 1 to 5), then open the M4 PR for verification.
 - [x] Owner verifies and merges the M4 PR.
 - [x] Approve the M5 step-by-step plan.
-- [ ] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
+- [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
+- [ ] Owner verifies and merges M5 PR A.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.

@@ -195,6 +195,11 @@ body {
   margin-bottom: var(--space-medium);
 }
 
+/* A field nested in a field (the percentage box under a growth dropdown). */
+.field > .field {
+  margin-top: var(--space-small);
+}
+
 .field label {
   display: block;
   font-size: 12px;

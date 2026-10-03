@@ -59,10 +59,13 @@ function findLowContrastText(page: Page, onlyHoveredOrFocused = false): Promise<
         return [255, 255, 255];
       };
 
-      // Elements that directly contain text, plus inputs (their value is text too).
+      // Elements that directly contain text, plus inputs and dropdowns (their
+      // value is text too). A closed <select> shows its chosen option's text in
+      // the select's own colours, so it is checked as one element.
       const textElements = [...document.querySelectorAll("body *")].filter(
         (element) =>
           element.tagName === "INPUT" ||
+          element.tagName === "SELECT" ||
           [...element.childNodes].some(
             (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
           ),
@@ -88,7 +91,11 @@ function findLowContrastText(page: Page, onlyHoveredOrFocused = false): Promise<
 
         if (ratio < minimum) {
           const label =
-            element instanceof HTMLInputElement ? element.value : (element.textContent ?? "");
+            element instanceof HTMLInputElement
+              ? element.value
+              : element instanceof HTMLSelectElement
+                ? (element.selectedOptions[0]?.textContent ?? "")
+                : (element.textContent ?? "");
           failures.push(
             `${ratio.toFixed(2)}:1 <${element.tagName.toLowerCase()} class="${element.className}"> ` +
               `"${label.trim().slice(0, 40)}" (text ${style.color} on ${backgroundBehind(element).join(",")})`,
@@ -110,7 +117,7 @@ function findLowContrastText(page: Page, onlyHoveredOrFocused = false): Promise<
 async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
   const failures: string[] = [];
 
-  for (const control of await page.locator("a, button, input").all()) {
+  for (const control of await page.locator("a, button, input, select").all()) {
     if (!(await control.isVisible())) {
       continue;
     }
@@ -231,6 +238,44 @@ test("every input page has readable text with valid and with invalid values", as
       expect(await findLowContrastWhileInteracting(page), `${inputPage} with ${value}`).toEqual([]);
     }
   }
+});
+
+test("the salary card has readable text with every growth option chosen, including its percentage box", async ({
+  page,
+}) => {
+  await startFresh(page, "#/income-expenses");
+  await page.getByLabel("Gross salary per year").fill("145000");
+  await page.getByLabel("Gross salary per year").press("Tab");
+
+  const growth = page.getByLabel("Grows at", { exact: true });
+
+  // The closed select is checked as an element of its own: its rendered
+  // background and text colour, not the browser default's.
+  for (const option of ["Inflation", "Inflation + …%", "Inflation − …%", "Fixed …%", "No growth"]) {
+    await growth.selectOption({ label: option });
+
+    // Custom options show their percentage box; the other two don't.
+    const hasNumberBox = option.includes("…");
+    await expect(page.getByLabel("Grows at percentage")).toHaveCount(hasNumberBox ? 1 : 0);
+
+    expect(await findLowContrastText(page), option).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), option).toEqual([]);
+  }
+
+  // The dropdown must really be a styled box, not Chrome's default grey control.
+  const selectBackground = await growth.evaluate((element) => ({
+    own: getComputedStyle(element).backgroundColor,
+    wrapper: getComputedStyle(element.parentElement!).backgroundColor,
+  }));
+  expect(selectBackground.own).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+  expect(selectBackground.wrapper).not.toMatch(/rgba\(0, 0, 0, 0\)/);
+
+  // An invalid percentage shows its error text.
+  await growth.selectOption({ label: "Fixed …%" });
+  await page.getByLabel("Grows at percentage").fill("20");
+  await page.getByLabel("Grows at percentage").press("Enter");
+  await expect(page.locator(".field-error")).toBeVisible();
+  expect(await findLowContrastText(page), "invalid percentage").toEqual([]);
 });
 
 test("the results page has readable text with every explanation open", async ({ page }) => {

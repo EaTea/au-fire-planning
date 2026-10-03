@@ -14,6 +14,11 @@ Everything is calculated in your browser and saved only on your device.
   much you spend in retirement, dated and one-off expenses (a car, school
   fees), your portfolio (value, expected return and yearly contributions), cash
   savings, inflation, the interest rate on cash and your safe withdrawal rate.
+- **Income & expenses, salary:** your gross (before-tax) salary and how it
+  grows (with inflation, inflation plus or minus a margin, a fixed rate, or not
+  at all). It stops at your target retirement age and shows in Year by year;
+  it sets your employer super contributions once super is added, but doesn't
+  pay for living expenses until tax is modelled.
 - **Results:** your FI number (in today's dollars, and in nominal dollars at
   your retirement age), your progress to it, the year you reach FI, and
   whether your money lasts to the age you plan until (or the age it runs out),
