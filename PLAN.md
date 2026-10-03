@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is implemented and awaiting the owner's verification; PR B (super) is not started.
+**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is proposed and comes before M5 PR B (super), which is not started.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A awaiting verification, PR B not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last proposed. M5 PR B not started |
 
 ## 1. Requirement ordering
 
@@ -247,6 +247,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 | 2 | **TAX-9** Low income offsets, tax-free threshold | Should | Should, pulled forward |
 | 3 | **TAX-7** Grossing up after-tax expenses | Must | all |
 | 4 | **FIRE-7** FIRE visualisations | Must | rest: chart (c) |
+
+Also in M8 (from the cash drawn last review): while working, after-tax salary pays living expenses, dated expenses and contributions. A surplus is saved to cash; a gap is drawn in the usual order.
 
 ### M9 · Investment income and capital gains
 
@@ -1376,10 +1378,120 @@ Conventions settled while building M4, which later milestones rely on:
   run can test a stale preview build. Restart the preview server after
   pulling or editing before trusting a local failure. CI is unaffected.
 
+### Cash drawn last: step-by-step plan
+
+**Status:** proposed, awaiting the owner's review. It lands before M5 PR B,
+because PR B adds super to the same drawing order.
+
+**Kind:** behavior change. One PR.
+
+**Why.** The owner noticed that cash, salary, spending and contributions
+don't add up in the projection. Here is how it works today
+(`src/engine/projection.ts`, `src/engine/coastFire.ts`):
+
+- **Cash is only ever drawn on.** It starts at the cash savings entered,
+  earns interest, and nothing is ever paid into it.
+- **Cash pays first.** Each year's spending (retirement spending once
+  retired, plus dated expenses in any year) comes from cash first, then
+  the portfolio. Anything left is a shortfall.
+- **So dated expenses while working come out of cash, not salary.** A
+  $30,000 car while you are still earning empties the cash savings.
+- **Salary feeds nothing yet.** Each row shows it, but it is not used to
+  pay living expenses or dated expenses and doesn't set the contribution.
+  M5 PR B uses it for employer super only.
+- **Contributions are a fixed amount the user enters.** They aren't
+  linked to salary minus spending. With a $120,000 salary, $60,000 of
+  living expenses and a $30,000 contribution, the other $30,000 a year
+  goes nowhere. There is no tax yet (M8), so salary is gross and a
+  surplus can't be worked out honestly.
+- **Coast FIRE** follows the same rule: cash pays the dated expenses
+  before retirement, and only what cash can't pay "spills" to the
+  portfolio.
+
+**What changes.** Cash becomes the last thing drawn on, as a buffer.
+
+- **Drawing order each year:** the portfolio first, then cash. After
+  M5 PR B: the portfolio, then super (from 65), then cash.
+- **Dated expenses** follow the same order in every year, so before
+  retirement they come from the portfolio and the cash is left alone.
+- **Cash still earns interest** and still counts towards investable net
+  worth, progress to FI and FI reached.
+- **Coast FIRE** mirrors it: the portfolio pays the dated expenses, and
+  cash grows untouched at the interest rate. Only a dated expense the
+  portfolio can't pay falls to cash. The "reached at row k" meaning and
+  its property test stay the same.
+- **The text that names the order** changes with it: the Drawdown and
+  Dated expenses hints, the Year by year retired-phase label and the Coast
+  FIRE breakdown.
+
+**What it does to the numbers.** In this model every year earns the same
+return, so a cash buffer can't show its real benefit (not having to sell
+shares after a crash). Cash usually earns less than the portfolio, so
+keeping it longer makes the money run out a little sooner. A sample plan
+(age 35, retire at 45, $200,000 portfolio at 7%, $50,000 cash at 4%,
+$30,000 a year contributed, $60,000 spending, 2.5% inflation, a $30,000
+expense in 2029):
+
+| | Today (cash first) | Cash last |
+| --- | --- | --- |
+| Cash after the 2029 expense | $23,936 | $56,243 |
+| Cash / portfolio at retirement (2036) | $31,499 / $807,924 | $74,012 / $756,046 |
+| Money runs out | 2052, age 61 | 2050, age 59 |
+
+**Considered and not chosen:**
+- **Keep a fixed buffer** (say two years of spending) and draw cash first
+  above it. Closer to how people hold a buffer, but it adds an input.
+  Easy to add later if wanted.
+- **Make salary pay the bills while working** (salary − living expenses −
+  contributions, with the surplus saved to cash). This is the real fix for
+  "salary, spending and contributions don't add up", but it needs
+  after-tax salary, so it belongs in M8 (personal income tax). This plan
+  adds it to M8's scope rather than doing it on gross salary now.
+
+**Open questions for the owner:**
+1. After M5, is the order portfolio, super, then cash (cash truly last)?
+   Recommended: yes.
+2. Is moving the salary cash flow to M8 right, or should a simpler
+   version come sooner? Recommended: M8.
+
+#### Step 1 · Engine: cash drawn last
+
+- [ ] Done
+
+1. In `projectPortfolio`, draw spending from the portfolio, then cash.
+   Update the diagram and the doc comments for `fromCash` and
+   `fromPortfolio`.
+2. In `coastFire.ts`, the portfolio pays the dated expenses first, and
+   cash only what the portfolio can't. Update the formula comment and the
+   Coast FIRE breakdown's cash line.
+3. Tests:
+   - unit tests for the new order: a retired year paid from the portfolio
+     with cash untouched; a year the portfolio can't cover, with the rest
+     from cash; a dated expense while working leaving cash alone;
+   - a fixture with the sample plan above, to the dollar;
+   - M3 and M4 worked-example fixtures recomputed where cash and the
+     portfolio are both drawn; the changes listed in the PR;
+   - the existing property tests (balances never negative, Coast FIRE's
+     "reached at row k") still pass.
+
+**Check:** `npm run check` passes.
+
+#### Step 2 · Wording and E2E (end of PR)
+
+- [ ] Done
+
+1. Change the hints and labels that name the order (Drawdown, Dated
+   expenses, Year by year retired phase).
+2. Update the E2E specs that assert that text, and any figures they check.
+3. Update M5's design decisions, step 5 and worked examples A and C to
+   the new order, so PR B builds on it.
+
+**Check:** `npm run check` and `npm run test:e2e` pass, and CI is green.
+
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** approved (PR #25). PR A (steps 1 to 4) is implemented and
-awaiting the owner's verification. PR B (steps 5 to 10) is not started.
+**Status:** approved (PR #25). PR A (steps 1 to 4) is merged (PR #26).
+PR B (steps 5 to 10) is not started, and waits for cash drawn last.
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -2101,6 +2213,10 @@ No new dependencies.
 - [x] Approve the M5 step-by-step plan.
 - [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
-- [ ] Owner verifies and merges M5 PR A.
+- [x] Owner verifies and merges M5 PR A.
+- [ ] Approve the cash drawn last plan.
+- [ ] Implement cash drawn last (steps 1 and 2), then open it for
+      verification.
+- [ ] Owner verifies and merges the cash drawn last PR.
 - [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.
