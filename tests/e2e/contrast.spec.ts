@@ -135,7 +135,7 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
 /**
  * Types a value into every input on the current page, then moves focus away.
  * "valid" uses a value every field accepts: 50 for ages (15 to 100), 90 for
- * "Plan until age" (50 to 110, and after the other ages), 2030 for a contribution
+ * "Plan until age" (50 to 110, and after the other ages), 62 for "Super accessible at" (60 to 65), 2030 for a contribution
  * year, and 5 for everything else (percentages are capped at 15%). "invalid" uses -5, which every field
  * rejects.
  */
@@ -149,12 +149,15 @@ async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<
     const labelText = await labelTextOf(input);
     const isAge = /age/i.test(labelText);
     const isEndAge = /plan until age/i.test(labelText);
+    const isAccessAge = /super accessible at/i.test(labelText);
     const isContributionYear = /(from|to) year$/i.test(labelText);
 
     if (values === "invalid") {
       await input.fill("-5");
     } else {
-      await input.fill(isEndAge ? "90" : isAge ? "50" : isContributionYear ? "2030" : "5");
+      await input.fill(
+        isEndAge ? "90" : isAccessAge ? "62" : isAge ? "50" : isContributionYear ? "2030" : "5",
+      );
     }
   }
   await page.locator("h1").click();

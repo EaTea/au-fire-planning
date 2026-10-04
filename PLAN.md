@@ -1842,7 +1842,12 @@ pinned.
 
 #### Step 5 · State and wire: the access age
 
-- [ ] Done
+- [x] Done
+
+**As built:** `superAccessAge?` on `Person`, set by `setSuperAccessAge`
+(`undefined` clears it) and stored as `people[].superAccessAgeYears` (whole
+years, 0 to 120). The fixture `v1-access-age.json` is B1's plan; older fixtures
+still load. The round-trip generator sets it on the person.
 
 1. Reducer: `setSuperAccessAge { personId, age? }`.
 2. Wire: `people[].superAccessAgeYears`, with the fixture
@@ -1854,7 +1859,13 @@ pinned.
 
 #### Step 6 · Household: "Super accessible at"
 
-- [ ] Done
+- [x] Done
+
+**As built:** the field is in `PersonAgesSection` after "Target retirement
+age". Its default (65) and limits (60 to 65) are read with `rulesForYear` for the
+start year, as `SuperSection` does for its legislated defaults. The contrast
+sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
+"age" in it and the generic 5 would be out of range.
 
 1. In the "About you" card, add `AgeField` "Super accessible at", with the
    default "65" dashed. Its limits come from the rules (60 to 65).
