@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, startFresh, test } from "./fixtures";
+import { expect, startFresh, test, yearCell } from "./fixtures";
 
 // End-to-end tests for IN-7 (salary). The first enters a salary that grows at
 // "Inflation + 1%" on Income & expenses, checks Year by year shows the grown
@@ -17,20 +17,10 @@ async function enter(page: Page, label: string, value: string): Promise<void> {
   await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
-/** The cell texts of the Year by year row for `year`. */
-async function rowCells(page: Page, year: number): Promise<string[]> {
-  const row = page
-    .getByRole("table", { name: "Year by year projection" })
-    .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
-
-  return row.getByRole("cell").allTextContents();
-}
-
-/** Checks the Salary column (the third cell) in the rows that matter. */
+/** Checks the Salary column in the rows that matter. */
 async function expectSalaries(page: Page, expected: Record<number, string>): Promise<void> {
   for (const [year, salary] of Object.entries(expected)) {
-    expect((await rowCells(page, Number(year)))[2], `salary in ${year}`).toBe(salary);
+    expect(await yearCell(page, Number(year), "Salary"), `salary in ${year}`).toBe(salary);
   }
 }
 
@@ -49,7 +39,7 @@ test("a salary growing at inflation + 1% shows year by year until retirement, an
 
   await enter(page, "Gross salary per year", "145000");
   await page.getByLabel("Grows at", { exact: true }).selectOption({ label: "Inflation + …%" });
-  await enter(page, "Grows at percentage", "1");
+  await enter(page, "Above inflation by", "1");
   await enter(page, "Per year, after tax", "64000");
 
   await page.getByLabel("Grows at", { exact: true }).scrollIntoViewIfNeeded();
@@ -93,7 +83,7 @@ test("a salary growing at inflation + 1% shows year by year until retirement, an
   await page.goto("#/income-expenses");
   await expect(page.getByLabel("Gross salary per year")).toHaveValue("$145,000");
   await expect(page.getByLabel("Grows at", { exact: true })).toHaveValue("inflationPlus");
-  await expect(page.getByLabel("Grows at percentage")).toHaveValue("1%");
+  await expect(page.getByLabel("Above inflation by")).toHaveValue("1%");
 
   await page.goto("#/results?view=year-by-year");
   await page.getByRole("button", { name: "Nominal" }).click();

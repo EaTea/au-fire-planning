@@ -259,6 +259,25 @@ body {
   border-radius: 3px;
 }
 
+/* "Advanced" disclosure (a native <details>): styled so the browser's default
+   summary colours and marker never apply, and focus is visible. */
+.advanced {
+  margin-top: var(--space-small);
+}
+
+.advanced summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--colour-text);
+  margin-bottom: var(--space-small);
+}
+
+.advanced summary:focus-visible {
+  outline: 2px solid var(--colour-border-strong);
+  outline-offset: 2px;
+}
+
 .input.invalid {
   border-color: var(--colour-border-error);
   box-shadow: 0 0 0 1px var(--colour-border-error);

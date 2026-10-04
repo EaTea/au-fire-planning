@@ -7,7 +7,9 @@
 // call it once per candidate retirement age.
 
 import type { Explained } from "./explained";
-import type { ProjectionRow } from "./projection";
+import { DEFAULT_SUPER_ACCESS_AGE } from "../plan/defaults";
+import { isShortfallWithSuperLocked, type ProjectionRow } from "./projection";
+import type { ExplanationLine } from "./explained";
 
 /** Whether the plan's money lasts to the end age, with the working behind the answer. */
 export type Solvency =
@@ -31,7 +33,7 @@ export type Solvency =
 /**
  * Checks the rows for shortfall years.
  *
- * If none, the plan "lasts", explained by cash + portfolio at the end age.
+ * If none, the plan "lasts", explained by cash + portfolio + super at the end age.
  * Otherwise it "runsOut" at the first shortfall year, and lists all of them
  * (the projection carries on after a shortfall, so later years can be flagged
  * too). Called by `summariseProjection` (src/engine/fiNumber.ts).
@@ -43,6 +45,32 @@ export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
   if (firstShortfall !== undefined) {
     const available = firstShortfall.fromCash + firstShortfall.fromPortfolio;
 
+    // Super drawn (age 65 or later) is money that was available too, so the sum stays honest.
+    const superLines: ExplanationLine[] =
+      firstShortfall.fromSuper > 0
+        ? [
+            {
+              label: "Super available",
+              value: firstShortfall.fromSuper,
+              unit: "dollars",
+              operator: "−",
+              source: "calculated",
+            },
+          ]
+        : [];
+
+    // A year before the access age that only locked super could have funded: say so, as a note
+    // that is not part of the sum above it.
+    const lockedSuperLines: ExplanationLine[] = isShortfallWithSuperLocked(firstShortfall)
+      ? [
+          {
+            label: `Super (not accessible until ${DEFAULT_SUPER_ACCESS_AGE})`,
+            value: firstShortfall.superClosing,
+            unit: "dollars",
+            source: "calculated",
+          },
+        ]
+      : [];
     return {
       status: "runsOut",
       year: firstShortfall.calendarYear,
@@ -65,6 +93,7 @@ export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
             operator: "−",
             source: "calculated",
           },
+          ...superLines,
           {
             label: "Shortfall",
             value: firstShortfall.shortfall,
@@ -72,6 +101,7 @@ export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
             operator: "=",
             source: "calculated",
           },
+          ...lockedSuperLines,
         ],
       },
     };
@@ -101,6 +131,18 @@ export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
                 operator: "+",
                 source: "calculated",
               },
+              // Super counts towards investable net worth, so the sum needs it when there is any.
+              ...(lastRow.superClosing > 0
+                ? [
+                    {
+                      label: "Super",
+                      value: lastRow.superClosing,
+                      unit: "dollars" as const,
+                      operator: "+" as const,
+                      source: "calculated" as const,
+                    },
+                  ]
+                : []),
               {
                 label: "Investable net worth",
                 value: lastRow.investableClosing,

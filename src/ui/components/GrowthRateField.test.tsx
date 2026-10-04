@@ -29,12 +29,19 @@ describe("GrowthRateField", () => {
     expect(labels).toEqual(["Inflation", "No growth"]);
   });
 
+  /** Renders the field with a stored value and a do-nothing handler. */
+  function renderFieldWith(value: GrowthRate) {
+    return render(
+      <GrowthRateField label="Grows at" options={ALL_OPTIONS} value={value} onChange={vi.fn()} />,
+    );
+  }
+
   it("shows the default (inflation) dashed, without a number box", () => {
     renderField();
 
     expect(screen.getByLabelText("Grows at")).toHaveValue("inflation");
     expect(screen.getByLabelText("Grows at").closest(".input")).toHaveClass("default");
-    expect(screen.queryByLabelText("Grows at percentage")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/inflation by|Fixed rate/)).not.toBeInTheDocument();
   });
 
   it.each([
@@ -61,7 +68,7 @@ describe("GrowthRateField", () => {
     );
 
     expect(screen.getByLabelText("Grows at")).toHaveValue("inflationMinus");
-    expect(screen.getByLabelText("Grows at percentage")).toHaveValue("1%");
+    expect(screen.getByLabelText("Below inflation by")).toHaveValue("1%");
     unmount();
 
     render(
@@ -73,20 +80,47 @@ describe("GrowthRateField", () => {
       />,
     );
     expect(screen.getByLabelText("Grows at")).toHaveValue("fixed");
-    expect(screen.getByLabelText("Grows at percentage")).toHaveValue("3.5%");
+    expect(screen.getByLabelText("Fixed rate")).toHaveValue("3.5%");
+  });
+
+  it("names the number box for the chosen option", () => {
+    const { unmount } = renderFieldWith({ kind: "inflationPlus", margin: 0.01 });
+    expect(screen.getByLabelText("Above inflation by")).toHaveValue("1%");
+    unmount();
+
+    const second = renderFieldWith({ kind: "inflationPlus", margin: -0.01 });
+    expect(screen.getByLabelText("Below inflation by")).toHaveValue("1%");
+    second.unmount();
+
+    renderFieldWith({ kind: "fixed", rate: 0.03 });
+    expect(screen.getByLabelText("Fixed rate")).toHaveValue("3%");
+  });
+
+  it("lets a screen prefix the number box's label", () => {
+    render(
+      <GrowthRateField
+        label="Alex: Grows at"
+        options={ALL_OPTIONS}
+        value={{ kind: "fixed", rate: 0.03 }}
+        numberLabel={(name) => `Alex: ${name}`}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Alex: Fixed rate")).toHaveValue("3%");
   });
 
   it("shows no number box for inflation or no growth", () => {
     renderField({ kind: "none" });
 
     expect(screen.getByLabelText("Grows at")).toHaveValue("none");
-    expect(screen.queryByLabelText("Grows at percentage")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/inflation by|Fixed rate/)).not.toBeInTheDocument();
   });
 
   it("commits a typed number with the current choice", async () => {
     const onChange = renderField({ kind: "inflationPlus", margin: 0.01 });
 
-    const box = screen.getByLabelText("Grows at percentage");
+    const box = screen.getByLabelText("Above inflation by");
     await userEvent.setup().clear(box);
     await userEvent.setup().type(box, "2{Enter}");
 
@@ -122,7 +156,7 @@ describe("GrowthRateField", () => {
   it("clearing the number returns to the default", async () => {
     const onChange = renderField({ kind: "fixed", rate: 0.03 });
 
-    await userEvent.setup().clear(screen.getByLabelText("Grows at percentage"));
+    await userEvent.setup().clear(screen.getByLabelText("Fixed rate"));
     await userEvent.setup().tab();
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith(undefined);
@@ -132,7 +166,7 @@ describe("GrowthRateField", () => {
     it("accepts a fixed rate from −10% to +15% and rejects beyond", async () => {
       const user = userEvent.setup();
       const onChange = renderField({ kind: "fixed", rate: 0.03 });
-      const box = screen.getByLabelText("Grows at percentage");
+      const box = screen.getByLabelText("Fixed rate");
 
       await user.clear(box);
       await user.type(box, "-10{Enter}");
@@ -157,7 +191,7 @@ describe("GrowthRateField", () => {
     it("limits an inflation margin to 0% to +15% and a reduction to 0% to 10%", async () => {
       const user = userEvent.setup();
       const onChange = renderField({ kind: "inflationPlus", margin: -0.01 });
-      const box = screen.getByLabelText("Grows at percentage");
+      const box = screen.getByLabelText("Below inflation by");
 
       await user.clear(box);
       await user.type(box, "10.5{Enter}");

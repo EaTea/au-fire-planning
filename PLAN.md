@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme, the one-page Results and M5 PR A (rules as data and salary) are done. "Cash drawn last" is implemented and awaiting verification; it comes before M5 PR B (super), which is not started.
+**Current status:** M0 to M4, the colour scheme, the one-page Results, M5 PR A, cash drawn last and the salary growth default are done. M5 PR B (super) is implemented and awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results and M5 PR A done. Cash drawn last awaiting verification. M5 PR B not started |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results, M5 PR A, cash drawn last and salary growth default done. M5 PR B awaiting the owner's verification |
 
 ## 1. Requirement ordering
 
@@ -1380,9 +1380,7 @@ Conventions settled while building M4, which later milestones rely on:
 
 ### Cash drawn last: step-by-step plan
 
-**Status:** approved by the owner and implemented, awaiting the owner's
-verification. It lands before M5 PR B,
-because PR B adds super to the same drawing order.
+**Status:** done, merged in PR #30 (plan in PR #27).
 
 **Kind:** behavior change. One PR.
 
@@ -1492,8 +1490,9 @@ expense in 2029):
 
 ### M5 · Superannuation: accumulation: step-by-step plan
 
-**Status:** approved (PR #25). PR A (steps 1 to 4) is merged (PR #26).
-PR B (steps 5 to 10) is not started, and waits for cash drawn last.
+**Status:** implemented, awaiting the owner's verification of PR B. PR A
+(steps 1 to 4) is merged in PR #26. PR B (steps 5 to 10) is done, and
+rebuilt on cash drawn last (see "Merged with cash drawn last" below).
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -2034,7 +2033,7 @@ No new dependencies.
 
 #### Step 5 · Engine: super accumulation and access
 
-- [ ] Done
+- [x] Done
 
 1. Add `superAccount?: SuperAccount` to `Person`, with the fields and
    defaults above. Resolve it, with the employer rate's source as `"rule"`
@@ -2069,9 +2068,36 @@ No new dependencies.
 
 **Check:** `npm run check` passes.
 
+**As built:**
+- `Person.superAccount` (`SuperAccount`, `SuperContribution`) in
+  `src/plan/types.ts`. Defaults in `defaults.ts`, including
+  `DEFAULT_SUPER_ACCESS_AGE = 65` (M6 makes it an input).
+  `resolvePlanInputs` gives `ResolvedProjectionInputs.superAccount`. An unset
+  employer rate or earnings tax rate resolves to `{ value: undefined, source:
+  "rule" }`, and the engine reads that year's rate from `rulesForYear`.
+- `ProjectionInputs.superAccount` (`ProjectionSuper`) is optional and carries
+  the `RuleSet`, so `projectPortfolio`'s signature is unchanged. Absent means
+  no super. `summarisePlan` always passes one.
+- Unset contribution years: no start means from the first projected year, and
+  no end means to the retirement year. The end is left open (not resolved to a
+  calendar year) so the earliest-retirement search moves it with the age it
+  tries, as it does for the portfolio stop age.
+- Progress to FI's investable always has a "Super" line, even at $0, like
+  Cash.
+- Fixture checks: S1 to S4 and A pass to the cent, with C's row 1, FI
+  reached (2041, 49), earliest retirement (47) and FI number at retirement.
+  S2 is run with a $0 balance and 0% return, as its figures imply. S4's
+  extras are by hand: FI reached in row 0 (super $500,000 = FI number), the
+  money runs out from 2027 (shortfalls 2027 to 2030), and the earliest
+  retirement age is 64 (spending then starts at 65). `fiReached.fiNumber` in
+  the fixture format is now optional (C's FI-year number isn't in the plan).
+- Coast FIRE is untouched, so with super it is not yet right (it compares
+  investable including super with a portfolio-only number). Step 6 fixes it.
+  The A and C Coast figures are not in the fixtures yet.
+
 #### Step 6 · Engine: Coast FIRE with super
 
-- [ ] Done
+- [x] Done
 
 1. Extend `calculateCoastFire` as described above. Super's "employer
    contributions only" path from each row comes from `projectPortfolio`
@@ -2087,9 +2113,66 @@ No new dependencies.
 
 **Check:** `npm run check` passes.
 
+**As built:**
+- `superLeft(k)` comes from `projectPortfolio` with the portfolio stop age
+  and the salary sacrifice and non-concessional end years pulled back to row
+  k (no new engine input), and with no dated expenses, because the formula
+  has the portfolio pay any spill so super is never drawn before retirement.
+  The "no further contributions" chart line uses the same helper at row 0.
+- **Spill adjustment (rows at or after 65, or any plan where cash plus
+  super already cover the FI number):** the closed form let the portfolio go
+  negative on the way when `FI − cash − super` was negative but a dated
+  expense still fell due. That made the number rise slightly with a higher
+  return. The portfolio needed is now at least the spills discounted back to
+  row k. M4 is unchanged, because a spill there always means cash is empty
+  and `FI − cash` is positive. When the floor applies, the breakdown says
+  "Portfolio needed today, to pay the dated expenses your cash can't".
+- The breakdown gains "Your super, growing at {return} net of fees and tax,
+  with employer contributions, to {year}" and "Your super today", only when
+  there is super, so plans without it read as in M4.
+- Examples A ($672,262.87, reached today) and C ($698,765.82, reached 2037
+  at age 45) are in `m5-super.json`. The fixture format now treats the
+  retirement-year-dollars figure and the reached row's investable and coast
+  figures as optional, because the plan doesn't list them.
+- Properties: the generators now include salary and super, and "reached means
+  stoppable" stops the portfolio, salary sacrifice and non-concessional
+  together. A plan where a dated expense only locked super could pay is a
+  flagged shortfall that the projection doesn't charge against FI, but Coast
+  FIRE does, so the "one year earlier doesn't reach FI" half and "chart line
+  matches reached today" skip plans with a shortfall before retirement. The
+  "at the retirement row" property now compares with cash + super.
+- **"Reached" is decided exactly (the owner's choice).** The closed form
+  assumes the portfolio pays every dated expense, but from age 65 the
+  projection pays one from super, which the formula's super path (no dated
+  expenses) doesn't see. So `coast(n)` could be a little off, and "reached"
+  optimistic. Coast FIRE is now reached at the first row k from 0 to n where
+  `projectPortfolio`, with voluntary contributions stopped after row k
+  (employer contributions unchanged), has investable at the retirement row at
+  least that row's FI number and no shortfall year in rows k+1 to n that the
+  plan with its contributions doesn't already have. That is n + 1
+  projections. The Coast FIRE number, the `coast(k)` path and the chart line
+  stay on the formula, so they can differ from "reached" in that edge case.
+  The reached explanation keeps its margin lines and appends "If you stop
+  voluntary contributions after {year}: investable at {retirement year}" and
+  "FI number at {retirement year}", which state the exact test (the margin can
+  be slightly negative in the edge case).
+- Properties: the generators include salary and super. "Reached means
+  stoppable" (and "a year earlier doesn't") now hold by construction and have
+  no edge-case skips. "Stopping now reaches FI without a new shortfall
+  exactly when reached today" replaces the old chart-line property. The
+  retirement-row property only covers plans where super isn't drawn up to
+  retirement (the edge case above). "Larger contributions never make Coast
+  FIRE later" skips plans where the smaller one has a shortfall before
+  retirement, because larger contributions can pay an expense the smaller
+  plan leaves as a shortfall, which then counts as a new shortfall when
+  stopping.
+- A regression unit test covers the edge case: retiring at 65 with exactly
+  the FI number in super and a $1 dated expense at 65, where the formula says
+  reached and the exact test correctly says not reached.
+
 #### Step 7 · Super state and wire format
 
-- [ ] Done
+- [x] Done
 
 1. Reducer actions for each super field, including clearing back to the
    default. The contribution years keep `toYear ≥ fromYear`, as dated
@@ -2106,9 +2189,29 @@ No new dependencies.
 
 **Check:** `npm run check` passes.
 
+**As built:**
+- Ten reducer actions: `setSuperBalance`, `setSuperReturn`, `setEmployerRate`,
+  `setEarningsTaxRate`, `setSalarySacrifice`, `setSalarySacrificeFromYear`,
+  `setSalarySacrificeToYear`, `setNonConcessional`,
+  `setNonConcessionalFromYear`, `setNonConcessionalToYear` (payloads `balance`,
+  `rate`, `annual` or `year`, all optional). Clearing the last field of a
+  contribution drops it, and clearing the last field of the account removes
+  `superAccount`, as for salary.
+- Years: raising From past To raises To; a To typed before From is raised to
+  From. With either year unset nothing is adjusted.
+- Wire limits (my judgement, step 8 should match): balance and contribution
+  amounts at least 0; return at least 0 (like the portfolio return); employer
+  and earnings tax rates 0 to 100%; years 1900 to 2200; a contribution whose
+  `toYear` is before `fromYear` is rejected when both are present.
+- The section is written only when something is set; empty contribution
+  objects are not written. So an in-memory `superAccount: {}` or
+  `salarySacrifice: {}` doesn't round-trip (it comes back absent); the reducer
+  never produces them, and the property test generates absent instead.
+
+
 #### Step 8 · Super on the Assets screen
 
-- [ ] Done
+- [x] Done
 
 1. Add a "Super" card, first on Assets as in mockup 03d, with:
    - "Super balance";
@@ -2128,14 +2231,44 @@ No new dependencies.
      less because of the 10% rate on long-held gains and franking credits.
      Enter your fund's rate if you know it."
 3. Add the card, with Advanced open, to the contrast sweep.
-4. Tests for each field: entering, clearing to default, limits, and the
+4. **Carried from PR A's review:** relabel `GrowthRateField`'s percentage box
+   to match the chosen option: "Above inflation by", "Below inflation by" or
+   "Fixed rate", instead of "{label} percentage". Update the tests and E2E
+   locators that use the old name.
+5. Tests for each field: entering, clearing to default, limits, and the
    years.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
+**As built:**
+- `SuperSection` (first on Assets) uses `PerPersonFields`. Labels: "Super
+  balance", "Return, net of fees", "Employer contribution rate", "Salary
+  sacrifice per year", "Non-concessional contributions per year", "Tax on
+  earnings", and for the years "Salary sacrifice from year" / "to year" and
+  "Non-concessional contributions from year" / "to year" (the plan only said
+  "From and To"; the full names keep every label unique).
+- Limits follow the wire: money at least 0; return, employer rate and tax on
+  earnings 0% to 100%. Years: next year to 2200 (next year, not the wire's
+  1900, because row 0 has no flows).
+- The legislated defaults come from `rulesForYear(bundledRuleSet, startYear,
+  inflation)`. `NumberField` gained an optional `defaultText` (display only)
+  so an unset rate reads "12% (legislated)"; "Tax on earnings" reads "15%
+  (legislated)" the same way.
+- "To" shows its dashed default only when both the current and target
+  retirement ages are set (the retirement year needs both), and not if that
+  year is before next year.
+- `GrowthRateField` names its number box "Above inflation by", "Below
+  inflation by" or "Fixed rate", and has an optional `numberLabel` function so
+  `SalarySection` can add "Name: " for several people.
+- Advanced is a native `<details>` with `.advanced summary` styles in
+  `app.css`. The contrast sweep opens every `<details>`, checks Assets closed
+  and open, and hovers and focuses `<summary>` too.
+- The round-trip property test now generates salary as well.
+
+
 #### Step 9 · Super in the outputs
 
-- [ ] Done
+- [x] Done
 
 1. Year by year:
    - "Contributions" becomes "Into portfolio";
@@ -2153,9 +2286,34 @@ No new dependencies.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
+**As built:**
+- Year by year: "Contributions" is now "Into portfolio"; "Into super" is
+  employer + salary sacrifice − contributions tax + non-concessional; "Super"
+  is the closing balance, after "Portfolio". Example A's 2027 row reads
+  salary $150,075, into super $23,808, super $219,815.
+- Status for a locked shortfall year reads "Shortfall −$X · super locked until
+  65". The test is `isShortfallWithSuperLocked(row)` in `projection.ts` (a
+  shortfall, age under `DEFAULT_SUPER_ACCESS_AGE`, super balance above $0),
+  shared by the table and the "Money runs out" breakdown.
+- "Money runs out": a locked year adds a note line "Super (not accessible
+  until 65)" with the balance, after "= Shortfall" and with no operator, so
+  the sum above it is untouched. When the first shortfall is at 65 or later,
+  super drawn that year is a "− Super available" line, so the sum stays true.
+  Not in the plan: the "Money lasts" breakdown gains "+ Super" when there is
+  any, because investable now includes it and the lines must still add up.
+- Progress to FI's breakdown now lists what investable is made of before the
+  division: each portfolio, "+ Cash savings", "+ Super" (both always shown,
+  even at $0, as in the engine), "= Investable amount", then "÷ FI number" and
+  "= Progress to FI". `calculateProgressToFi` reuses the investable
+  explanation's lines (a single-line investable stays one line); no
+  ExplainPanel change was needed.
+- The "Not yet modelled" banner reads as the plan says.
+- E2E specs (growth, drawdown, salary) find cells by column header.
+
+
 #### Step 10 · E2E, README and wrap-up (end of PR B)
 
-- [ ] Done
+- [x] Done
 
 1. E2E (`tests/e2e/super.spec.ts`), with the clock fixed in 2026:
    - **Example A:**
@@ -2170,6 +2328,41 @@ No new dependencies.
    and "As built" notes.
 
 **Check:** `npm run check` and `npm run test:e2e` pass. **Open PR B.**
+
+**As built:**
+- `tests/e2e/super.spec.ts` has two tests. Example A is entered through the
+  screens (FI 2033 at 41, earliest retirement 40, Coast FIRE "Reached:
+  contributions are now optional", 2027 row salary $150,075 and super
+  $219,815) and the super inputs are checked after a reload. Example S4
+  checks 2027 to 2030 read "Shortfall −$20,000 · super locked until 65" and
+  2031 reads "✓" with super at $480,000.
+- The reload poll waits for the saved super balance and the salary sacrifice
+  amount. The sacrifice from and to years aren't stored in example A, because
+  2027 and 2042 are the defaults (first year, retirement year).
+
+#### Merged with cash drawn last and the salary growth default
+
+PR B was written before cash drawn last (PR #30) and the salary growth
+default (PR #29) merged. Merging `main` into it changed:
+- **Drawing order:** the portfolio, then super (from 65), then cash, as
+  the owner decided. `projectPortfolio` and the row docs say so.
+- **Coast FIRE:** main's cash-last solver (a closed form in the usual case,
+  bisection otherwise) is the base. superLeft(k) is added as one more
+  amount that grows untouched on the coast path. PR B's exact "reached"
+  test is unchanged.
+- **A gap the merge exposed:** the coast path now also requires every dated
+  expense on the way to be paid. Cash alone could never beat the FI number
+  without also covering an expense, but super can: with $0 cash and super
+  above the FI number, an expense would otherwise have gone silently
+  unpaid. PR B's unit test for that case caught it.
+- **Worked examples A and C:** recomputed with the new order by the
+  independent script. FI reached, money lasts, the earliest retirement age
+  and Coast FIRE (number and year) are unchanged, because neither has
+  dated expenses, so nothing is drawn before retirement. Only the balances
+  at the end of the plan move. Example A ends at $39,397,746.98 instead
+  of $39,943,624.45.
+- **Salary growth:** it defaults to no growth. Example C sets "Inflation"
+  explicitly; S1 to S3 use 0% inflation, so they are unaffected.
 
 #### Follow-ups
 
@@ -2190,8 +2383,8 @@ No new dependencies.
 
 ### Salary growth defaults to "No growth": step-by-step plan
 
-**Kind:** behavior change. **Status:** plan approved (PR #28); step 1
-implemented and awaiting the owner's verification.
+**Kind:** behavior change. **Status:** done, merged in PR #29 (plan in PR
+#28).
 
 **Why.** The owner isn't convinced salaries keep pace with inflation, so a
 plan shouldn't assume they do unless the user says so. Salary growth is
@@ -2293,10 +2486,11 @@ it can merge before or after it.
 - [x] Approve the cash drawn last plan.
 - [x] Implement cash drawn last (steps 1 and 2), then open it for
       verification.
-- [ ] Owner verifies and merges the cash drawn last PR.
-- [ ] Implement M5 PR B, super (steps 5 to 10), then open it for
-      verification.
+- [x] Owner verifies and merges the cash drawn last PR.
 - [x] Approve the salary growth default plan.
 - [x] Implement the salary growth default (step 1), then open it for
       verification.
-- [ ] Owner verifies and merges the salary growth default PR.
+- [x] Owner verifies and merges the salary growth default PR.
+- [x] Implement M5 PR B, super (steps 5 to 10), then open it for
+      verification.
+- [ ] Owner verifies and merges M5 PR B.

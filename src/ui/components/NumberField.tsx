@@ -7,6 +7,12 @@ interface NumberFieldProps {
   readonly value?: number;
   /** Shown in the dashed "default" style while `value` is unset. */
   readonly defaultValue?: number;
+  /**
+   * Replaces the formatted default while it is shown, e.g. "12% (legislated)"
+   * to say where the default comes from. Only the display changes; the
+   * default's value is still `defaultValue`.
+   */
+  readonly defaultText?: string;
   /** Called with a valid new value, or undefined when the user clears the field. */
   readonly onChange: (value?: number) => void;
   readonly hint?: string;
@@ -38,6 +44,7 @@ export function NumberField({
   label,
   value,
   defaultValue,
+  defaultText,
   onChange,
   hint,
   min,
@@ -56,7 +63,12 @@ export function NumberField({
   // What the box shows when not editing: the plan's value, else the default.
   const isShowingDefault = value === undefined && defaultValue !== undefined;
   const shownValue = value ?? defaultValue;
-  const shownText = shownValue === undefined ? "" : formatValue(shownValue);
+  const shownText =
+    shownValue === undefined
+      ? ""
+      : isShowingDefault && defaultText !== undefined
+        ? defaultText
+        : formatValue(shownValue);
 
   /**
    * Checks the draft and, if it is valid, reports it upward. Called on blur

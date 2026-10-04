@@ -49,4 +49,42 @@ export async function startFresh(page: Page, hash = "./"): Promise<void> {
   await page.goto(hash);
 }
 
+/**
+ * The Year by year table on Results. Scoped by its accessible name, because
+ * the charts' visually hidden data tables also have a row per year.
+ */
+function yearByYearTable(page: Page) {
+  return page.getByRole("table", { name: "Year by year projection" });
+}
+
+/**
+ * The cell texts of the Year by year row for `year`. Waits for that row to
+ * render first: the table appears after a page change or reload, and reading
+ * it too early would silently return no cells.
+ */
+export async function rowCells(page: Page, year: number): Promise<string[]> {
+  const row = yearByYearTable(page)
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
+
+  await expect(row).toHaveCount(1);
+  return row.getByRole("cell").allTextContents();
+}
+
+/**
+ * One cell of the Year by year row for `year`, found by its column header so
+ * that new columns never shift it. Waits for the header and the row to render
+ * before reading, so it can't race the table after navigation.
+ */
+export async function yearCell(page: Page, year: number, header: string): Promise<string> {
+  const table = yearByYearTable(page);
+  await expect(table.getByRole("columnheader", { name: header, exact: true })).toBeVisible();
+
+  const headers = await table.getByRole("columnheader").allTextContents();
+  const columnIndex = headers.indexOf(header);
+  if (columnIndex < 0) throw new Error(`No column headed "${header}"`);
+
+  return (await rowCells(page, year))[columnIndex] ?? "";
+}
+
 export { expect };

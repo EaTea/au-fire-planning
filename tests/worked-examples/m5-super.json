@@ -1,10 +1,10 @@
 {
   "milestone": "M5",
-  "description": "Salary and superannuation accumulation. Step 2 covers salary only; super is added in step 5.",
+  "description": "Salary and superannuation accumulation: salary (step 2) and super rows, FI reached, money lasts and earliest retirement (step 5). Coast FIRE with super is added in step 6.",
   "startYear": 2026,
   "scenarios": [
     {
-      "name": "A: salary, M4's example A plus $145,000 at inflation + 1%",
+      "name": "A: M4's example A plus super and a $145,000 salary at inflation + 1%",
       "checkedBy": "independent calculation (not the app's code), per the M5 plan",
       "inputs": {
         "currentAge": 34,
@@ -21,20 +21,89 @@
         "retirementSpending": null,
         "safeWithdrawalRate": 0.04,
         "salaryAnnual": 145000,
-        "salaryGrowth": { "kind": "inflationPlus", "margin": 0.01 }
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0.01
+        },
+        "superAccount": {
+          "balance": 185000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        }
       },
       "arithmetic": [
         "Salary grows at inflation + margin = 2.5% + 1% = 3.5% a year, one step per row",
         "2027 (row 1, age 35): $145,000 x 1.035 = $150,075.00",
         "2042 (row 16, age 50, the last working year): $145,000 x 1.035^16 = $251,427.98",
-        "2043 (row 17, age 51, retired): $0"
+        "2043 (row 17, age 51, retired): $0",
+        "Super: $185,000 at 7% net of fees, $10,000 salary sacrifice 2027 to 2042",
+        "2027: employer 12% x 150,075 = 18,009.00; earnings 12,950.00, tax 1,942.50; contributions tax 15% x 28,009 = 4,201.35; super 185,000 + 12,950 - 1,942.50 + 28,009 - 4,201.35 = 219,815.15; investable 1,041,015.15",
+        "2042 (age 50): salary 251,427.98, employer 30,171.36, super 1,175,633.85",
+        "FI reached 2033 (age 41): 1,932,046.19 against 1,901,897.21",
+        "Money lasts to 95; earliest retirement age 40",
+        "Coast FIRE (step 6): cash 20,000 + super 185,000 + portfolio 467,262.87 = 672,262.87; already reached (investable today is 925,000)"
       ],
       "expected": {
         "salaryRows": [
-          { "yearIndex": 1, "salary": 150075.0 },
-          { "yearIndex": 16, "salary": 251427.98 },
-          { "yearIndex": 17, "salary": 0 }
-        ]
+          {
+            "yearIndex": 1,
+            "salary": 150075.0
+          },
+          {
+            "yearIndex": 16,
+            "salary": 251427.98
+          },
+          {
+            "yearIndex": 17,
+            "salary": 0
+          }
+        ],
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "salary": 150075,
+            "employerContribution": 18009,
+            "salarySacrifice": 10000,
+            "superEarnings": 12950,
+            "superEarningsTax": 1942.5,
+            "contributionsTax": 4201.35,
+            "superClosing": 219815.15,
+            "investableClosing": 1041015.15
+          },
+          {
+            "yearIndex": 16,
+            "salary": 251427.98,
+            "employerContribution": 30171.36,
+            "superClosing": 1175633.85
+          }
+        ],
+        "fiReached": {
+          "yearIndex": 7,
+          "calendarYear": 2033,
+          "age": 41,
+          "investableClosing": 1932046.19,
+          "fiNumber": 1901897.21
+        },
+        "solvency": {
+          "status": "lasts"
+        },
+        "earliestRetirement": {
+          "status": "feasible",
+          "age": 40,
+          "year": 2032
+        },
+        "coast": {
+          "number": 672262.87,
+          "reached": {
+            "yearIndex": 0,
+            "calendarYear": 2026,
+            "age": 34
+          }
+        }
       }
     },
     {
@@ -55,7 +124,9 @@
         "retirementSpending": null,
         "safeWithdrawalRate": 0.04,
         "salaryAnnual": 90000,
-        "salaryGrowth": { "kind": "none" }
+        "salaryGrowth": {
+          "kind": "none"
+        }
       },
       "arithmetic": [
         "No growth: $90,000 in every working row (ages 41 and 42)",
@@ -63,10 +134,368 @@
       ],
       "expected": {
         "salaryRows": [
-          { "yearIndex": 1, "salary": 90000 },
-          { "yearIndex": 2, "salary": 90000 },
-          { "yearIndex": 3, "salary": 0 }
+          {
+            "yearIndex": 1,
+            "salary": 90000
+          },
+          {
+            "yearIndex": 2,
+            "salary": 90000
+          },
+          {
+            "yearIndex": 3,
+            "salary": 0
+          }
         ]
+      }
+    },
+    {
+      "name": "S1: super by hand",
+      "checkedBy": "independent script (not the app's code), per the M5 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 44,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": null,
+        "expectedReturn": 0.07,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 40,
+        "targetRetirementAge": 42,
+        "salaryAnnual": 100000,
+        "salaryGrowth": {
+          "kind": "none"
+        },
+        "superAccount": {
+          "balance": 50000,
+          "returnRate": 0.08
+        }
+      },
+      "arithmetic": [
+        "Employer = 12% x $100,000 = $12,000; contributions tax 15% = $1,800",
+        "2027: earnings 50,000 x 8% = 4,000.00, tax 600.00; 50,000 + 4,000 - 600 + 12,000 - 1,800 = 63,600.00",
+        "2028: earnings 5,088.00, tax 763.20; super 78,124.80",
+        "2029 (retired): earnings 6,249.984, tax 937.4976; super 83,437.2864",
+        "2030: earnings 6,674.98, tax 1,001.25; super 89,111.02"
+      ],
+      "expected": {
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "salary": 100000,
+            "employerContribution": 12000,
+            "superEarnings": 4000,
+            "superEarningsTax": 600,
+            "contributionsTax": 1800,
+            "superClosing": 63600
+          },
+          {
+            "yearIndex": 2,
+            "salary": 100000,
+            "employerContribution": 12000,
+            "superEarnings": 5088,
+            "superEarningsTax": 763.2,
+            "contributionsTax": 1800,
+            "superClosing": 78124.8
+          },
+          {
+            "yearIndex": 3,
+            "salary": 0,
+            "employerContribution": 0,
+            "superEarnings": 6249.98,
+            "superEarningsTax": 937.5,
+            "contributionsTax": 0,
+            "superClosing": 83437.29
+          },
+          {
+            "yearIndex": 4,
+            "employerContribution": 0,
+            "superEarnings": 6674.98,
+            "superEarningsTax": 1001.25,
+            "contributionsTax": 0,
+            "superClosing": 89111.02
+          }
+        ]
+      }
+    },
+    {
+      "name": "S2: the cap on employer contributions",
+      "checkedBy": "independent script (not the app's code), per the M5 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 44,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": null,
+        "expectedReturn": 0.07,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 40,
+        "targetRetirementAge": 42,
+        "salaryAnnual": 300000,
+        "salaryGrowth": {
+          "kind": "none"
+        },
+        "superAccount": {
+          "balance": 0,
+          "returnRate": 0
+        }
+      },
+      "arithmetic": [
+        "Base is $250,000 (0% inflation), so employer = 12% x 250,000 = 30,000 (not 36,000)",
+        "Contributions tax 15% x 30,000 = 4,500",
+        "Super ends 2027 at 0 + 30,000 - 4,500 = 25,500"
+      ],
+      "expected": {
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "salary": 300000,
+            "employerContribution": 30000,
+            "contributionsTax": 4500,
+            "superClosing": 25500
+          }
+        ]
+      }
+    },
+    {
+      "name": "S3: voluntary contributions with years",
+      "checkedBy": "independent script (not the app's code), per the M5 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 44,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": null,
+        "expectedReturn": 0.07,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 40,
+        "targetRetirementAge": 42,
+        "salaryAnnual": 100000,
+        "salaryGrowth": {
+          "kind": "none"
+        },
+        "superAccount": {
+          "balance": 0,
+          "returnRate": 0,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2030
+          },
+          "nonConcessional": {
+            "annual": 20000,
+            "fromYear": 2028,
+            "toYear": 2028
+          }
+        }
+      },
+      "arithmetic": [
+        "2027: employer 12,000 + sacrifice 10,000 = 22,000 concessional; tax 3,300; super 18,700",
+        "2028: same again, plus 20,000 non-concessional (untaxed): 18,700 + 18,700 + 20,000 = 57,400",
+        "2029 (retired): sacrifice stops with salary, nothing else: 57,400"
+      ],
+      "expected": {
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "employerContribution": 12000,
+            "salarySacrifice": 10000,
+            "nonConcessional": 0,
+            "contributionsTax": 3300,
+            "superClosing": 18700
+          },
+          {
+            "yearIndex": 2,
+            "employerContribution": 12000,
+            "salarySacrifice": 10000,
+            "nonConcessional": 20000,
+            "contributionsTax": 3300,
+            "superClosing": 57400
+          },
+          {
+            "yearIndex": 3,
+            "employerContribution": 0,
+            "salarySacrifice": 0,
+            "nonConcessional": 0,
+            "contributionsTax": 0,
+            "superClosing": 57400
+          }
+        ]
+      }
+    },
+    {
+      "name": "S4: super locked until 65",
+      "checkedBy": "hand calculation, per the M5 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 67,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": null,
+        "expectedReturn": 0.07,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 60,
+        "targetRetirementAge": 60,
+        "superAccount": {
+          "balance": 500000,
+          "returnRate": 0
+        }
+      },
+      "arithmetic": [
+        "Retired at 60 with only super. Ages 61 to 64 (2027 to 2030): $20,000 needed, super locked, so each is a $20,000 shortfall and super stays 500,000",
+        "Age 65 (2031) on: drawn from super: 480,000, 460,000, 440,000 at ages 65, 66, 67",
+        "FI number 20,000 / 4% = 500,000, and investable (super) is 500,000 today, so FI is reached in row 0",
+        "Earliest retirement (by hand, not in the plan): retiring at 64 means spending starts at 65, when super is accessible, so every year is funded; retiring at 63 starts spending at 64, a shortfall. So 64, in 2030"
+      ],
+      "expected": {
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "shortfall": 20000,
+            "fromSuper": 0,
+            "superClosing": 500000
+          },
+          {
+            "yearIndex": 2,
+            "shortfall": 20000,
+            "fromSuper": 0,
+            "superClosing": 500000
+          },
+          {
+            "yearIndex": 3,
+            "shortfall": 20000,
+            "fromSuper": 0,
+            "superClosing": 500000
+          },
+          {
+            "yearIndex": 4,
+            "shortfall": 20000,
+            "fromSuper": 0,
+            "superClosing": 500000
+          },
+          {
+            "yearIndex": 5,
+            "shortfall": 0,
+            "fromSuper": 20000,
+            "superClosing": 480000
+          },
+          {
+            "yearIndex": 6,
+            "shortfall": 0,
+            "fromSuper": 20000,
+            "superClosing": 460000
+          },
+          {
+            "yearIndex": 7,
+            "shortfall": 0,
+            "fromSuper": 20000,
+            "superClosing": 440000
+          }
+        ],
+        "fiReached": {
+          "yearIndex": 0,
+          "calendarYear": 2026,
+          "age": 60,
+          "investableClosing": 500000,
+          "fiNumber": 500000
+        },
+        "solvency": {
+          "status": "runsOut",
+          "year": 2027,
+          "age": 61,
+          "shortfallYears": [2027, 2028, 2029, 2030],
+          "shortfall": 20000
+        },
+        "earliestRetirement": {
+          "status": "feasible",
+          "age": 64,
+          "year": 2030
+        }
+      }
+    },
+    {
+      "name": "C: Coast FIRE later, A with a $300,000 portfolio, $120,000 salary at inflation and $100,000 super",
+      "checkedBy": "independent script (not the app's code), per the M5 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 300000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "salaryAnnual": 120000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0
+        },
+        "superAccount": {
+          "balance": 100000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        }
+      },
+      "arithmetic": [
+        "2027: salary 120,000 x 1.025 = 123,000.00; employer 12% = 14,760.00; concessional 24,760; contributions tax 3,714.00; earnings 7,000, tax 1,050; super 100,000 + 7,000 - 1,050 + 24,760 - 3,714 = 126,996.00; investable 498,796.00",
+        "FI reached 2041 (age 49); earliest retirement age 47",
+        "Coast FIRE (step 6): cash 20,000 + super 100,000 + portfolio 578,765.82 = 698,765.82, reached 2037 (age 45). Stopping voluntary contributions after 45 gives 2,385,819.60 at retirement; after 44, 2,332,394.93 (FI number 2,375,208.99)"
+      ],
+      "expected": {
+        "superRows": [
+          {
+            "yearIndex": 1,
+            "salary": 123000,
+            "employerContribution": 14760,
+            "contributionsTax": 3714,
+            "superClosing": 126996,
+            "investableClosing": 498796
+          }
+        ],
+        "fiReached": {
+          "yearIndex": 15,
+          "calendarYear": 2041,
+          "age": 49
+        },
+        "earliestRetirement": {
+          "status": "feasible",
+          "age": 47,
+          "year": 2039
+        },
+        "fiNumberAtRetirement": 2375208.99,
+        "coast": {
+          "number": 698765.82,
+          "reached": {
+            "yearIndex": 11,
+            "calendarYear": 2037,
+            "age": 45
+          }
+        }
       }
     }
   ]

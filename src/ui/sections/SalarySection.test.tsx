@@ -13,7 +13,7 @@ describe("SalarySection", () => {
 
     expect(screen.getByLabelText("Gross salary per year")).toHaveValue("");
     expect(screen.getByLabelText("Grows at")).toHaveValue("none");
-    expect(screen.queryByLabelText("Grows at percentage")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Above inflation by")).not.toBeInTheDocument();
   });
 
   it("stores a typed salary on the person", async () => {
@@ -31,7 +31,7 @@ describe("SalarySection", () => {
     const { readPlan } = renderSection(<SalarySection />);
 
     await user.selectOptions(screen.getByLabelText("Grows at"), "inflationPlus");
-    const percentage = screen.getByLabelText("Grows at percentage");
+    const percentage = screen.getByLabelText("Above inflation by");
     await user.clear(percentage);
     await user.type(percentage, "1{Enter}");
 

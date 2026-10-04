@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, startFresh, test } from "./fixtures";
+import { expect, startFresh, test, yearCell } from "./fixtures";
 
 // End-to-end test for M2's headline flow (IN-2, IN-3, IN-11, IN-15, IN-18,
 // OUT-1, OUT-2, OUT-4): enter worked example A through the real screens, read
@@ -10,19 +10,8 @@ import { expect, startFresh, test } from "./fixtures";
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
 async function enter(page: Page, label: string, value: string): Promise<void> {
-  await page.getByLabel(label).fill(value);
-  await page.getByLabel(label).press("Tab");
-}
-
-/** The cell texts of the Year by year row for `year`. */
-async function rowCells(page: Page, year: number): Promise<string[]> {
-  // Scoped to the table: the chart's hidden data table on Results has a row per year too.
-  const row = page
-    .getByRole("table", { name: "Year by year projection" })
-    .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: String(year), exact: true }) });
-
-  return row.getByRole("cell").allTextContents();
+  await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
 test("worked example A reaches FI in 2038 at age 46 and shows it year by year", async ({
@@ -73,14 +62,14 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
     "aria-pressed",
     "true",
   );
-  expect((await rowCells(page, 2027))[3]).toBe("$30,000");
-  expect((await rowCells(page, 2027))[7]).toBe("$800,400");
-  expect((await rowCells(page, 2038))[7]).toBe("$2,158,231");
+  expect(await yearCell(page, 2027, "Into portfolio")).toBe("$30,000");
+  expect(await yearCell(page, 2027, "Portfolio")).toBe("$800,400");
+  expect(await yearCell(page, 2038, "Portfolio")).toBe("$2,158,231");
 
   // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025.
   await page.getByRole("button", { name: "Today's dollars" }).click();
-  expect((await rowCells(page, 2027))[3]).toBe("$29,268");
-  expect((await rowCells(page, 2027))[7]).toBe("$780,878");
+  expect(await yearCell(page, 2027, "Into portfolio")).toBe("$29,268");
+  expect(await yearCell(page, 2027, "Portfolio")).toBe("$780,878");
 
   // Autosave waits 500 ms after the last edit; reload once the plan is stored.
   await expect
@@ -114,7 +103,7 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await page.getByRole("link", { name: "← Assumptions" }).click();
   await expect(page.getByLabel("Inflation per year")).toHaveValue("2.5%");
   await page.getByRole("link", { name: "← Assets" }).click();
-  await expect(page.getByLabel("Contributions per year")).toHaveValue("$30,000");
+  await expect(page.getByLabel("Contributions per year", { exact: true })).toHaveValue("$30,000");
   await page.goto("./#/household");
   await expect(page.getByLabel("Current age")).toHaveValue("34");
   await expect(page.getByLabel("Target retirement age")).toHaveValue("50");

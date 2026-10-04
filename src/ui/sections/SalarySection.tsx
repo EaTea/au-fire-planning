@@ -44,6 +44,7 @@ export function SalarySection() {
               options={SALARY_GROWTH_OPTIONS}
               value={person.salary?.growth}
               defaultValue={DEFAULT_SALARY_GROWTH}
+              numberLabel={fieldLabel}
               onChange={(growth) =>
                 dispatch({ type: "setSalaryGrowth", personId: person.id, growth })
               }

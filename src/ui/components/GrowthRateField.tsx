@@ -15,6 +15,13 @@ const OPTION_LABELS: Record<GrowthRateOption, string> = {
   none: "No growth",
 };
 
+/** What the number box is called for each custom option, so it says what the number means. */
+const NUMBER_LABELS: Record<"inflationPlus" | "inflationMinus" | "fixed", string> = {
+  inflationPlus: "Above inflation by",
+  inflationMinus: "Below inflation by",
+  fixed: "Fixed rate",
+};
+
 /** The number each custom option starts with when first picked (a fraction), so the pick is visible. */
 const STARTING_NUMBER: Record<"inflationPlus" | "inflationMinus" | "fixed", number> = {
   inflationPlus: 0.01,
@@ -28,7 +35,7 @@ const HIGHEST_RATE = 0.15;
 
 /** What GrowthRateField needs. */
 interface GrowthRateFieldProps {
-  /** Names the dropdown, e.g. "Grows at". The number box is named "<label> percentage". */
+  /** Names the dropdown, e.g. "Grows at". The number box is named for the chosen option ("Above inflation by", "Below inflation by" or "Fixed rate"). */
   readonly label: string;
   /** Which choices to offer, in display order. */
   readonly options: readonly GrowthRateOption[];
@@ -39,6 +46,12 @@ interface GrowthRateFieldProps {
   /** Called with the new growth, or undefined when the user returns to the default. */
   readonly onChange: (value?: GrowthRate) => void;
   readonly hint?: string;
+  /**
+   * Turns the number box's plain name into the label to show. A screen with
+   * several people passes its `PerPersonFields` label function so each
+   * person's box stays unique ("Alex: Fixed rate"). Defaults to unchanged.
+   */
+  readonly numberLabel?: (name: string) => string;
 }
 
 const INFLATION: GrowthRate = { kind: "inflationPlus", margin: 0 };
@@ -100,6 +113,7 @@ export function GrowthRateField({
   defaultValue = INFLATION,
   onChange,
   hint,
+  numberLabel = (name) => name,
 }: GrowthRateFieldProps) {
   const selectId = useId();
 
@@ -148,7 +162,7 @@ export function GrowthRateField({
 
       {customOption !== undefined && (
         <PercentField
-          label={`${label} percentage`}
+          label={numberLabel(NUMBER_LABELS[customOption])}
           value={numberOf(shownGrowth)}
           allowNegative={customOption === "fixed"}
           min={customOption === "fixed" ? LOWEST_RATE : 0}
