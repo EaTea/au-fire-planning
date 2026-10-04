@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 plan and implementation are in review as stacked PRs.
+**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 (super access and the bridge period) is implemented; the plan and implementation PRs are stacked and await the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M5 and the side plans done. M6 plan and implementation in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M5 and the side plans done. M6 implemented, in review |
 
 ## 1. Requirement ordering
 
@@ -1454,7 +1454,7 @@ Conventions settled while building M5, which later milestones rely on:
 
 ### M6 · Super access and the bridge period: step-by-step plan
 
-**Status:** draft. At the owner's request, the plan PR and the
+**Status:** implemented, awaiting the owner's verification. At the owner's request, the plan PR and the
 implementation PR are opened together, stacked: the implementation PR's
 base is the plan branch. The plan is still reviewed first, and the
 implementation follows any change to it.
@@ -1710,7 +1710,17 @@ pinned.
 
 #### Step 1 · Rules: preservation age and unconditional release
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- Both values are fields of `superannuation` in the file and `SuperannuationRules`
+  (so `RuleSnapshot` and `YearRules` carry them), as whole-year ages (0 to 120 in
+  the schema) named `preservationAgeYears` and `unconditionalReleaseAgeYears`.
+  They are not indexed after the latest file.
+- `fy2025-26.json` is "unverified", with a note saying the original values were
+  checked on 2026-10-03 and only these two are new. The source links are the ATO
+  pages given for this step; the ATO site blocks automated clients, so the owner
+  verifies them before merge.
 
 1. Add `preservationAgeYears: 60` and `unconditionalReleaseAgeYears: 65`
    to the FY2025–26 file and its schema, each with an ATO source link. Set
@@ -1723,7 +1733,27 @@ pinned.
 
 #### Step 2 · Engine: the access age and the condition of release
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- The default of 65 is not a constant any more: `resolvePlanInputs` gives
+  `superAccessAge: Sourced<number | undefined>` (unset is `undefined` with source
+  "rule", like the employer rate), `ProjectionSuper.accessAge` carries it, and the
+  projection clamps it between the preservation age and the release age using the
+  year's rules. `Person.superAccessAge` is added to the plan type only; the
+  reducer, wire and UI are steps 5 and 6.
+- `effectiveSuperAccessAge(inputs, startYear)` takes the start year too, because
+  it reads the rules. It returns `undefined` when the plan has no super.
+  `ProjectionSummary` (complete) gains `superAccessAge?` with that value, so
+  Year by year can word the locked shortfall. Rows with no super account are
+  `superAccessible: false`.
+- `assessSolvency(rows, superAccessAge?)` takes the effective age for its
+  "Super (not accessible until N)" note. `isShortfallWithSuperLocked` now uses
+  the row's `superAccessible`. The earliest-retirement search passes the age for
+  each retirement age it tries.
+- `m6-bridge.json` holds B1 to B3 (rows, shortfalls, effective access age). The
+  worked-example test gained the input `superAccessAge` and the expected
+  `superAccessAge` and `superRows[].superAccessible`.
 
 1. `Person.superAccessAge?`, resolved to the default of 65 and clamped
    between the preservation age and 65, taken from the rules.
@@ -1743,7 +1773,21 @@ pinned.
 
 #### Step 3 · Engine: the bridge check
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `assessBridge(rows, inputs)` returns `{ effectiveAccessAge?, bridge?, afterAccess? }`.
+  Each part has first/last year and age, `need` and `projected` (both `Explained`),
+  `status` ("met" | "short") and `shortYears`. Everything is empty without super.
+  The start year is read from `rows[0]`.
+- "No bridge" is `bridge` being absent, and "access after the plan ends" is
+  `afterAccess` being absent. After access never starts before row 1, with row 0
+  as its base when access is already open.
+- The need's explanation names the discount rate and ends with the line
+  "Withdrawals are tax-free from 60" (the value is the preservation age, source
+  "rule", unit years).
+- All plan figures match to the cent (B1 to B3, A at 65 and 60, and C). They are
+  in `m6-bridge.json`, which gained the scenarios A, A at 60 and C.
 
 1. `src/engine/bridge.ts`, with `assessBridge(rows, inputs)` returning the
    bridge and after-access parts as described: years, need, projected,
@@ -1761,7 +1805,25 @@ pinned.
 
 #### Step 4 · Engine: Coast FIRE for super and outside super
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- New `coastSplit.ts` (`calculateCoastSplit(rows, inputs, bridge)`), added to the
+  summary as `coast.split` with `outside?` and `super?`. Each part has
+  `needToday` (`Explained`), `hasToday` and `reached?`.
+- `portfolioNeededFromRow` in `coastFire.ts` is exported and takes the target at
+  retirement as a parameter (the FI number by default).
+- **Outside super counts cash on both sides.** The plan's figures ($338,666.95
+  needed and $740,000 had in example A) are portfolio needed + cash against
+  portfolio + cash, so `needToday` and `hasToday` include cash. Reached is the
+  first row where the portfolio is at least the portfolio needed.
+- **Super's linear form** reads G(k) and E(k) from `projectPortfolio` runs (no
+  spending, nothing outside super, voluntary contributions stopped after row k),
+  with $1 in super and with none, so no super rule is copied. Reached is checked
+  from today to the retirement row (or the row before access if that is earlier).
+- Absent parts: `outside` when there is no bridge, `super` when there is no super
+  or no years after access.
+- All plan figures match (B1, B2, A, C; B3 has no outside part).
 
 1. `coastSplit` in `coastFire.ts` (or a new `coastSplit.ts`), returning
    `outside` and `super`. Each has today's need, today's balance, the
@@ -1780,7 +1842,12 @@ pinned.
 
 #### Step 5 · State and wire: the access age
 
-- [ ] Done
+- [x] Done
+
+**As built:** `superAccessAge?` on `Person`, set by `setSuperAccessAge`
+(`undefined` clears it) and stored as `people[].superAccessAgeYears` (whole
+years, 0 to 120). The fixture `v1-access-age.json` is B1's plan; older fixtures
+still load. The round-trip generator sets it on the person.
 
 1. Reducer: `setSuperAccessAge { personId, age? }`.
 2. Wire: `people[].superAccessAgeYears`, with the fixture
@@ -1792,7 +1859,13 @@ pinned.
 
 #### Step 6 · Household: "Super accessible at"
 
-- [ ] Done
+- [x] Done
+
+**As built:** the field is in `PersonAgesSection` after "Target retirement
+age". Its default (65) and limits (60 to 65) are read with `rulesForYear` for the
+start year, as `SuperSection` does for its legislated defaults. The contrast
+sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
+"age" in it and the generic 5 would be out of range.
 
 1. In the "About you" card, add `AgeField` "Super accessible at", with the
    default "65" dashed. Its limits come from the rules (60 to 65).
@@ -1804,7 +1877,42 @@ pinned.
 
 #### Step 7 · Results: the bridge check, milestones and Year by year
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `StatusMeter` takes a label, a kind ("met", "short", "coasting", "notYet") with
+  its status word, and the projected and need amounts as `{ amount, text }` (the
+  caller formats `text`; `amount` sizes the bar and places the need marker). It
+  also takes an optional `needNote` ("in 2042"), `detail` and `explanation`. It
+  uses existing role variables only (gold, error pink, green-white fills at 3:1
+  on the page, and the white need marker), so `tokens.test.ts` has no new pairs.
+- **"No super" is derived, not stored.** The engine always carries a super
+  account (an empty one when nothing is entered), so `projectionHasSuper(rows)`
+  in `bridge.ts` (super holds money in some year) decides whether the card, the
+  milestone and the bridge bands appear. A plan with no super keeps the single
+  "Retired" band.
+- `BridgeSection` (`src/ui/sections/`) has the id `bridge`. Headings use the
+  part's own years, like the breakdowns: "Bridge: outside super, 2028 – 2035" and
+  "After super is accessible, 2036 – 2037" (a single year is written alone). Each figure is
+  stated in the year before its part starts ("Need $X in 2042"), formatted with
+  that row's inflation index, and the breakdown's dollar lines follow the toggle
+  too. "Withdrawals are tax-free from age 60" is the last line of the
+  after-access breakdown only (the engine adds it to that part's projected
+  working; `ExplainPanel` keeps the result bold when a "rule" line follows it). Short years read "short in 2033 – 2035" (`formatYearRuns` in `format.ts`,
+  now shared with the Year by year banner).
+- **Year by year bands, top to bottom:** "Working · contributing"; then, for a
+  plan with super, "Bridge · retired, super locked until {age}" for the retired
+  years before access and "Super accessible" from then on. These replace the
+  single "Retired" band for plans with super (two band rows in a row for the
+  first retired year would be clunky); with no bridge, "Super accessible" opens
+  the retired years.
+- Milestones add "Super accessible" (year and age) at the effective access age,
+  or an undated "not reached" item when the plan ends first.
+- The "Not yet modelled" banner still says super is only drawn from 65; its
+  wording is left for the wrap-up step.
+- E2E: `bridgeResults.spec.ts` (B1, B2 and A) and a contrast test with B2 and both
+  breakdowns open. B1, B2, A and the bands are also unit-tested in
+  `ResultsBridge.test.tsx`.
 
 1. `StatusMeter` in `src/ui/components/`, with tests (each status, the
    need marker, text that doesn't rely on colour).
@@ -1820,7 +1928,38 @@ pinned.
 
 #### Step 8 · Chart (b) and the Coast FIRE split meters
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `StackedAreaChart` is a sibling of `TimeSeriesChart`, reusing its point, series
+  and band types, tooltip and axis formatting (now exported). The builder is
+  `buildBridgeChartSeries(projection, dollarsMode)` in `src/ui/charts/bridgeChart.ts`:
+  outside super (portfolio + cash) under super, with one "Bridge" band over the
+  bridge years and none when there is no bridge. The chart sits at the foot of the
+  "Can you bridge to super?" card under an "h4", follows the dollars toggle, and a
+  click goes to `?year=`.
+- Colour roles `--colour-chart-outside` (gold) and `--colour-chart-super` (the
+  green-grey), both with 3:1 pairs in `tokens.test.ts`.
+- **The band is drawn over the areas** (`zIndex` 110 against the areas' 100), as
+  a translucent tint; behind them the opaque fills hid it. So its label stays
+  readable, the value axis has at least 15% headroom above the tallest stack, in
+  round steps (`axisTopWithHeadroom`), which keeps the label on the bare page.
+- **Fixed a latent CSS bug on the way:** Recharts 3 draws a band as a `<path>`
+  (`.recharts-reference-area-rect`), not a `<rect>`, so `.chart-band rect` never
+  matched and chart (a)'s shortfall band was Recharts' default grey. The rule now
+  targets the class, and the new E2E checks the band's colour and opacity.
+- `CoastSplitSection` (id `coast-split`, "Super and outside super"), after the
+  Coast FIRE chart, with an "On this page" link, shown only for a plan with super
+  and at least one part. Two `StatusMeter`s ("Outside super funds the bridge on
+  its own", "Super funds the years after access on its own"), each reading
+  "Needs $X today · has $Y" (`StatusMeter` gained `figureWords`), the status
+  "Coasting since {year}", "Coasting from {year}" (with "reached at age N") or
+  "Not before retirement", and the engine's `needToday` working. The figures are
+  always row-0 dollars, like the Coast FIRE tile, so they ignore the dollars toggle.
+- Tests: `buildBridgeChartSeries` (B1, B2, B3, cash, dollars modes),
+  `StackedAreaChart`, the split card on Results (B1, B2, A, C to the dollar, B3
+  with one meter, no super), and `bridgeChart.spec.ts` (fill colours, band,
+  tooltip, click-through, split card), plus a contrast-sweep test.
 
 1. `StackedAreaChart` in `src/ui/components/`, with the new colour roles
    and their 3:1 pairs, and its builder `buildBridgeChartSeries` with unit
@@ -1836,7 +1975,16 @@ pinned.
 
 #### Step 9 · E2E, README and wrap-up (end of the implementation PR)
 
-- [ ] Done
+- [x] Done
+
+**As built:** `tests/e2e/bridge.spec.ts` is one flow with the clock fixed in 2026:
+B2 entered through the screens (SHORT 2033–2035, after access MET, the Bridge
+band and "super locked until 65"), then "Super accessible at" set to 60 (B1,
+both MET, band says 60), then a reload, after waiting for the autosave to store
+`superAccessAgeYears`, keeps the age and the result. Run 10 times with
+`--repeat-each 10`. The Results "Not yet modelled" banner no longer says super
+is drawn only from 65. README "What it does" now covers the access age, the
+bridge check and chart, and the Coast FIRE split.
 
 1. `tests/e2e/bridge.spec.ts`, with the clock fixed in 2026:
    - **B2 entered through the screens:**
@@ -1913,5 +2061,7 @@ implementation PR**, stacked on this plan PR.
       verification.
 - [x] Owner verifies and merges M5 PR B.
 - [ ] Approve the M6 step-by-step plan (plan PR).
-- [ ] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
+- [x] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
       plan PR, then the owner verifies and merges both.
+- [ ] Owner verifies and merges the M6 PRs (the owner verifies the two new
+      rule values: preservation age 60 and unconditional release at 65).

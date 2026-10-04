@@ -138,3 +138,28 @@ export function formatYear(year: number): string {
 export function parseYear(text: string): number | undefined {
   return parseAge(text);
 }
+
+/**
+ * Writes a list of calendar years compactly: consecutive years collapse into
+ * ranges and separate runs are joined by commas, e.g. [2035, 2031, 2036]
+ * becomes "2031, 2035 – 2036". The years may be given in any order. Used by
+ * the Year by year shortfall banner and the bridge check's "short in ..." line.
+ */
+export function formatYearRuns(years: readonly number[]): string {
+  const sortedYears = [...years].sort((first, second) => first - second);
+
+  // Group into runs of consecutive years.
+  const runs: { first: number; last: number }[] = [];
+  for (const year of sortedYears) {
+    const lastRun = runs[runs.length - 1];
+    if (lastRun !== undefined && year === lastRun.last + 1) {
+      lastRun.last = year;
+    } else {
+      runs.push({ first: year, last: year });
+    }
+  }
+
+  return runs
+    .map((run) => (run.first === run.last ? String(run.first) : `${run.first} – ${run.last}`))
+    .join(", ");
+}

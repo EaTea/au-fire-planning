@@ -9,7 +9,13 @@ import { StepPage } from "../components/StepPage";
 import { DollarsModeToggle } from "../dollarsMode";
 import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { BRIDGE_SECTION_ID, BridgeSection, hasBridgeSection } from "../sections/BridgeSection";
 import { COAST_CHART_SECTION_ID, CoastChartSection } from "../sections/CoastChartSection";
+import {
+  COAST_SPLIT_SECTION_ID,
+  CoastSplitSection,
+  hasCoastSplitSection,
+} from "../sections/CoastSplitSection";
 import { FIRE_CHART_SECTION_ID, FireChartSection } from "../sections/FireChartSection";
 import { MILESTONES_SECTION_ID, MilestonesSection } from "../sections/MilestonesSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
@@ -40,7 +46,6 @@ function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explaine
 export function ResultsScreen() {
   const summary = usePlanSummary();
   const projection = summary.status === "complete" ? summary.projection : undefined;
-  const projectionComplete = projection?.status === "complete";
 
   useScrollToRequestedSection();
 
@@ -50,7 +55,7 @@ export function ResultsScreen() {
       intro="Your FI number, when you could reach it and retire, whether the money lasts, and every year of the plan behind those figures."
       headerAction={<DollarsModeToggle />}
     >
-      {projectionComplete && <JumpLinks />}
+      {projection?.status === "complete" && <JumpLinks projection={projection} />}
 
       <div className="results-stack">
         {summary.status === "complete" ? (
@@ -73,7 +78,9 @@ export function ResultsScreen() {
                 <RunsOutBanner projection={summary.projection} />
                 <MilestonesSection projection={summary.projection} />
                 <FireChartSection projection={summary.projection} />
+                <BridgeSection projection={summary.projection} />
                 <CoastChartSection projection={summary.projection} />
+                <CoastSplitSection projection={summary.projection} />
               </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />
@@ -83,10 +90,7 @@ export function ResultsScreen() {
           <MissingInputsBanner missing={summary.missing} />
         )}
 
-        <Banner tone="info">
-          Not yet modelled: super is only drawn from 65 (M6 lets you change this and checks the
-          years before), tax (M8), property (M12) and more.
-        </Banner>
+        <Banner tone="info">Not yet modelled: tax (M8), property (M12) and more.</Banner>
       </div>
 
       {projection?.status === "complete" && <YearByYearSection projection={projection} />}
@@ -98,15 +102,22 @@ export function ResultsScreen() {
  * The "On this page" links under the title: Results is long once it ends
  * with the table, so these jump to the milestones, the charts and the table. They set
  * `?view=`, which useScrollToRequestedSection acts on. Shown only when the
- * projection is complete, since both targets need it.
+ * projection is complete, since the targets need it; the bridge and split links
+ * appear only when the plan has super and so those cards are shown.
  */
-function JumpLinks() {
+function JumpLinks({ projection }: { readonly projection: CompleteProjection }) {
   return (
     <nav className="page-jump-links" aria-label="On this page">
       <span>On this page:</span>
       <Link to={`${step.path}?view=${MILESTONES_SECTION_ID}`}>Milestones</Link>
       <Link to={`${step.path}?view=${FIRE_CHART_SECTION_ID}`}>FIRE chart</Link>
+      {hasBridgeSection(projection) && (
+        <Link to={`${step.path}?view=${BRIDGE_SECTION_ID}`}>Can you bridge to super?</Link>
+      )}
       <Link to={`${step.path}?view=${COAST_CHART_SECTION_ID}`}>Coast FIRE chart</Link>
+      {hasCoastSplitSection(projection) && (
+        <Link to={`${step.path}?view=${COAST_SPLIT_SECTION_ID}`}>Super and outside super</Link>
+      )}
       <Link to={`${step.path}?view=${YEAR_BY_YEAR_SECTION_ID}`}>Year by year ↓</Link>
     </nav>
   );

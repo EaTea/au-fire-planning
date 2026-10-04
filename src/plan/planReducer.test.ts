@@ -138,6 +138,7 @@ describe("planReducer", () => {
   it.each([
     ["setCurrentAge", "currentAge"],
     ["setTargetRetirementAge", "targetRetirementAge"],
+    ["setSuperAccessAge", "superAccessAge"],
   ] as const)("%s sets and clears %s on the named person", (type, field) => {
     const set = planReducer(buildBlankPlan(), { type, personId: "person-1", age: 34 });
     expect(set.household.people[0]?.[field]).toBe(34);

@@ -394,6 +394,7 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     fromPortfolio: 0,
     shortfall: 0,
     fromSuper: 0,
+    superAccessible: false,
     investableClosing,
     livingExpenses: 0,
     fiNumber,

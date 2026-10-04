@@ -30,6 +30,7 @@ export type PlanAction =
   | { readonly type: "renamePortfolio"; readonly portfolioId: string; readonly name: string }
   | { readonly type: "setCurrentAge"; readonly personId: string; readonly age?: number }
   | { readonly type: "setTargetRetirementAge"; readonly personId: string; readonly age?: number }
+  | { readonly type: "setSuperAccessAge"; readonly personId: string; readonly age?: number }
   | { readonly type: "setSalary"; readonly personId: string; readonly annual?: number }
   | { readonly type: "setSalaryGrowth"; readonly personId: string; readonly growth?: SalaryGrowth }
   | { readonly type: "setSuperBalance"; readonly personId: string; readonly balance?: number }
@@ -119,6 +120,9 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
 
     case "setTargetRetirementAge":
       return updatePerson(plan, action.personId, { targetRetirementAge: action.age });
+
+    case "setSuperAccessAge":
+      return updatePerson(plan, action.personId, { superAccessAge: action.age });
 
     case "setSalary":
       return updateSalary(plan, action.personId, { annual: action.annual });

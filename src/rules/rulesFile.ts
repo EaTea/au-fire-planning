@@ -15,6 +15,9 @@ import { z } from "zod";
 /** A percentage rate from 0 to 100. Negative or above-100 rates are always a data-entry mistake. */
 const percentSchema = z.number().min(0).max(100);
 
+/** An age in whole years. The same 0 to 120 limit as the ages stored in a plan. */
+const ageSchema = z.number().int().min(0).max(120);
+
 /** A calendar date as `YYYY-MM-DD`, the form used for `effectiveFrom`. */
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected a date like 2025-07-01");
 
@@ -38,6 +41,8 @@ export const rulesFileV1Schema = z.object({
     contributionsTaxPercent: percentSchema,
     earningsTaxPercent: percentSchema,
     discountedCapitalGainsTaxPercent: percentSchema,
+    preservationAgeYears: ageSchema,
+    unconditionalReleaseAgeYears: ageSchema,
   }),
   sources: z.object({
     guaranteeRatePercent: z.url(),
@@ -45,6 +50,8 @@ export const rulesFileV1Schema = z.object({
     contributionsTaxPercent: z.url(),
     earningsTaxPercent: z.url(),
     discountedCapitalGainsTaxPercent: z.url(),
+    preservationAgeYears: z.url(),
+    unconditionalReleaseAgeYears: z.url(),
   }),
 });
 

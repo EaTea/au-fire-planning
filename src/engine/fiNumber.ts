@@ -19,6 +19,7 @@ import type { Plan, RetirementSpending, Sourced } from "../plan/types";
 import type { RuleSet } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  effectiveSuperAccessAge,
   findFiReached,
   projectPortfolio,
   type FiMilestone,
@@ -27,7 +28,9 @@ import {
   type ProjectionRow,
 } from "./projection";
 import { calculateCoastFire, type CoastFire } from "./coastFire";
+import { calculateCoastSplit, type CoastSplit } from "./coastSplit";
 import { findEarliestRetirementAge, type EarliestRetirement } from "./earliestRetirement";
+import { assessBridge, type BridgeAssessment } from "./bridge";
 import { assessSolvency, type Solvency } from "./solvency";
 
 /**
@@ -50,10 +53,14 @@ export type ProjectionSummary =
       readonly endAge: number;
       /** Whether the money lasts to the end age, or the first year it can't be funded. */
       readonly solvency: Solvency;
+      /** The age super can first be drawn while retired (see `effectiveSuperAccessAge`); absent when the plan has no super. */
+      readonly superAccessAge?: number;
+      /** The bridge to super and the years after access (FIRE-4). Both parts are absent when there is no super. */
+      readonly bridge: BridgeAssessment;
       /** The first retirement age from today to the end age at which the money lasts (FIRE-3). */
       readonly earliestRetirement: EarliestRetirement;
       /** The Coast FIRE number, its path to retirement and when it is reached (COAST-1, COAST-2). */
-      readonly coast: CoastFire;
+      readonly coast: CoastFire & { readonly split: CoastSplit };
     }
   | { readonly status: "incomplete"; readonly missing: readonly MissingInput[] };
 
@@ -327,11 +334,18 @@ function summariseProjection(
         : {}),
       salarySacrifice: projectionContributionFrom(superAccount.salarySacrifice),
       nonConcessional: projectionContributionFrom(superAccount.nonConcessional),
+      ...(projectionInputs.superAccessAge.value !== undefined
+        ? { accessAge: projectionInputs.superAccessAge.value }
+        : {}),
       ruleSet,
     },
   };
 
   const rows = projectPortfolio(projectionSettings, startYear);
+  const superAccessAge = effectiveSuperAccessAge(projectionSettings, startYear);
+
+  const bridge = assessBridge(rows, projectionSettings);
+  const coastSplit = calculateCoastSplit(rows, projectionSettings, bridge);
 
   const fiReached = findFiReached(rows);
   const retirementAge = projectionInputs.targetRetirementAge.value;
@@ -349,8 +363,10 @@ function summariseProjection(
     retirementAge,
     retirementYear: startYear + yearsUntilRetirement,
     endAge: projectionInputs.endAge.value,
-    solvency: assessSolvency(rows),
-    coast: calculateCoastFire(rows, projectionSettings),
+    ...(superAccessAge === undefined ? {} : { superAccessAge }),
+    solvency: assessSolvency(rows, superAccessAge),
+    bridge,
+    coast: { ...calculateCoastFire(rows, projectionSettings), split: coastSplit },
     earliestRetirement: findEarliestRetirementAge(
       {
         ...projectionSettings,

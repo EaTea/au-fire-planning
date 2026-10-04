@@ -53,12 +53,9 @@ export const DEFAULT_SUPER_RETURN = 0.07;
 /** Voluntary super contributions (salary sacrifice, non-concessional): $0 a year. */
 export const DEFAULT_SUPER_CONTRIBUTION_ANNUAL = 0;
 
-/**
- * The age from which super can be drawn (IN-5's default). M5 draws super only
- * from this age; M6 makes it an input and adds the bridge check, replacing
- * this constant's use in the engine with the person's own access age.
- */
-export const DEFAULT_SUPER_ACCESS_AGE = 65;
+// The age super becomes accessible (IN-5) has no constant here: its default is
+// the unconditional release age (65), which is statutory, so it comes from the
+// rules data (src/rules/) rather than from this file.
 
 /** Cash savings: $0. */
 export const DEFAULT_CASH_BALANCE = 0;

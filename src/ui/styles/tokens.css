@@ -93,6 +93,13 @@
   --colour-chart-secondary: var(--green-white);
   --colour-chart-band: var(--error-pink);
   --chart-band-opacity: 0.2;
+  /*
+   * The two fills of the bridge chart (chart b): outside super in gold and
+   * super in the green-grey, so they differ in lightness as well as hue where
+   * they meet. Both are graphics at 3:1 or better against the page.
+   */
+  --colour-chart-outside: var(--aus-gold);
+  --colour-chart-super: var(--green-grey);
 
   /* ---------- Type and spacing ---------- */
 

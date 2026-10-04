@@ -73,6 +73,12 @@ export interface Person {
   readonly salary?: Salary;
   /** Super account (IN-21 to IN-23). `undefined` means none entered (balance $0). */
   readonly superAccount?: SuperAccount;
+  /**
+   * Age in whole years from which they want super to be accessible (IN-5).
+   * `undefined` means the default, the unconditional release age (65). The
+   * engine clamps it between the preservation age and that age.
+   */
+  readonly superAccessAge?: number;
 }
 
 /** One share portfolio. M1 has exactly one; several arrive in later milestones. */
