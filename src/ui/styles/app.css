@@ -745,7 +745,8 @@ button:focus-visible {
   fill: var(--colour-text);
 }
 
-.chart-picture .chart-band rect {
+/* Recharts draws the band as a <path> (class recharts-reference-area-rect), not a <rect>. */
+.chart-picture .chart-band .recharts-reference-area-rect {
   fill: var(--colour-chart-band);
   fill-opacity: var(--chart-band-opacity);
 }
