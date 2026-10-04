@@ -1,0 +1,259 @@
+{
+  "milestone": "M6",
+  "description": "Super access and the bridge period: the effective access age, the condition of release and the rows it produces (step 2). Bridge and Coast FIRE figures are added in steps 3 and 4.",
+  "startYear": 2026,
+  "scenarios": [
+    {
+      "name": "B1: bridge met, super accessible at 60",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 66,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 100000,
+          "returnRate": 0
+        },
+        "superAccessAge": 60
+      },
+      "arithmetic": [
+        "Age 55, retire at 56, plan until 66 (2026 to 2037). Portfolio $100,000 and super $100,000, both at 0%, $20,000 a year, no inflation, no salary",
+        "Retired years start in 2028 (age 57). Super accessible at 60 and retiring at 56 is before that, so the effective access age is 60 (2031)",
+        "Portfolio pays first: 2028 to 2032 leave 80,000, 60,000, 40,000, 20,000, 0. Super is accessible from 2031 but isn't touched until the portfolio is empty",
+        "Super pays 2033 to 2037: 80,000, 60,000, 40,000, 20,000, 0. No shortfall in any year"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 2,
+            "portfolioClosing": 80000,
+            "fromPortfolio": 20000,
+            "shortfall": 0
+          },
+          {
+            "yearIndex": 6,
+            "portfolioClosing": 0,
+            "fromPortfolio": 20000,
+            "shortfall": 0
+          }
+        ],
+        "superAccessAge": 60,
+        "superRows": [
+          {
+            "yearIndex": 4,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 5,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": true
+          },
+          {
+            "yearIndex": 6,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": true
+          },
+          {
+            "yearIndex": 7,
+            "fromSuper": 20000,
+            "shortfall": 0,
+            "superClosing": 80000,
+            "superAccessible": true
+          },
+          {
+            "yearIndex": 11,
+            "fromSuper": 20000,
+            "shortfall": 0,
+            "superClosing": 0,
+            "superAccessible": true
+          }
+        ],
+        "solvency": {
+          "status": "lasts",
+          "investableClosing": 0
+        }
+      }
+    },
+    {
+      "name": "B2: bridge short, default access at 65",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 66,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 100000,
+          "returnRate": 0
+        }
+      },
+      "arithmetic": [
+        "B1 with 'Super accessible at' left unset, so it defaults to 65. Effective access age 65 (2036)",
+        "Portfolio pays 2028 to 2032 and runs out. 2033, 2034 and 2035 (ages 62 to 64) can't be funded: super $100,000 is locked, so each is a $20,000 shortfall",
+        "Super pays 2036 and 2037 (ages 65 and 66): 80,000, then 60,000"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 6,
+            "portfolioClosing": 0,
+            "fromPortfolio": 20000,
+            "shortfall": 0
+          }
+        ],
+        "superAccessAge": 65,
+        "superRows": [
+          {
+            "yearIndex": 7,
+            "fromSuper": 0,
+            "shortfall": 20000,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 8,
+            "fromSuper": 0,
+            "shortfall": 20000,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 9,
+            "fromSuper": 0,
+            "shortfall": 20000,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 10,
+            "fromSuper": 20000,
+            "shortfall": 0,
+            "superClosing": 80000,
+            "superAccessible": true
+          },
+          {
+            "yearIndex": 11,
+            "fromSuper": 20000,
+            "shortfall": 0,
+            "superClosing": 60000,
+            "superAccessible": true
+          }
+        ],
+        "solvency": {
+          "status": "runsOut",
+          "year": 2033,
+          "age": 62,
+          "shortfallYears": [2033, 2034, 2035],
+          "shortfall": 20000
+        }
+      }
+    },
+    {
+      "name": "B3: retiring after the access age",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "livingExpensesAnnual": 20000,
+        "projectionEndAge": 64,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "cashBalance": null,
+        "interestRate": null,
+        "inflationRate": 0,
+        "currentAge": 55,
+        "targetRetirementAge": 61,
+        "superAccount": {
+          "balance": 100000,
+          "returnRate": 0
+        },
+        "superAccessAge": 60
+      },
+      "arithmetic": [
+        "B1 with retirement at 61 and the plan until 64 (2026 to 2035). Retired years start in 2033 (age 62)",
+        "Access age 60 but retirement at 61: the condition of release needs age > retirement age, so super opens in the first retired year, age 62 (2033), not at 60. No bridge is needed",
+        "Super is locked at 61 (2032) and accessible from 62 (2033)",
+        "Portfolio pays first: 2033 to 2035 leave 80,000, 60,000, 40,000, so super isn't drawn and stays 100,000"
+      ],
+      "expected": {
+        "rows": [
+          {
+            "yearIndex": 7,
+            "portfolioClosing": 80000,
+            "fromPortfolio": 20000,
+            "shortfall": 0
+          },
+          {
+            "yearIndex": 9,
+            "portfolioClosing": 40000,
+            "fromPortfolio": 20000,
+            "shortfall": 0
+          }
+        ],
+        "superAccessAge": 62,
+        "superRows": [
+          {
+            "yearIndex": 5,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 6,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": false
+          },
+          {
+            "yearIndex": 7,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": true
+          },
+          {
+            "yearIndex": 9,
+            "fromSuper": 0,
+            "shortfall": 0,
+            "superClosing": 100000,
+            "superAccessible": true
+          }
+        ],
+        "solvency": {
+          "status": "lasts",
+          "investableClosing": 140000
+        }
+      }
+    }
+  ]
+}

@@ -2,7 +2,6 @@ import { useSearchParams } from "react-router";
 
 import type { ProjectionSummary } from "../../engine/fiNumber";
 import { isShortfallWithSuperLocked, type ProjectionRow } from "../../engine/projection";
-import { DEFAULT_SUPER_ACCESS_AGE } from "../../plan/defaults";
 import { Banner } from "../components/Banner";
 import { ProjectionTable, type ProjectionColumn } from "../components/ProjectionTable";
 import { useMoneyFormatter } from "../dollarsMode";
@@ -86,7 +85,9 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         row.shortfall > 0 ? (
           <span className="projection-shortfall">
             Shortfall −{formatMoney(row.shortfall, row.inflationIndex)}
-            {isShortfallWithSuperLocked(row) && ` · super locked until ${DEFAULT_SUPER_ACCESS_AGE}`}
+            {isShortfallWithSuperLocked(row) &&
+              projection.superAccessAge !== undefined &&
+              ` · super locked until ${projection.superAccessAge}`}
           </span>
         ) : (
           "✓"

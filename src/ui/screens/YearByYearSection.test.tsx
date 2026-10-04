@@ -397,6 +397,33 @@ describe("YearByYearSection", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("4 years can't be funded: 2027 – 2030");
   });
 
+  it("quotes the person's own access age in the locked wording", () => {
+    // S4 again, but super is accessible from 62: only age 61 (2027) is locked.
+    const [person] = exampleB.household.people;
+    renderYearByYear({
+      ...blankPlan,
+      household: {
+        people: [
+          {
+            ...person!,
+            currentAge: 60,
+            targetRetirementAge: 60,
+            superAccessAge: 62,
+            superAccount: { balance: 500000, returnRate: 0 },
+          },
+        ],
+        projectionEndAge: 67,
+      },
+      expenses: { livingAnnual: 20000 },
+      assumptions: { inflationRate: 0 },
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", expectedReturn: 0.07 }],
+    });
+
+    expect(cellFor(2027, "Status")).toBe("Shortfall −$20,000 · super locked until 62");
+    expect(cellFor(2028, "Status")).toBe("✓");
+    expect(cellFor(2028, "Super")).toBe("$480,000");
+  });
+
   it("doesn't say super is locked when there is none", () => {
     renderYearByYear(exampleB);
 

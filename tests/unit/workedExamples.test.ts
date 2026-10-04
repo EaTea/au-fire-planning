@@ -49,6 +49,8 @@ interface WorkedScenario {
     readonly salaryGrowth?: SalaryGrowth | null;
     /** The super account as entered (M5 step 5 onwards); absent means none. */
     readonly superAccount?: SuperAccount | null;
+    /** M6 onwards: the age the person wants super accessible from; absent means left unset (65). */
+    readonly superAccessAge?: number;
   };
   /** M1 figures: present in M1 fixtures only. */
   readonly expected: {
@@ -70,6 +72,8 @@ interface WorkedScenario {
     readonly salaryRows?: readonly { readonly yearIndex: number; readonly salary: number }[];
     /** M5 figures: super (and salary, shortfall, investable) in the listed rows. */
     readonly superRows?: readonly ExpectedSuperRow[];
+    /** M6 figures: the effective super access age (the first age super can be drawn while retired). */
+    readonly superAccessAge?: number;
   };
 }
 
@@ -87,6 +91,8 @@ interface ExpectedSuperRow {
   readonly shortfall?: number;
   readonly superClosing?: number;
   readonly investableClosing?: number;
+  /** M6: whether super can be drawn in that row. */
+  readonly superAccessible?: boolean;
 }
 
 /** The expected Coast FIRE figures. Only the listed fields are checked. */
@@ -194,6 +200,7 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
             growth: inputs.salaryGrowth ?? undefined,
           },
           superAccount: inputs.superAccount ?? undefined,
+          superAccessAge: inputs.superAccessAge,
         },
       ],
       projectionEndAge: inputs.projectionEndAge ?? undefined,
@@ -394,10 +401,20 @@ function checkSuperFigures(summary: CompleteSummary, expected: WorkedScenario["e
   expect(summary.projection.status).toBe("complete");
   if (summary.projection.status !== "complete") return;
 
+  if (expected.superAccessAge !== undefined) {
+    expect(summary.projection.superAccessAge).toBe(expected.superAccessAge);
+  }
+
   for (const expectedRow of expected.superRows) {
     const row = summary.projection.rows[expectedRow.yearIndex];
     expect(row).toBeDefined();
     if (row === undefined) continue;
+
+    if (expectedRow.superAccessible !== undefined) {
+      expect(row.superAccessible, `superAccessible in row ${expectedRow.yearIndex}`).toBe(
+        expectedRow.superAccessible,
+      );
+    }
 
     const checks = [
       ["salary", row.salary, expectedRow.salary],

@@ -7,7 +7,6 @@
 // call it once per candidate retirement age.
 
 import type { Explained } from "./explained";
-import { DEFAULT_SUPER_ACCESS_AGE } from "../plan/defaults";
 import { isShortfallWithSuperLocked, type ProjectionRow } from "./projection";
 import type { ExplanationLine } from "./explained";
 
@@ -36,9 +35,12 @@ export type Solvency =
  * If none, the plan "lasts", explained by cash + portfolio + super at the end age.
  * Otherwise it "runsOut" at the first shortfall year, and lists all of them
  * (the projection carries on after a shortfall, so later years can be flagged
- * too). Called by `summariseProjection` (src/engine/fiNumber.ts).
+ * too). `superAccessAge` is the effective access age (see
+ * `effectiveSuperAccessAge`), used to word the locked-super note; callers
+ * without super can leave it out. Called by `summariseProjection`
+ * (src/engine/fiNumber.ts) and by the earliest-retirement search.
  */
-export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
+export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: number): Solvency {
   const shortfallRows = rows.filter((row) => row.shortfall > 0);
   const firstShortfall = shortfallRows[0];
 
@@ -64,7 +66,10 @@ export function assessSolvency(rows: readonly ProjectionRow[]): Solvency {
     const lockedSuperLines: ExplanationLine[] = isShortfallWithSuperLocked(firstShortfall)
       ? [
           {
-            label: `Super (not accessible until ${DEFAULT_SUPER_ACCESS_AGE})`,
+            label:
+              superAccessAge === undefined
+                ? "Super (not yet accessible)"
+                : `Super (not accessible until ${superAccessAge})`,
             value: firstShortfall.superClosing,
             unit: "dollars",
             source: "calculated",

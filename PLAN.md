@@ -1710,7 +1710,17 @@ pinned.
 
 #### Step 1 · Rules: preservation age and unconditional release
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- Both values are fields of `superannuation` in the file and `SuperannuationRules`
+  (so `RuleSnapshot` and `YearRules` carry them), as whole-year ages (0 to 120 in
+  the schema) named `preservationAgeYears` and `unconditionalReleaseAgeYears`.
+  They are not indexed after the latest file.
+- `fy2025-26.json` is "unverified", with a note saying the original values were
+  checked on 2026-10-03 and only these two are new. The source links are the ATO
+  pages given for this step; the ATO site blocks automated clients, so the owner
+  verifies them before merge.
 
 1. Add `preservationAgeYears: 60` and `unconditionalReleaseAgeYears: 65`
    to the FY2025–26 file and its schema, each with an ATO source link. Set
@@ -1723,7 +1733,27 @@ pinned.
 
 #### Step 2 · Engine: the access age and the condition of release
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- The default of 65 is not a constant any more: `resolvePlanInputs` gives
+  `superAccessAge: Sourced<number | undefined>` (unset is `undefined` with source
+  "rule", like the employer rate), `ProjectionSuper.accessAge` carries it, and the
+  projection clamps it between the preservation age and the release age using the
+  year's rules. `Person.superAccessAge` is added to the plan type only; the
+  reducer, wire and UI are steps 5 and 6.
+- `effectiveSuperAccessAge(inputs, startYear)` takes the start year too, because
+  it reads the rules. It returns `undefined` when the plan has no super.
+  `ProjectionSummary` (complete) gains `superAccessAge?` with that value, so
+  Year by year can word the locked shortfall. Rows with no super account are
+  `superAccessible: false`.
+- `assessSolvency(rows, superAccessAge?)` takes the effective age for its
+  "Super (not accessible until N)" note. `isShortfallWithSuperLocked` now uses
+  the row's `superAccessible`. The earliest-retirement search passes the age for
+  each retirement age it tries.
+- `m6-bridge.json` holds B1 to B3 (rows, shortfalls, effective access age). The
+  worked-example test gained the input `superAccessAge` and the expected
+  `superAccessAge` and `superRows[].superAccessible`.
 
 1. `Person.superAccessAge?`, resolved to the default of 65 and clamped
    between the preservation age and 65, taken from the rules.

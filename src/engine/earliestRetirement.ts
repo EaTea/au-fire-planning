@@ -15,7 +15,7 @@
 // (src/engine/fiNumber.ts).
 
 import type { Explained, ExplanationLine } from "./explained";
-import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { effectiveSuperAccessAge, projectPortfolio, type ProjectionInputs } from "./projection";
 import { assessSolvency, type Solvency } from "./solvency";
 
 /**
@@ -135,7 +135,8 @@ function solvencyWhenRetiringAt(
     startYear,
   );
 
-  return assessSolvency(rows);
+  // The access age depends on when the person retires, so it is worked out for the age being tried.
+  return assessSolvency(rows, effectiveSuperAccessAge({ ...inputs, retirementAge }, startYear));
 }
 
 /**
