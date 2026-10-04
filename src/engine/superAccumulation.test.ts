@@ -214,27 +214,50 @@ describe("drawing on super", () => {
     }
   });
 
-  it("draws from 65, after cash and the portfolio", () => {
+  it("draws from 65, once the portfolio is empty", () => {
     const rows = projectPortfolio(
       { ...lockedSuper, cashOpening: 5_000, portfolioOpening: 10_000 },
       2026,
     );
     const age65 = rows.find((row) => row.age === 65);
 
-    // Cash and portfolio were spent (or not enough) before 65: by 65 they are empty.
+    // The portfolio, then cash, paid what they could before 65, so by 65 both are empty.
     expect(age65?.fromCash).toBe(0);
     expect(age65?.fromPortfolio).toBe(0);
     expect(age65?.fromSuper).toBe(20_000);
     expect(age65?.shortfall).toBe(0);
   });
 
-  it("draws only the part of spending that cash and the portfolio can't fund", () => {
-    const rows = projectPortfolio({ ...lockedSuper, currentAge: 64, cashOpening: 5_000 }, 2026);
+  it("draws the portfolio first, then super, and leaves cash until last (cash drawn last)", () => {
+    const rows = projectPortfolio(
+      { ...lockedSuper, currentAge: 64, cashOpening: 5_000, portfolioOpening: 8_000 },
+      2026,
+    );
 
-    // Age 65: $5,000 from cash, the other $15,000 from super.
-    expect(rows[1]?.fromCash).toBe(5_000);
-    expect(rows[1]?.fromSuper).toBe(15_000);
-    expect(rows[1]?.superClosing).toBe(485_000);
+    // Age 65: $8,000 from the portfolio, the other $12,000 from super, and cash untouched.
+    expect(rows[1]?.fromPortfolio).toBe(8_000);
+    expect(rows[1]?.fromSuper).toBe(12_000);
+    expect(rows[1]?.fromCash).toBe(0);
+    expect(rows[1]?.superClosing).toBe(488_000);
+    expect(rows[1]?.cashClosing).toBe(5_000);
+  });
+
+  it("draws cash only when the portfolio and super can't fund the year", () => {
+    const rows = projectPortfolio(
+      {
+        ...lockedSuper,
+        currentAge: 64,
+        cashOpening: 5_000,
+        superAccount: { ...emptySuper, opening: 16_000 },
+      },
+      2026,
+    );
+
+    // Age 65: all $16,000 of super, then $4,000 of the $5,000 cash.
+    expect(rows[1]?.fromSuper).toBe(16_000);
+    expect(rows[1]?.fromCash).toBe(4_000);
+    expect(rows[1]?.cashClosing).toBe(1_000);
+    expect(rows[1]?.shortfall).toBe(0);
   });
 
   it("counts super in investable net worth", () => {

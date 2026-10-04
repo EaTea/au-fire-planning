@@ -241,14 +241,14 @@ describe("ResultsScreen", () => {
 
       expect(screen.getByText("Money lasts")).toBeInTheDocument();
       expect(screen.getByText("To age 95 ✓")).toBeInTheDocument();
-      expect(screen.getByText("$24,101,430 left in 2087 (nominal dollars)")).toBeInTheDocument();
+      expect(screen.getByText("$23,555,553 left in 2087 (nominal dollars)")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
       await openExplanation(user, "Money lasts");
       expect(explanationRows()).toEqual([
-        "Cash at end of 2087 (age 95)$0",
-        "+ Portfolio$24,101,430",
-        "= Investable net worth$24,101,430",
+        "Cash at end of 2087 (age 95)$218,808",
+        "+ Portfolio$23,336,745",
+        "= Investable net worth$23,555,553",
       ]);
     });
 
@@ -263,7 +263,7 @@ describe("ResultsScreen", () => {
       await openExplanation(user, "Earliest retirement");
       const rows = explanationRows();
       expect(rows).toHaveLength(3);
-      expect(rows[0]).toMatch(/^Retiring at 42: runs short in 2085 \(age 93\)\$/);
+      expect(rows[0]).toMatch(/^Retiring at 42: runs short in 2083 \(age 91\)\$/);
       expect(rows[1]).toMatch(/^Retiring at 43: lasts to age 95\$/);
       expect(rows[2]).toBe("= Earliest feasible retirement age43");
     });
@@ -300,8 +300,8 @@ describe("ResultsScreen", () => {
       await openExplanation(user, "Money lasts");
       expect(explanationRows()).toEqual([
         "Spending to fund in 2031$30,000",
-        "− Cash and portfolio available$23,271",
-        "= Shortfall$6,729",
+        "− Cash and portfolio available$20,661",
+        "= Shortfall$9,339",
       ]);
     });
 
@@ -502,7 +502,7 @@ describe("ResultsScreen", () => {
         },
       });
 
-      expect(within(coastTile()).getByText("$890,925")).toBeInTheDocument();
+      expect(within(coastTile()).getByText("$896,086")).toBeInTheDocument();
 
       await openExplanation(user, "Coast FIRE");
 

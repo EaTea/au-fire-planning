@@ -37,8 +37,12 @@ export const DEFAULT_INTEREST_RATE = 0.04;
 /** Gross salary: $0 a year (IN-7). */
 export const DEFAULT_SALARY_ANNUAL = 0;
 
-/** Salary growth: with inflation (a margin of 0). */
-export const DEFAULT_SALARY_GROWTH: SalaryGrowth = { kind: "inflationPlus", margin: 0 };
+/**
+ * Salary growth: none, so an untouched salary stays at the same dollar amount
+ * every working year. Wages don't reliably keep pace with prices, so a plan
+ * only assumes they do when the user picks "Inflation" (owner's decision).
+ */
+export const DEFAULT_SALARY_GROWTH: SalaryGrowth = { kind: "none" };
 
 /** Super balance: $0. */
 export const DEFAULT_SUPER_BALANCE = 0;

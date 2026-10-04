@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M4, the colour scheme and the one-page Results are done. M5 PR A (rules as data and salary) is merged; PR B (super) is implemented and awaiting the owner's verification.
+**Current status:** M0 to M4, the colour scheme, the one-page Results, M5 PR A, cash drawn last and the salary growth default are done. M5 PR B (super) is implemented and awaiting the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4 and one-page Results done. M5 PR A merged, PR B implemented, awaiting the owner's verification |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M4, one-page Results, M5 PR A, cash drawn last and salary growth default done. M5 PR B awaiting the owner's verification |
 
 ## 1. Requirement ordering
 
@@ -247,6 +247,8 @@ and the [desktop mockups](requirements/mockups/README.md).
 | 2 | **TAX-9** Low income offsets, tax-free threshold | Should | Should, pulled forward |
 | 3 | **TAX-7** Grossing up after-tax expenses | Must | all |
 | 4 | **FIRE-7** FIRE visualisations | Must | rest: chart (c) |
+
+Also in M8 (from the cash drawn last review): while working, after-tax salary pays living expenses, dated expenses and contributions. A surplus is saved to cash; a gap is drawn in the usual order.
 
 ### M9 · Investment income and capital gains
 
@@ -1376,10 +1378,121 @@ Conventions settled while building M4, which later milestones rely on:
   run can test a stale preview build. Restart the preview server after
   pulling or editing before trusting a local failure. CI is unaffected.
 
+### Cash drawn last: step-by-step plan
+
+**Status:** done, merged in PR #30 (plan in PR #27).
+
+**Kind:** behavior change. One PR.
+
+**Why.** The owner noticed that cash, salary, spending and contributions
+don't add up in the projection. Here is how it works today
+(`src/engine/projection.ts`, `src/engine/coastFire.ts`):
+
+- **Cash is only ever drawn on.** It starts at the cash savings entered,
+  earns interest, and nothing is ever paid into it.
+- **Cash pays first.** Each year's spending (retirement spending once
+  retired, plus dated expenses in any year) comes from cash first, then
+  the portfolio. Anything left is a shortfall.
+- **So dated expenses while working come out of cash, not salary.** A
+  $30,000 car while you are still earning empties the cash savings.
+- **Salary feeds nothing yet.** Each row shows it, but it is not used to
+  pay living expenses or dated expenses and doesn't set the contribution.
+  M5 PR B uses it for employer super only.
+- **Contributions are a fixed amount the user enters.** They aren't
+  linked to salary minus spending. With a $120,000 salary, $60,000 of
+  living expenses and a $30,000 contribution, the other $30,000 a year
+  goes nowhere. There is no tax yet (M8), so salary is gross and a
+  surplus can't be worked out honestly.
+- **Coast FIRE** follows the same rule: cash pays the dated expenses
+  before retirement, and only what cash can't pay "spills" to the
+  portfolio.
+
+**What changes.** Cash becomes the last thing drawn on, as a buffer.
+
+- **Drawing order each year:** the portfolio first, then cash. After
+  M5 PR B: the portfolio, then super (from 65), then cash.
+- **Dated expenses** follow the same order in every year, so before
+  retirement they come from the portfolio and the cash is left alone.
+- **Cash still earns interest** and still counts towards investable net
+  worth, progress to FI and FI reached.
+- **Coast FIRE** mirrors it: the portfolio pays the dated expenses, and
+  cash grows untouched at the interest rate. Only a dated expense the
+  portfolio can't pay falls to cash. The "reached at row k" meaning and
+  its property test stay the same.
+- **The text that names the order** changes with it: the Drawdown and
+  Dated expenses hints, the Year by year retired-phase label and the Coast
+  FIRE breakdown.
+
+**What it does to the numbers.** In this model every year earns the same
+return, so a cash buffer can't show its real benefit (not having to sell
+shares after a crash). Cash usually earns less than the portfolio, so
+keeping it longer makes the money run out a little sooner. A sample plan
+(age 35, retire at 45, $200,000 portfolio at 7%, $50,000 cash at 4%,
+$30,000 a year contributed, $60,000 spending, 2.5% inflation, a $30,000
+expense in 2029):
+
+| | Today (cash first) | Cash last |
+| --- | --- | --- |
+| Cash after the 2029 expense | $23,936 | $56,243 |
+| Cash / portfolio at retirement (2036) | $31,499 / $807,924 | $74,012 / $756,046 |
+| Money runs out | 2052, age 61 | 2051, age 60 |
+
+**Considered and not chosen:**
+- **Keep a fixed buffer** (say two years of spending) and draw cash first
+  above it. Closer to how people hold a buffer, but it adds an input.
+  Easy to add later if wanted.
+- **Make salary pay the bills while working** (salary − living expenses −
+  contributions, with the surplus saved to cash). This is the real fix for
+  "salary, spending and contributions don't add up", but it needs
+  after-tax salary, so it belongs in M8 (personal income tax). This plan
+  adds it to M8's scope rather than doing it on gross salary now.
+
+**Owner's decisions:**
+1. After M5, the order is the portfolio, then super (from 65), then cash,
+   so cash really is last.
+2. The salary cash flow is done in M8, on after-tax salary.
+
+#### Step 1 · Engine: cash drawn last
+
+- [x] Done
+
+1. In `projectPortfolio`, draw spending from the portfolio, then cash.
+   Update the diagram and the doc comments for `fromCash` and
+   `fromPortfolio`.
+2. In `coastFire.ts`, the portfolio pays the dated expenses first, and
+   cash only what the portfolio can't. Update the formula comment and the
+   Coast FIRE breakdown's cash line.
+3. Tests:
+   - unit tests for the new order: a retired year paid from the portfolio
+     with cash untouched; a year the portfolio can't cover, with the rest
+     from cash; a dated expense while working leaving cash alone;
+   - a fixture with the sample plan above, to the dollar;
+   - M3 and M4 worked-example fixtures recomputed where cash and the
+     portfolio are both drawn; the changes listed in the PR. Done with an
+     independent script: M3 A and B and M4 C change, the sample is M3 D;
+   - the existing property tests (balances never negative, Coast FIRE's
+     "reached at row k") still pass.
+
+**Check:** `npm run check` passes.
+
+#### Step 2 · Wording and E2E (end of PR)
+
+- [x] Done
+
+1. Change the hints and labels that name the order (Drawdown, Dated
+   expenses, Year by year retired phase).
+2. Update the E2E specs that assert that text, and any figures they check
+   (only figures changed: the 2031 shortfall in example B, done in step 1).
+3. Update M5's design decisions, step 5 and worked examples A and C to
+   the new order, so PR B builds on it.
+
+**Check:** `npm run check` and `npm run test:e2e` pass, and CI is green.
+
 ### M5 · Superannuation: accumulation: step-by-step plan
 
 **Status:** implemented, awaiting the owner's verification of PR B. PR A
-(steps 1 to 4) is merged in PR #26. PR B (steps 5 to 10) is done.
+(steps 1 to 4) is merged in PR #26. PR B (steps 5 to 10) is done, and
+rebuilt on cash drawn last (see "Merged with cash drawn last" below).
 
 **Kind:** behavior change.
 - PR A's first step adds the rules-as-data foundation (NFR-3), which
@@ -1454,8 +1567,9 @@ files, not in code.
   - progress to FI, FI reached, Coast FIRE, the earliest retirement age
     and the charts all count super;
   - the breakdowns show it as its own line.
-- Super is drawn only from age 65, after cash and the portfolio. Years
-  before that which only super could fund are flagged as shortfalls.
+- Super is drawn only from age 65, after the portfolio and before cash
+  (cash is drawn last). Years before that which only super could fund
+  are flagged as shortfalls.
 - With the worked examples below, the figures match to the cent.
 - Plans saved by M1 to M4 still load.
 - `npm run check` and `npm run test:e2e` pass, and CI is green.
@@ -1527,7 +1641,8 @@ files, not in code.
 - **Fields:** the gross (pre-tax) salary per year (default $0), and how it
   grows.
   - **Growth options:** "Inflation", "Inflation + …%", "Inflation − …%",
-    "Fixed …%" or "No growth". The default is "Inflation".
+    "Fixed …%" or "No growth". The default is "No growth" (changed from
+    "Inflation" after PR A; see the salary growth default plan below).
   - **Internal type:**
     `SalaryGrowth = { kind: "inflationPlus"; margin } | { kind: "fixed"; rate } | { kind: "none" }`.
     "Inflation" is `inflationPlus` with a margin of 0.
@@ -1599,9 +1714,9 @@ so it errs on the conservative side.
 - This follows the "each asset grows its own way" principle.
 
 **Drawing on super.** In M5, super is drawn only from **age 65** (IN-5's
-default access age), and only after cash and the portfolio. The order
-each year is cash, then the portfolio, then super if the person is 65 or
-over.
+default access age), and only after the portfolio. The order each year
+is the portfolio, then super if the person is 65 or over, then cash (see
+"Cash drawn last").
 - **Before 65,** a year that only super could fund is a shortfall, and the
   shortfall banner explains why.
 - **M6** makes the access age an input, and adds the bridge check that
@@ -1698,6 +1813,11 @@ non-concessional in 2028 only.
 - **From 2031 (age 65):** spending is drawn from super, which ends 2031
   to 2033 at $480,000, $460,000 and $440,000.
 
+Examples A and C were worked out with cash drawn first. Their FI reached
+and Coast FIRE figures don't depend on the order (nothing is drawn before
+retirement and there are no dated expenses), but "money lasts" and the
+earliest retirement age must be recomputed in step 5 with the new order.
+
 **A: headline.** M4's example A, plus:
 - super of $185,000 at 7% net of fees;
 - a salary of $145,000 growing at inflation + 1%;
@@ -1719,7 +1839,7 @@ Results:
   $467,262.87), **already reached**.
 
 **C: Coast FIRE later.** A, with a $300,000 portfolio, a $120,000 salary
-growing at inflation, and $100,000 of super. Salary sacrifice is still
+growing at inflation (set explicitly, since the default is no growth), and $100,000 of super. Salary sacrifice is still
 $10,000 from 2027 to 2042.
 - **Row 1 (2027):** salary $123,000.00, employer $14,760.00, contributions
   tax $3,714.00, super $126,996.00, investable $498,796.00.
@@ -1919,7 +2039,7 @@ No new dependencies.
    defaults above. Resolve it, with the employer rate's source as `"rule"`
    when it's left to the law.
 2. In `projectPortfolio`, apply the "super each year" rules and the
-   drawing order (cash, portfolio, then super from 65). `ProjectionRow`
+   drawing order (portfolio, super from 65, then cash). `ProjectionRow`
    gains:
    - `employerContribution`, `salarySacrifice`, `nonConcessional`;
    - `superEarnings`, `superEarningsTax`, `contributionsTax`;
@@ -2220,6 +2340,30 @@ No new dependencies.
   amount. The sacrifice from and to years aren't stored in example A, because
   2027 and 2042 are the defaults (first year, retirement year).
 
+#### Merged with cash drawn last and the salary growth default
+
+PR B was written before cash drawn last (PR #30) and the salary growth
+default (PR #29) merged. Merging `main` into it changed:
+- **Drawing order:** the portfolio, then super (from 65), then cash, as
+  the owner decided. `projectPortfolio` and the row docs say so.
+- **Coast FIRE:** main's cash-last solver (a closed form in the usual case,
+  bisection otherwise) is the base. superLeft(k) is added as one more
+  amount that grows untouched on the coast path. PR B's exact "reached"
+  test is unchanged.
+- **A gap the merge exposed:** the coast path now also requires every dated
+  expense on the way to be paid. Cash alone could never beat the FI number
+  without also covering an expense, but super can: with $0 cash and super
+  above the FI number, an expense would otherwise have gone silently
+  unpaid. PR B's unit test for that case caught it.
+- **Worked examples A and C:** recomputed with the new order by the
+  independent script. FI reached, money lasts, the earliest retirement age
+  and Coast FIRE (number and year) are unchanged, because neither has
+  dated expenses, so nothing is drawn before retirement. Only the balances
+  at the end of the plan move. Example A ends at $39,397,746.98 instead
+  of $39,943,624.45.
+- **Salary growth:** it defaults to no growth. Example C sets "Inflation"
+  explicitly; S1 to S3 use 0% inflation, so they are unaffected.
+
 #### Follow-ups
 
 - **Remember the today's/nominal choice** in `meta` between visits (from
@@ -2236,6 +2380,73 @@ No new dependencies.
   - flush unsaved edits when the tab closes;
   - write back migrated records once the first migration exists;
   - two tabs on an empty database (M16).
+
+### Salary growth defaults to "No growth": step-by-step plan
+
+**Kind:** behavior change. **Status:** done, merged in PR #29 (plan in PR
+#28).
+
+**Why.** The owner isn't convinced salaries keep pace with inflation, so a
+plan shouldn't assume they do unless the user says so. Salary growth is
+already configurable per person (the "Grows at" dropdown from M5 PR A);
+only the default changes. The owner chose "No growth" as the new default.
+
+**What changes for the user:**
+- A new salary, with "Grows at" left alone, stays at the same dollar
+  amount every working year. "No growth" is shown as the default choice
+  (the grey "default" style), and "Inflation" moves to an ordinary choice.
+- In today's dollars (the default display), a flat salary shrinks a little
+  each year, because prices rise and the salary doesn't. That is the point
+  of the change, not a bug.
+- Employer super (M5 PR B) follows the salary, so untouched plans will show
+  less super than under the old default.
+
+**What doesn't change:** the growth options, the internal type
+(`SalaryGrowth`), the wire format, the projection maths
+(`salaryGrowthRate`), and every plan where the user picked an option.
+
+**Saved plans.** An untouched dropdown is stored as "not set", so a plan
+saved before this change that left salary growth at its default will switch
+from inflation to no growth when it next loads. No migration is planned:
+salary shipped only in M5 PR A, the app has one user, and the dropdown makes
+the old behaviour one click away. The alternative, a schema version 2
+migration that writes "Inflation" into every saved salary without a growth,
+is rejected unless the owner wants existing plans kept as they were.
+
+**Requirements wording.** IN-11 currently says inflation applies to "salary
+growth (unless overridden)". It becomes "salary growth (when the user
+chooses it)". IN-7 gains "default: no growth". The M5 design decision above
+("The default is 'Inflation'") is updated to match.
+
+#### Step 1 · Default to no growth (one PR)
+
+1. `src/plan/defaults.ts`: `DEFAULT_SALARY_GROWTH = { kind: "none" }`,
+   with its comment saying why.
+2. `GrowthRateField` already handles any default: choosing the default's
+   own option ("No growth") clears the value to "not set", and choosing
+   "Inflation" stores a margin of 0. No change expected; its tests gain a
+   case with "No growth" as the default if one is missing.
+3. `SalarySection` passes the new default unchanged. Update its tests:
+   - "starts empty, with growth showing the default (no growth)";
+   - "goes back to the default growth by choosing No growth";
+   - choosing "Inflation" stores `{ kind: "inflationPlus", margin: 0 }`.
+4. `resolvePlanInputs` tests: the defaulted salary growth is
+   `{ kind: "none" }` with source "default".
+5. E2E (`tests/e2e/salary.spec.ts`): add a flow where a salary is entered
+   without touching "Grows at", and Year by year (nominal dollars) shows
+   the same salary in every working row.
+6. Worked examples: any example that relies on the default salary growth
+   sets its growth explicitly instead, so the examples don't depend on
+   defaults. M5 PR B's example C ("a $120,000 salary growing at
+   inflation") must set `salaryGrowth` to inflation explicitly.
+7. Requirements and plan text: IN-7 and IN-11 as above, the M5 salary
+   design decision, and this section marked done.
+
+**Checks:** `npm run check` and the E2E
+suite all pass.
+
+**Merge point:** after step 1. It is small and independent of M5 PR B, so
+it can merge before or after it.
 
 ## Next steps
 
@@ -2272,6 +2483,14 @@ No new dependencies.
 - [x] Implement M5 PR A, rules as data and salary (steps 1 to 4), then open
       it for verification.
 - [x] Owner verifies and merges M5 PR A.
+- [x] Approve the cash drawn last plan.
+- [x] Implement cash drawn last (steps 1 and 2), then open it for
+      verification.
+- [x] Owner verifies and merges the cash drawn last PR.
+- [x] Approve the salary growth default plan.
+- [x] Implement the salary growth default (step 1), then open it for
+      verification.
+- [x] Owner verifies and merges the salary growth default PR.
 - [x] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.
 - [ ] Owner verifies and merges M5 PR B.

@@ -42,18 +42,32 @@ describe("calculateCoastFire", () => {
     expect(coast.path.map((point) => point.portfolioNeeded)).toEqual([900, 900, 900]);
   });
 
-  // A $150 expense in 2027 uses the $100 of cash and spills $50 to the portfolio.
-  it("adds the part of a dated expense that cash can't pay", () => {
+  // A $150 expense in 2027 is paid from the portfolio, so the portfolio needs $150 more.
+  it("adds a dated expense the portfolio pays before retirement", () => {
     const coast = coastFor({
       ...flatInputs,
       datedExpenses: [{ annual: 150, fromYear: 2027, toYear: 2027 }],
     });
 
-    // (FI $1,000 − cash left $0 + spill $50) ÷ 1, plus $100 cash today.
+    // (FI $1,000 − cash left $100 + expense $150) ÷ 1 = $1,050, plus $100 cash today.
     expect(coast.number.value).toBe(1150);
     // Once the expense has been paid (row 1) it no longer raises the number.
     expect(coast.path[1]?.coastNumber).toBe(1000);
     expect(coast.path[2]?.coastNumber).toBe(1000);
+  });
+
+  // Cash alone ($2,000) beats the FI number, but a $1,500 expense would drain a
+  // small portfolio and dip into cash. With $500 in the portfolio, it pays $500
+  // and cash pays $1,000, leaving exactly $1,000: the smallest portfolio that works.
+  it("finds the portfolio needed when the expense would also draw on cash", () => {
+    const coast = coastFor({
+      ...flatInputs,
+      cashOpening: 2000,
+      datedExpenses: [{ annual: 1500, fromYear: 2027, toYear: 2027 }],
+    });
+
+    expect(coast.path[0]?.portfolioNeeded).toBeCloseTo(500, 6);
+    expect(coast.number.value).toBeCloseTo(2500, 6);
   });
 
   // The explanation line appears only when there is a dated expense to explain.
@@ -66,7 +80,7 @@ describe("calculateCoastFire", () => {
 
     expect(without.some((label) => label.startsWith("Dated expenses"))).toBe(false);
     expect(withExpense.some((label) => label.startsWith("Dated expenses"))).toBe(true);
-    expect(withExpense[1]).toContain("after paying the dated expenses it can");
+    expect(withExpense[1]).toContain("after paying what the portfolio can't");
   });
 
   // After retirement, dated expenses are part of "does the money last", not of coasting.

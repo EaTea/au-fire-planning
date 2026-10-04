@@ -270,7 +270,7 @@ describe("YearByYearSection", () => {
 
     expect(bandRows.map((row) => row.textContent)).toEqual([
       "Working · contributing",
-      "Retired · spending drawn from cash, then the portfolio",
+      "Retired · spending drawn from the portfolio, then cash",
     ]);
 
     // The working band comes first (after the header), and the retired band sits before the 2043 row (age 51).
@@ -290,37 +290,37 @@ describe("YearByYearSection", () => {
       "Into super": "$0",
       "Growth & interest": "$10,500",
       Spending: "$30,000",
-      Cash: "$0",
-      Portfolio: "$90,500",
+      Cash: "$10,500",
+      Portfolio: "$80,000",
       Super: "$0",
       Investable: "$90,500",
       "FI number": "$750,000",
       Status: "✓",
     });
-    expect(cellFor(2028, "Growth & interest")).toBe("$9,050");
+    expect(cellFor(2028, "Growth & interest")).toBe("$8,525");
     expect(cellFor(2028, "Spending")).toBe("$30,000");
-    expect(cellFor(2028, "Cash")).toBe("$0");
-    expect(cellFor(2028, "Portfolio")).toBe("$69,550");
-    expect(cellFor(2029, "Portfolio")).toBe("$46,505");
-    expect(cellFor(2030, "Portfolio")).toBe("$21,156");
+    expect(cellFor(2028, "Cash")).toBe("$11,025");
+    expect(cellFor(2028, "Portfolio")).toBe("$58,000");
+    expect(cellFor(2029, "Portfolio")).toBe("$33,800");
+    expect(cellFor(2030, "Portfolio")).toBe("$7,180");
 
-    // 2031: $23,271 available against $30,000 spending, so $6,729 is unfunded and everything ends at $0.
+    // 2031: the portfolio's $7,898 and cash's $12,763 against $30,000 spending (cash drawn last), so $9,339 is unfunded and everything ends at $0.
     expect(rowRecord(2031)).toEqual({
       Year: "2031",
       Age: "65",
       Salary: "—",
       "Into portfolio": "$0",
       "Into super": "$0",
-      "Growth & interest": "$2,116",
+      "Growth & interest": "$1,326",
       Spending: "$30,000",
       Cash: "$0",
       Portfolio: "$0",
       Super: "$0",
       Investable: "$0",
       "FI number": "$750,000",
-      Status: "Shortfall −$6,729",
+      Status: "Shortfall −$9,339",
     });
-    expect(screen.getByText("Shortfall −$6,729")).toHaveClass("projection-shortfall");
+    expect(screen.getByText("Shortfall −$9,339")).toHaveClass("projection-shortfall");
     expect(screen.getAllByText("Shortfall", { exact: false })).toHaveLength(1);
   });
 

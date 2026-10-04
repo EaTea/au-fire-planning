@@ -8,11 +8,11 @@ import { SalarySection } from "./SalarySection";
 // Component tests for the Salary card: the person's salary and growth go into
 // the plan, and clearing them removes them.
 describe("SalarySection", () => {
-  it("starts empty, with growth showing the default (inflation)", () => {
+  it("starts empty, with growth showing the default (no growth)", () => {
     renderSection(<SalarySection />);
 
     expect(screen.getByLabelText("Gross salary per year")).toHaveValue("");
-    expect(screen.getByLabelText("Grows at")).toHaveValue("inflation");
+    expect(screen.getByLabelText("Grows at")).toHaveValue("none");
     expect(screen.queryByLabelText("Above inflation by")).not.toBeInTheDocument();
   });
 
@@ -41,7 +41,19 @@ describe("SalarySection", () => {
     });
   });
 
-  it("goes back to the default growth by choosing Inflation", async () => {
+  it("stores plain inflation (a margin of 0) when Inflation is chosen", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<SalarySection />);
+
+    await user.selectOptions(screen.getByLabelText("Grows at"), "inflation");
+
+    expect(readPlan().household.people[0]?.salary?.growth).toEqual({
+      kind: "inflationPlus",
+      margin: 0,
+    });
+  });
+
+  it("goes back to the default growth by choosing No growth", async () => {
     const user = userEvent.setup();
     const { readPlan } = renderSection(<SalarySection />, {
       ...blankPlan,
@@ -56,7 +68,7 @@ describe("SalarySection", () => {
       },
     });
 
-    await user.selectOptions(screen.getByLabelText("Grows at"), "inflation");
+    await user.selectOptions(screen.getByLabelText("Grows at"), "none");
 
     expect(readPlan().household.people[0]?.salary).toEqual({ annual: 1000 });
   });

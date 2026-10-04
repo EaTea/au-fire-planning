@@ -122,7 +122,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
 /** The heading of each phase's band row in the table. */
 const phaseBandText: Record<ProjectionRow["phase"], string> = {
   working: "Working · contributing",
-  retired: "Retired · spending drawn from cash, then the portfolio",
+  retired: "Retired · spending drawn from the portfolio, then cash",
 };
 
 /**

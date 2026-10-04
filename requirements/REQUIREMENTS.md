@@ -69,7 +69,7 @@ entered.
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| IN-7 | For each person, the user can enter their current gross (pre-tax) salary and an expected annual growth rate. | Must |
+| IN-7 | For each person, the user can enter their current gross (pre-tax) salary and an expected annual growth rate (default: no growth). | Must |
 | IN-8 | The user can add one-off or time-limited income, such as an inheritance, bonus or part-time work, with a start and end year and the person it belongs to. | Should |
 | IN-9 | For each person, the user can model part-time or reduced income after "retirement" (e.g. Barista FIRE). | Could |
 
@@ -97,7 +97,7 @@ app works out the pre-tax income or withdrawals needed to fund them.
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | IN-10 | The user can set **drawdown rates**: the safe withdrawal rate used to size the FI number, and the rate used to withdraw from the portfolio in retirement. The drawdown is a constant, inflation-adjusted withdrawal (dynamic strategies are in the backlog, BL-1). | Must |
-| IN-11 | The user can set an **inflation rate**. It applies to expenses (EXP-3), salary growth (unless overridden) and the display of today's-dollar values. | Must |
+| IN-11 | The user can set an **inflation rate**. It applies to expenses (EXP-3), salary growth (when the user chooses it) and the display of today's-dollar values. | Must |
 | IN-12 | The user can set a general **interest rate**. Cash and offset account balances earn it, and variable-rate loans can be set to move with it (PROP-6). | Must |
 | IN-13 | The user can override any assumption for a specific future period, e.g. higher inflation or higher interest rates for the next three years. | Could |
 

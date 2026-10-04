@@ -2,28 +2,35 @@
 // no further contributions, you would still reach your FI number by your
 // target retirement age; and the first year your actual savings get there.
 //
-// Why only the portfolio needs solving. Coasting means you stop the
-// contributions you choose to make: the portfolio's, salary sacrifice and
-// non-concessional. Dated expenses are paid from cash first (see
-// projection.ts), so cash follows the same path whether or not you keep
-// contributing. Super also follows its own path: your employer keeps paying
-// while you work, so it grows with employer contributions only. Only the
-// portfolio's part is left to solve, and it has a closed form. Looking forward
-// from row k to the retirement row n (m = n − k years):
+// What has to be solved. Coasting means you stop the contributions you
+// choose to make: the portfolio's, salary sacrifice and non-concessional.
+// Your employer keeps paying while you work, so super grows to superLeft(k)
+// at the retirement row with employer contributions only; that path comes
+// from `projectPortfolio` with voluntary contributions switched off after
+// row k. Each year's dated expenses are paid from the portfolio first, then
+// super (from 65) and cash last (see projection.ts). Looking forward from
+// row k to the retirement row n (m = n − k years), only the portfolio's
+// starting amount P is ours to choose. portfolioNeeded(k) is the smallest P
+// that still reaches the FI number at row n:
 //
-//   cash:       cash(k) grows at the interest rate and pays dated expenses
-//               first. At row n it has cashLeft(k) left. A dated expense the
-//               cash can't pay in full "spills" to the portfolio: spill(j).
+//   coast path from row k, starting with portfolio P and cash(k):
+//     each row j: portfolio grows at r, cash at the interest rate g;
+//                 the portfolio pays row j's dated expenses, cash pays what
+//                 the portfolio can't (super is left untouched here)
+//     at row n:   portfolioLeft(P) + cashLeft(P) + superLeft(k)
+//                 must be ≥ the FI number at row n, and every dated expense
+//                 on the way must have been paid
 //
-//   super:      super(k) grows to superLeft(k) at row n with employer
-//               contributions only. That path comes from `projectPortfolio`
-//               with voluntary contributions switched off after row k (and
-//               without dated expenses, because the portfolio is assumed to
-//               pay any spill, so super is never drawn on before retirement).
+// In the usual case the portfolio pays every dated expense, cash is never
+// touched and grows to cash(k) × (1+g)^m, and P has a closed form:
 //
-//                  FI number at row n − cashLeft(k) − superLeft(k) + Σ spill(j) × (1+r)^(n−j)
+//                  FI number − cash(k) × (1+g)^m − superLeft(k) + Σ dated(j) × (1+r)^(n−j)
 //   portfolioNeeded(k) = ─────────────────────────────────────────────────────────────────  (at least 0)
-//                                        (1+r)^m
+//                                               (1+r)^m
+//
+// When cash and super alone would beat the FI number but the dated expenses
+// would empty a smaller portfolio and dip into cash, the closed form doesn't
+// apply, and P is found by bisection on the coast path (it only grows with P).
 //
 //   coast(k) = cash(k) + super(k) + portfolioNeeded(k)   (nominal, in year k's dollars)
 //
@@ -208,7 +215,7 @@ function inputsWithVoluntaryContributionsStoppedAfter(
  * superLeft(k): super at the retirement row if voluntary contributions stop
  * after row `fromIndex` and employer contributions carry on. Taken from
  * `projectPortfolio` with no dated expenses, since the Coast FIRE formula has
- * the portfolio pay any spill, leaving super untouched before retirement.
+ * the portfolio (then cash) pay them, leaving super untouched before retirement.
  * 0 when there is no super account. Called by `calculateCoastFire` per row.
  */
 function superAtRetirementWhenCoastingFrom(
@@ -237,34 +244,44 @@ interface PortfolioNeed {
   readonly portfolioNeeded: number;
   /** The FI number at the retirement row. */
   readonly fiNumberAtRetirement: number;
-  /** Cash left at the retirement row after paying the dated expenses it can. */
+  /** Cash left at the retirement row on the coast path, after paying what the portfolio couldn't. */
   readonly cashLeftAtRetirement: number;
-  /** Super at the retirement row with employer contributions only. */
+  /** Super at the retirement row with employer contributions only, untouched by dated expenses. */
   readonly superLeftAtRetirement: number;
-  /** Dated expenses the cash couldn't pay, each grown to the retirement row at the portfolio return, summed. */
-  readonly spillsGrownToRetirement: number;
+  /** Dated expenses the portfolio pays on the coast path, each grown to the retirement row at the portfolio return, summed. */
+  readonly portfolioPaymentsGrownToRetirement: number;
   /** (1+r)^(years from that row to retirement). */
   readonly portfolioGrowthFactor: number;
   /** Whether any dated expense falls between that row and retirement. */
   readonly hasDatedExpenses: boolean;
-  /**
-   * True when the portfolio needed is set by paying the dated expenses cash
-   * can't, rather than by the FI number (only possible when cash and super
-   * already cover the FI number on their own).
-   */
-  readonly limitedBySpills: boolean;
 }
+
+/** Where the coast path from one row ends up at the retirement row, for one starting portfolio. */
+interface CoastPathEnd {
+  readonly portfolioLeft: number;
+  readonly cashLeft: number;
+  /** Dated expenses the portfolio paid, each grown to the retirement row at the portfolio return, summed. */
+  readonly portfolioPaymentsGrownToRetirement: number;
+  /**
+   * Dated expenses neither the portfolio nor cash could pay. Super is left
+   * untouched on the coast path, so with little cash this can be above 0 even
+   * when cash and super cover the FI number; such a path doesn't count.
+   */
+  readonly unpaid: number;
+}
+
+/** Bisection steps when the closed form doesn't apply: enough to reach floating-point precision. */
+const BISECTION_STEPS = 200;
 
 /**
  * Applies the formula in the header: portfolioNeeded(k) for the row at
  * `fromIndex`, looking forward to the last row of `workingRows` (the
- * retirement row).
+ * retirement row). Called by `calculateCoastFire` for every row of the path.
  *
- * Cash grows at the interest rate and pays each later row's dated expenses
- * first. Before retirement a row's `spending` is only dated expenses
- * (retirement spending starts the year after), so it is read straight off the
- * projection rows instead of being recomputed. Whatever the cash can't pay
- * spills to the portfolio and is grown to the retirement row.
+ * Before retirement a row's `spending` is only dated expenses (retirement
+ * spending starts the year after), so they are read straight off the
+ * projection rows instead of being recomputed. `superLeftAtRetirement` is
+ * superLeft(k), from `superAtRetirementWhenCoastingFrom`.
  */
 function portfolioNeededFromRow(
   workingRows: readonly ProjectionRow[],
@@ -282,56 +299,122 @@ function portfolioNeededFromRow(
       fiNumberAtRetirement: 0,
       cashLeftAtRetirement: 0,
       superLeftAtRetirement: 0,
-      spillsGrownToRetirement: 0,
+      portfolioPaymentsGrownToRetirement: 0,
       portfolioGrowthFactor: 1,
       hasDatedExpenses: false,
-      limitedBySpills: false,
     };
   }
 
-  let cash = fromRow.cashClosing;
-  let spillsGrownToRetirement = 0;
-  let hasDatedExpenses = false;
-  let spillsDiscountedToFromRow = 0;
+  const datedSpendingByRow = workingRows
+    .slice(fromIndex + 1)
+    .map((row) => ({ rowIndex: row.yearIndex, datedSpending: row.spending }));
+  const hasDatedExpenses = datedSpendingByRow.some((row) => row.datedSpending > 0);
 
-  for (let rowIndex = fromIndex + 1; rowIndex <= retirementRowIndex; rowIndex++) {
-    const datedSpending = workingRows[rowIndex]?.spending ?? 0;
-    const cashAvailable = cash * (1 + inputs.interestRate);
-    const paidFromCash = Math.min(datedSpending, cashAvailable);
-    const spill = datedSpending - paidFromCash;
+  const fiNumber = retirementRow.fiNumber;
+  const portfolioGrowthFactor = Math.pow(1 + inputs.expectedReturn, retirementRowIndex - fromIndex);
+  const cashGrownUntouched =
+    fromRow.cashClosing * Math.pow(1 + inputs.interestRate, retirementRowIndex - fromIndex);
+  const allDatedSpendingGrown = datedSpendingByRow.reduce(
+    (total, row) =>
+      total +
+      row.datedSpending * Math.pow(1 + inputs.expectedReturn, retirementRowIndex - row.rowIndex),
+    0,
+  );
 
-    if (datedSpending > 0) hasDatedExpenses = true;
+  const endsWith = (startingPortfolio: number): CoastPathEnd =>
+    followCoastPath(
+      startingPortfolio,
+      fromRow.cashClosing,
+      datedSpendingByRow,
+      retirementRowIndex,
+      inputs,
+    );
+  // A path only counts if it also pays every dated expense on the way. A
+  // fully paid expense nets to exactly 0 unpaid, so no tolerance is needed.
+  const reachesFi = (end: CoastPathEnd) =>
+    end.unpaid <= 0 && end.portfolioLeft + end.cashLeft + superLeftAtRetirement >= fiNumber;
 
-    // A spill in row j is paid by the portfolio, so it must be covered by
-    // that much more at row k, grown at the portfolio's own return.
-    spillsGrownToRetirement +=
-      spill * Math.pow(1 + inputs.expectedReturn, retirementRowIndex - rowIndex);
-    spillsDiscountedToFromRow += spill / Math.pow(1 + inputs.expectedReturn, rowIndex - fromIndex);
-    cash = cashAvailable - paidFromCash;
+  let portfolioNeeded: number;
+
+  if (reachesFi(endsWith(0))) {
+    // Cash and super alone (cash paying any dated expenses) get there.
+    portfolioNeeded = 0;
+  } else if (fiNumber - superLeftAtRetirement >= cashGrownUntouched) {
+    // The usual case: the closed form in the header. The portfolio left at
+    // retirement is FI − untouched cash − super ≥ 0, so it never ran dry on
+    // the way and the cash was never touched.
+    portfolioNeeded =
+      (fiNumber - cashGrownUntouched - superLeftAtRetirement + allDatedSpendingGrown) /
+      portfolioGrowthFactor;
+  } else {
+    // Untouched cash and super would beat the FI number, but the dated
+    // expenses would drain the cash. The answer lies between 0 (not enough) and the amount that
+    // pays every expense and reaches the FI number on its own.
+    let tooLittle = 0;
+    let enough = (fiNumber + allDatedSpendingGrown) / portfolioGrowthFactor;
+
+    for (let step = 0; step < BISECTION_STEPS; step++) {
+      const middle = (tooLittle + enough) / 2;
+      if (reachesFi(endsWith(middle))) {
+        enough = middle;
+      } else {
+        tooLittle = middle;
+      }
+    }
+
+    portfolioNeeded = enough;
   }
 
-  const portfolioGrowthFactor = Math.pow(1 + inputs.expectedReturn, retirementRowIndex - fromIndex);
-  const neededForFiNumber =
-    (retirementRow.fiNumber - cash - superLeftAtRetirement + spillsGrownToRetirement) /
-    portfolioGrowthFactor;
-
-  // The portfolio can't go below $0 on the way. When cash and super alone
-  // already cover the FI number, the end-of-path sum can be small or negative
-  // while the portfolio still has to be there to pay each spill when it falls
-  // due. Super can't pay it (the formula keeps super untouched), so the
-  // portfolio needed is never less than the spills discounted back to row k.
-  const needed = Math.max(neededForFiNumber, spillsDiscountedToFromRow);
+  const end = endsWith(portfolioNeeded);
 
   return {
-    portfolioNeeded: Math.max(0, needed),
-    fiNumberAtRetirement: retirementRow.fiNumber,
-    cashLeftAtRetirement: cash,
+    portfolioNeeded,
+    fiNumberAtRetirement: fiNumber,
+    cashLeftAtRetirement: end.cashLeft,
     superLeftAtRetirement,
-    spillsGrownToRetirement,
+    portfolioPaymentsGrownToRetirement: end.portfolioPaymentsGrownToRetirement,
     portfolioGrowthFactor,
     hasDatedExpenses,
-    limitedBySpills: spillsDiscountedToFromRow > neededForFiNumber && needed > 0,
   };
+}
+
+/**
+ * Runs the coast path forward from one row with a given starting portfolio
+ * and no contributions: each row grows the portfolio and cash, then pays the
+ * dated expenses from the portfolio first and cash last, as `projectPortfolio`
+ * does. Called by `portfolioNeededFromRow`, for the answer and while
+ * bisecting.
+ */
+function followCoastPath(
+  startingPortfolio: number,
+  startingCash: number,
+  datedSpendingByRow: readonly { rowIndex: number; datedSpending: number }[],
+  retirementRowIndex: number,
+  inputs: ProjectionInputs,
+): CoastPathEnd {
+  let portfolio = startingPortfolio;
+  let cash = startingCash;
+  let portfolioPaymentsGrownToRetirement = 0;
+  let unpaid = 0;
+
+  for (const { rowIndex, datedSpending } of datedSpendingByRow) {
+    portfolio *= 1 + inputs.expectedReturn;
+    cash *= 1 + inputs.interestRate;
+
+    const fromPortfolio = Math.min(datedSpending, portfolio);
+    const fromCash = Math.min(datedSpending - fromPortfolio, cash);
+
+    portfolio -= fromPortfolio;
+    cash -= fromCash;
+    unpaid += datedSpending - fromPortfolio - fromCash;
+
+    // A payment in row j would otherwise have kept growing at the portfolio's
+    // return to the retirement row, so that is what it costs the portfolio.
+    portfolioPaymentsGrownToRetirement +=
+      fromPortfolio * Math.pow(1 + inputs.expectedReturn, retirementRowIndex - rowIndex);
+  }
+
+  return { portfolioLeft: portfolio, cashLeft: cash, portfolioPaymentsGrownToRetirement, unpaid };
 }
 
 /**
@@ -360,7 +443,7 @@ function explainCoastNumber(
     },
     {
       label: need.hasDatedExpenses
-        ? `${cashLabel}, after paying the dated expenses it can`
+        ? `${cashLabel}, after paying what the portfolio can't`
         : cashLabel,
       value: need.cashLeftAtRetirement,
       unit: "dollars",
@@ -385,7 +468,7 @@ function explainCoastNumber(
   if (need.hasDatedExpenses) {
     lines.push({
       label: `Dated expenses the portfolio would pay, grown to ${retirementRow.calendarYear}`,
-      value: need.spillsGrownToRetirement,
+      value: need.portfolioPaymentsGrownToRetirement,
       unit: "dollars",
       operator: "+",
       source: "calculated",
@@ -401,9 +484,7 @@ function explainCoastNumber(
       source: "calculated",
     },
     {
-      label: need.limitedBySpills
-        ? "Portfolio needed today, to pay the dated expenses your cash can't"
-        : "Portfolio needed today",
+      label: "Portfolio needed today",
       value: need.portfolioNeeded,
       unit: "dollars",
       operator: "=",
@@ -458,7 +539,8 @@ interface StopTest {
  *
  * This test, not the closed-form number, decides "reached", because the
  * formula assumes the portfolio pays every dated expense while the projection
- * draws super for one from age 65. They agree except in that edge case.
+ * draws super for one from age 65, before cash. They agree except in that
+ * edge case.
  */
 function testStoppingAfterRow(
   workingRows: readonly ProjectionRow[],

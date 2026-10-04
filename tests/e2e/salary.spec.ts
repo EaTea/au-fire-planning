@@ -2,11 +2,13 @@ import type { Page } from "@playwright/test";
 
 import { expect, startFresh, test, yearCell } from "./fixtures";
 
-// End-to-end test for IN-7 (salary): enter a salary that grows at "Inflation +
-// 1%" on Income & expenses, check Year by year shows the grown salary while
-// working and "—" after retirement, in both dollar modes, and that it survives
-// a reload. Uses M5's worked example A (tests/worked-examples/m5-super.json):
-// $145,000 at 3.5% a year is $150,075 in 2027 and $251,428 in 2042. The clock
+// End-to-end tests for IN-7 (salary). The first enters a salary that grows at
+// "Inflation + 1%" on Income & expenses, checks Year by year shows the grown
+// salary while working and "—" after retirement, in both dollar modes, and that
+// it survives a reload. It uses M5's worked example A
+// (tests/worked-examples/m5-super.json): $145,000 at 3.5% a year is $150,075
+// in 2027 and $251,428 in 2042. The second checks that a salary left at the
+// default growth (no growth) stays flat. The clock
 // is fixed in 2026 so the calendar years don't depend on the real date.
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
@@ -86,4 +88,22 @@ test("a salary growing at inflation + 1% shows year by year until retirement, an
   await page.goto("#/results?view=year-by-year");
   await page.getByRole("button", { name: "Nominal" }).click();
   await expectSalaries(page, { 2027: "$150,075", 2042: "$251,428", 2043: "—" });
+});
+
+test("a salary left at the default growth stays flat until retirement", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+
+  await startFresh(page, "./#/household");
+  await enter(page, "Current age", "34");
+  await enter(page, "Target retirement age", "50");
+
+  // Enter a salary without touching "Grows at": the default is no growth.
+  await page.getByRole("link", { name: "Next: Income & expenses →" }).click();
+  await enter(page, "Gross salary per year", "145000");
+  await enter(page, "Per year, after tax", "64000");
+  await expect(page.getByLabel("Grows at", { exact: true })).toHaveValue("none");
+
+  // Nominal dollars (the default): the same $145,000 in every working row, then "—".
+  await page.goto("#/results?view=year-by-year");
+  await expectSalaries(page, { 2027: "$145,000", 2042: "$145,000", 2043: "—" });
 });

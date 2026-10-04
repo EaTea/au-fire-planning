@@ -73,7 +73,7 @@ test("worked example B runs out in 2031, and a dated expense changes that year's
   );
   const yearByYearSection = page.locator(".year-by-year-section");
   await expect(yearByYearSection.getByRole("alert")).toHaveText("1 year can't be funded: 2031");
-  expect(await yearCell(page, 2031, "Status")).toBe("Shortfall −$6,729");
+  expect(await yearCell(page, 2031, "Status")).toBe("Shortfall −$9,339");
   expect(await yearCell(page, 2030, "Status")).toBe("✓");
   expect(await yearCell(page, 2027, "Spending")).toBe("$30,000");
 

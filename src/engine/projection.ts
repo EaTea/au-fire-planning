@@ -21,9 +21,14 @@
 //     super available = opening + earnings − earnings tax
 //                     + concessional − contributions tax + non-concessional
 //
-//   take it from: 1. cash available   2. portfolio available
-//                 3. super available, only if age ≥ the super access age (65)
+//   take it from: 1. portfolio available
+//                 2. super available, only if age ≥ the super access age (65)
+//                 3. cash available (last, as a buffer)
 //   anything left over = shortfall for this year (everything drawn ends at $0)
+//
+// Cash is drawn last so it acts as a buffer: it is only touched once the
+// portfolio is empty. That holds in working years too, so a dated expense
+// before retirement is paid from the portfolio and the cash is left alone.
 //
 // Every value in row k shares one inflation index, (1+i)^k, so converting any
 // of them to today's dollars divides by that single number.
@@ -134,13 +139,13 @@ export interface ProjectionRow {
   readonly portfolioClosing: number;
   /** Spending to fund this year: retirement spending plus dated expenses. */
   readonly spending: number;
-  /** The part of spending paid from cash. */
-  readonly fromCash: number;
-  /** The part of spending paid from the portfolio, after cash. */
+  /** The part of spending paid from the portfolio, which is drawn first. */
   readonly fromPortfolio: number;
+  /** The part of spending paid from cash, drawn last: once the portfolio (and accessible super) are empty. */
+  readonly fromCash: number;
   /** The part of spending that couldn't be funded; 0 in a funded year. */
   readonly shortfall: number;
-  /** The part of spending paid from super, after cash and the portfolio; 0 before the super access age. */
+  /** The part of spending paid from super, after the portfolio and before cash; 0 before the super access age. */
   readonly fromSuper: number;
   /** Cash plus portfolio plus super at the end of the year. */
   readonly investableClosing: number;
@@ -261,15 +266,16 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       sumDatedExpensesInYear(inputs.datedExpenses, calendarYear) * inflationIndex;
     const spending = retirementSpending + datedSpending;
 
-    // Cash is drawn first, then the portfolio, then super but only from the
-    // access age; whatever is left over is the shortfall.
-    const fromCash = Math.min(spending, cashAvailable);
-    const fromPortfolio = Math.min(spending - fromCash, portfolioAvailable);
+    // The portfolio is drawn first, then super but only from the access age,
+    // and cash last, so cash stays as a buffer until everything else is
+    // spent; whatever is left over is the shortfall.
+    const fromPortfolio = Math.min(spending, portfolioAvailable);
     const superIsAccessible = age >= DEFAULT_SUPER_ACCESS_AGE;
     const fromSuper = superIsAccessible
-      ? Math.min(spending - fromCash - fromPortfolio, superYear.available)
+      ? Math.min(spending - fromPortfolio, superYear.available)
       : 0;
-    const shortfall = spending - fromCash - fromPortfolio - fromSuper;
+    const fromCash = Math.min(spending - fromPortfolio - fromSuper, cashAvailable);
+    const shortfall = spending - fromPortfolio - fromSuper - fromCash;
 
     cash = cashAvailable - fromCash;
     portfolio = portfolioAvailable - fromPortfolio;
