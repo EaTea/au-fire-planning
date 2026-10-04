@@ -644,6 +644,12 @@ button:focus-visible {
   margin: 0;
 }
 
+.chart-title {
+  margin: var(--space-medium) 0 var(--space-small);
+  font-size: 15px;
+  color: var(--colour-text);
+}
+
 .chart-hint {
   margin: var(--space-small) 0 0;
   font-size: 13px;
@@ -672,6 +678,25 @@ button:focus-visible {
 
 .chart-series-coast-number {
   --series-colour: var(--colour-chart-reference);
+}
+
+/* The bridge chart (chart b): the two stacked balances. Fill and outline share a colour. */
+.chart-series-outside-super {
+  --series-colour: var(--colour-chart-outside);
+}
+
+.chart-series-super {
+  --series-colour: var(--colour-chart-super);
+}
+
+.stacked-area-chart .recharts-area-area {
+  fill: var(--series-colour);
+  fill-opacity: 1;
+}
+
+.stacked-area-chart .recharts-area-curve {
+  stroke: var(--colour-page-background);
+  stroke-width: 1.5px;
 }
 
 .time-series-chart .recharts-line-curve {
@@ -709,6 +734,14 @@ button:focus-visible {
 
 .chart-swatch-dotted {
   border-top-style: dotted;
+}
+
+/* A filled square, for an area series. */
+.chart-swatch-fill {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  background: var(--series-colour);
 }
 
 /* The picture's text and strokes. SVG attributes can't use var(), so it's all set here. */

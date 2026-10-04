@@ -511,3 +511,51 @@ test("the bridge check has readable text with SHORT showing and both breakdowns 
     expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
   }
 });
+
+test("the bridge chart and the Coast FIRE split card have readable text in both dollar modes, with a tooltip and a breakdown open", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B2 (tests/worked-examples/m6-bridge.json): the bridge band is shaded, outside super is not reached.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "55"],
+    ["#/household", "Target retirement age", "56"],
+    ["#/household", "Plan until age", "66"],
+    ["#/income-expenses", "Per year, after tax", "20000"],
+    ["#/assets", "Super balance", "100000"],
+    ["#/assets", "Return, net of fees", "0"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "0"],
+    ["#/assets", "Cash savings", "0"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "0"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  await page.goto("#/results?view=coast-split");
+  const splitCard = page.locator("#coast-split");
+  await expect(splitCard.getByText("Coasting since 2026", { exact: true })).toBeVisible();
+  await expect(splitCard.getByText("Not before retirement", { exact: true })).toBeVisible();
+  await splitCard.getByRole("button", { name: "How is this calculated?" }).first().click();
+  await expect(splitCard.locator(".explain-panel")).toHaveCount(1);
+
+  // Show the chart's tooltip while checking, since it is text on its own background.
+  const picture = page.locator("#bridge .chart-picture");
+  await expect(page.locator("#bridge .chart-band")).toHaveCount(1);
+  await picture.scrollIntoViewIfNeeded();
+  const box = (await picture.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    expect(await findLowContrastText(page), mode).toEqual([]);
+  }
+});

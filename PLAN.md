@@ -1928,7 +1928,38 @@ sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
 
 #### Step 8 · Chart (b) and the Coast FIRE split meters
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `StackedAreaChart` is a sibling of `TimeSeriesChart`, reusing its point, series
+  and band types, tooltip and axis formatting (now exported). The builder is
+  `buildBridgeChartSeries(projection, dollarsMode)` in `src/ui/charts/bridgeChart.ts`:
+  outside super (portfolio + cash) under super, with one "Bridge" band over the
+  bridge years and none when there is no bridge. The chart sits at the foot of the
+  "Can you bridge to super?" card under an "h4", follows the dollars toggle, and a
+  click goes to `?year=`.
+- Colour roles `--colour-chart-outside` (gold) and `--colour-chart-super` (the
+  green-grey), both with 3:1 pairs in `tokens.test.ts`.
+- **The band is drawn over the areas** (`zIndex` 110 against the areas' 100), as
+  a translucent tint; behind them the opaque fills hid it. So its label stays
+  readable, the value axis has at least 15% headroom above the tallest stack, in
+  round steps (`axisTopWithHeadroom`), which keeps the label on the bare page.
+- **Fixed a latent CSS bug on the way:** Recharts 3 draws a band as a `<path>`
+  (`.recharts-reference-area-rect`), not a `<rect>`, so `.chart-band rect` never
+  matched and chart (a)'s shortfall band was Recharts' default grey. The rule now
+  targets the class, and the new E2E checks the band's colour and opacity.
+- `CoastSplitSection` (id `coast-split`, "Super and outside super"), after the
+  Coast FIRE chart, with an "On this page" link, shown only for a plan with super
+  and at least one part. Two `StatusMeter`s ("Outside super funds the bridge on
+  its own", "Super funds the years after access on its own"), each reading
+  "Needs $X today · has $Y" (`StatusMeter` gained `figureWords`), the status
+  "Coasting since {year}", "Coasting from {year}" (with "reached at age N") or
+  "Not before retirement", and the engine's `needToday` working. The figures are
+  always row-0 dollars, like the Coast FIRE tile, so they ignore the dollars toggle.
+- Tests: `buildBridgeChartSeries` (B1, B2, B3, cash, dollars modes),
+  `StackedAreaChart`, the split card on Results (B1, B2, A, C to the dollar, B3
+  with one meter, no super), and `bridgeChart.spec.ts` (fill colours, band,
+  tooltip, click-through, split card), plus a contrast-sweep test.
 
 1. `StackedAreaChart` in `src/ui/components/`, with the new colour roles
    and their 3:1 pairs, and its builder `buildBridgeChartSeries` with unit

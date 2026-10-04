@@ -1,10 +1,17 @@
+import { useNavigate } from "react-router";
+
 import { projectionHasSuper, type BridgePart } from "../../engine/bridge";
 import type { Explained } from "../../engine/explained";
 import type { ProjectionSummary } from "../../engine/fiNumber";
+import { buildBridgeChartSeries } from "../charts/bridgeChart";
 import { Card } from "../components/Card";
+import { StackedAreaChart } from "../components/StackedAreaChart";
 import { StatusMeter } from "../components/StatusMeter";
 import { useDollarsMode, useMoneyFormatter, type DollarsMode } from "../dollarsMode";
 import { formatYearRuns } from "../format";
+import { steps } from "../navigation/steps";
+
+const resultsStep = steps.find((candidate) => candidate.id === "results")!;
 
 /** The complete variant of the projection summary: the only one with a bridge check. */
 type CompleteProjection = Extract<ProjectionSummary, { status: "complete" }>;
@@ -99,17 +106,32 @@ function BridgeMeter({ label, part, baseInflationIndex, baseYear }: BridgeMeterP
   );
 }
 
+/** What BridgeSection needs. */
+interface BridgeSectionProps {
+  readonly projection: CompleteProjection;
+  /** Fixed chart size in pixels, for tests (jsdom has no layout). Omit on the real page. */
+  readonly chartSize?: { readonly width: number; readonly height: number };
+}
+
 /**
- * The "Can you bridge to super?" card on Results (FIRE-4): two status meters,
+ * The "Can you bridge to super?" card on Results (FIRE-4, FIRE-7 chart (b)): two status meters,
  * the bridge (outside super, from retirement until super opens) and the years
  * after super is accessible (super plus what is left outside). The statuses
  * are the engine's `assessBridge` answers. Without a bridge (retiring at or
  * after the access age) it says so and shows only the second meter; if the
- * plan ends before super opens it shows only the bridge. Rendered by
- * ResultsScreen after chart (a), and only when `hasBridgeSection` is true.
+ * plan ends before super opens it shows only the bridge. Below the meters is
+ * chart (b), outside super and super stacked by year with the bridge years
+ * shaded; it follows the page's dollars toggle, and clicking a year scrolls to
+ * that row of Year by year (`?year=`). Rendered by ResultsScreen after chart
+ * (a), and only when `hasBridgeSection` is true.
  */
-export function BridgeSection({ projection }: { readonly projection: CompleteProjection }) {
+export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
+  const { mode } = useDollarsMode();
+  const navigate = useNavigate();
+
   if (!hasBridgeSection(projection)) return null;
+
+  const chartData = buildBridgeChartSeries(projection, mode);
 
   const { bridge, afterAccess } = projection.bridge;
   const accessAge = projection.bridge.effectiveAccessAge as number;
@@ -150,6 +172,18 @@ export function BridgeSection({ projection }: { readonly projection: CompletePro
           {lastRow === undefined ? "" : ` in ${lastRow.calendarYear}`}.
         </p>
       )}
+
+      <h4 className="chart-title">Bridge period: outside super, then super</h4>
+      <StackedAreaChart
+        label="Outside super and super balances, stacked by year, with the bridge years shaded"
+        points={chartData.points}
+        series={chartData.series}
+        bands={chartData.bands}
+        onSelectYear={(year) => navigate(`${resultsStep.path}?year=${year}`)}
+        width={chartSize?.width}
+        height={chartSize?.height}
+      />
+      <p className="chart-hint">Click a year to see it in the Year by year table below.</p>
     </Card>
   );
 }

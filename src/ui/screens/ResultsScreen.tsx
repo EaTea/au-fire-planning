@@ -11,6 +11,11 @@ import { formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
 import { BRIDGE_SECTION_ID, BridgeSection, hasBridgeSection } from "../sections/BridgeSection";
 import { COAST_CHART_SECTION_ID, CoastChartSection } from "../sections/CoastChartSection";
+import {
+  COAST_SPLIT_SECTION_ID,
+  CoastSplitSection,
+  hasCoastSplitSection,
+} from "../sections/CoastSplitSection";
 import { FIRE_CHART_SECTION_ID, FireChartSection } from "../sections/FireChartSection";
 import { MILESTONES_SECTION_ID, MilestonesSection } from "../sections/MilestonesSection";
 import { MissingInputsBanner } from "./MissingInputsBanner";
@@ -75,6 +80,7 @@ export function ResultsScreen() {
                 <FireChartSection projection={summary.projection} />
                 <BridgeSection projection={summary.projection} />
                 <CoastChartSection projection={summary.projection} />
+                <CoastSplitSection projection={summary.projection} />
               </>
             ) : (
               <MissingInputsBanner missing={summary.projection.missing} />
@@ -99,8 +105,8 @@ export function ResultsScreen() {
  * The "On this page" links under the title: Results is long once it ends
  * with the table, so these jump to the milestones, the charts and the table. They set
  * `?view=`, which useScrollToRequestedSection acts on. Shown only when the
- * projection is complete, since the targets need it; the bridge link appears
- * only when the plan has super and so the bridge card is shown.
+ * projection is complete, since the targets need it; the bridge and split links
+ * appear only when the plan has super and so those cards are shown.
  */
 function JumpLinks({ projection }: { readonly projection: CompleteProjection }) {
   return (
@@ -112,6 +118,9 @@ function JumpLinks({ projection }: { readonly projection: CompleteProjection }) 
         <Link to={`${step.path}?view=${BRIDGE_SECTION_ID}`}>Can you bridge to super?</Link>
       )}
       <Link to={`${step.path}?view=${COAST_CHART_SECTION_ID}`}>Coast FIRE chart</Link>
+      {hasCoastSplitSection(projection) && (
+        <Link to={`${step.path}?view=${COAST_SPLIT_SECTION_ID}`}>Super and outside super</Link>
+      )}
       <Link to={`${step.path}?view=${YEAR_BY_YEAR_SECTION_ID}`}>Year by year ↓</Link>
     </nav>
   );

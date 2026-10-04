@@ -111,6 +111,22 @@ describe("StatusMeter", () => {
     expect(screen.getByText("Need $2 · projected $1 · short in 2033 – 2035")).toBeInTheDocument();
   });
 
+  it("can word the figures differently, as the Coast FIRE split does", () => {
+    render(
+      <StatusMeter
+        label="Outside super"
+        kind="coasting"
+        statusWord="Coasting since 2026"
+        projected={{ amount: 740000, text: "$740,000" }}
+        need={{ amount: 338667, text: "$338,667" }}
+        needNote="today"
+        figureWords={{ need: "Needs", projected: "has" }}
+      />,
+    );
+
+    expect(screen.getByText("Needs $338,667 today · has $740,000")).toBeInTheDocument();
+  });
+
   it("reveals and hides the breakdown", async () => {
     const user = userEvent.setup();
     renderMeter("short", "SHORT");

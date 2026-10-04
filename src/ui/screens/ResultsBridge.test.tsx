@@ -259,6 +259,175 @@ describe("the bridge check on Results", () => {
   });
 });
 
+/** M5's example C with the default access age of 65: outside super coasts first, super not before retirement. */
+const exampleC: Plan = {
+  ...blankPlan,
+  household: {
+    people: [
+      {
+        id: "person-1",
+        label: "Person 1",
+        currentAge: 34,
+        targetRetirementAge: 50,
+        salary: { annual: 120000, growth: { kind: "inflationPlus", margin: 0 } },
+        superAccount: {
+          balance: 100000,
+          returnRate: 0.07,
+          salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2042 },
+        },
+      },
+    ],
+  },
+  expenses: { livingAnnual: 64000 },
+  assumptions: { inflationRate: 0.025, interestRate: 0.04 },
+  cash: { balance: 20000 },
+  portfolios: [
+    {
+      id: "portfolio-1",
+      name: "Share portfolio",
+      value: 300000,
+      expectedReturn: 0.07,
+      annualContribution: 30000,
+    },
+  ],
+};
+
+/** The "Super and outside super" card. */
+function splitCard(): HTMLElement {
+  return screen
+    .getByRole("heading", { name: "Super and outside super" })
+    .closest<HTMLElement>("section")!;
+}
+
+describe("the Coast FIRE split card on Results", () => {
+  it("B1: outside super coasts since 2026; super on its own is not reached", () => {
+    renderResults(exampleB1);
+
+    const card = splitCard();
+    expect(within(card).getByText("Coasting since 2026")).toBeInTheDocument();
+    expect(within(card).getByText("Needs $60,000 today · has $100,000")).toBeInTheDocument();
+    expect(within(card).getByText("Not before retirement")).toBeInTheDocument();
+    expect(within(card).getByText("Needs $140,000 today · has $100,000")).toBeInTheDocument();
+  });
+
+  it("B2: outside super is not reached; super coasts since 2026", () => {
+    renderResults(exampleB2);
+
+    const card = splitCard();
+    expect(within(card).getByText("Needs $160,000 today · has $100,000")).toBeInTheDocument();
+    expect(within(card).getByText("Not before retirement")).toBeInTheDocument();
+    expect(within(card).getByText("Needs $40,000 today · has $100,000")).toBeInTheDocument();
+    expect(within(card).getByText("Coasting since 2026")).toBeInTheDocument();
+  });
+
+  it("A: outside super since 2026, super from 2039 at age 47, to the dollar", () => {
+    renderResults(exampleA);
+
+    const card = splitCard();
+    expect(within(card).getByText("Coasting since 2026")).toBeInTheDocument();
+    expect(within(card).getByText("Needs $338,667 today · has $740,000")).toBeInTheDocument();
+    expect(within(card).getByText("Coasting from 2039")).toBeInTheDocument();
+    expect(
+      within(card).getByText("Needs $256,833 today · has $185,000 · reached at age 47"),
+    ).toBeInTheDocument();
+  });
+
+  it("C: outside super coasts from 2027 at age 35; super is not before retirement", () => {
+    renderResults(exampleC);
+
+    const card = splitCard();
+    expect(within(card).getByText("Coasting from 2027")).toBeInTheDocument();
+    expect(
+      within(card).getByText("Needs $338,667 today · has $320,000 · reached at age 35"),
+    ).toBeInTheDocument();
+    expect(within(card).getByText("Not before retirement")).toBeInTheDocument();
+    expect(within(card).getByText("Needs $302,393 today · has $100,000")).toBeInTheDocument();
+  });
+
+  it("shows only the super meter when there is no bridge (B3)", () => {
+    renderResults(exampleB3);
+
+    const card = splitCard();
+    expect(within(card).queryByText(/^Outside super funds/)).not.toBeInTheDocument();
+    expect(within(card).getByText(/^Super funds the years after access/)).toBeInTheDocument();
+  });
+
+  it("keeps today's dollars figures when the dollars toggle changes", async () => {
+    const user = userEvent.setup();
+    renderResults(exampleA);
+
+    await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+    expect(
+      within(splitCard()).getByText("Needs $338,667 today · has $740,000"),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the working behind a need", async () => {
+    const user = userEvent.setup();
+    renderResults(exampleB2);
+
+    const meter = within(splitCard())
+      .getByText("Outside super funds the bridge on its own")
+      .closest<HTMLElement>(".status-meter")!;
+    await user.click(within(meter).getByRole("button", { name: "How is this calculated?" }));
+
+    expect(breakdownRows(meter).at(-1)).toBe("= Outside super needed today$160,000");
+  });
+
+  it("adds an 'On this page' link that targets the card, and is absent without super", () => {
+    const { unmount } = renderResults(exampleB2);
+
+    expect(screen.getByRole("link", { name: "Super and outside super" })).toHaveAttribute(
+      "href",
+      "/results?view=coast-split",
+    );
+    expect(splitCard().id).toBe("coast-split");
+    unmount();
+
+    renderResults({
+      ...blankPlan,
+      household: {
+        people: [{ id: "person-1", label: "Person 1", currentAge: 60, targetRetirementAge: 60 }],
+        projectionEndAge: 65,
+      },
+      expenses: { livingAnnual: 30000 },
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 100000 }],
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Super and outside super" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Super and outside super" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the bridge chart on Results", () => {
+  it("sits inside the bridge card, with a data table of the two balances (B2)", () => {
+    renderResults(exampleB2);
+
+    const card = bridgeCard();
+    expect(
+      within(card).getByRole("heading", { name: "Bridge period: outside super, then super" }),
+    ).toBeInTheDocument();
+
+    const table = within(card).getByRole("table", { name: /stacked by year.*: data/ });
+    const rows = within(table)
+      .getAllByRole("row")
+      .map((row) => row.textContent);
+    expect(rows[0]).toBe("YearAgeOutside super (portfolio and cash)Super");
+    // Nothing is drawn in 2027 (retired at 56, first spending year is 2028); in 2033 the portfolio is empty and super locked.
+    expect(rows).toContain("202756$100,000$100,000");
+    expect(rows).toContain("203362$0$100,000");
+    expect(rows).toContain("203766$0$60,000");
+  });
+
+  it("is not shown without the card", () => {
+    renderResults(blankPlan);
+
+    expect(screen.queryByRole("img", { name: /stacked by year/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("Milestones with super", () => {
   it("lists 'Super accessible' at the effective access age's year", () => {
     renderResults(exampleB2);

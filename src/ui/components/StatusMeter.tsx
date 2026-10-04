@@ -22,6 +22,12 @@ interface StatusMeterProps {
   readonly need: { readonly amount: number; readonly text: string };
   /** Words after the need, e.g. "in 2042", giving "Need $978,217 in 2042 · projected ...". */
   readonly needNote?: string;
+  /**
+   * The words before each amount in the figures line. Default "Need" and
+   * "projected"; the Coast FIRE split uses "Needs" and "has", giving "Needs
+   * $338,667 today · has $740,000".
+   */
+  readonly figureWords?: { readonly need: string; readonly projected: string };
   /** Extra text after the projected amount, e.g. "short in 2033 – 2035". */
   readonly detail?: string;
   /** If given, a "How is this calculated?" button reveals this breakdown. */
@@ -34,8 +40,8 @@ interface StatusMeterProps {
  * two fills the track, which keeps the need marker on the track even when the
  * projection falls short. The bar is decoration for the text under it
  * ("Need ... · projected ..."), which carries the same facts. Generic over the
- * status words, so Results' bridge check uses it now and the Coast FIRE split
- * meters will later. Styles use role variables only (see app.css).
+ * status words, so Results' bridge check and the Coast FIRE split meters both
+ * use it. Styles use role variables only (see app.css).
  */
 export function StatusMeter({
   label,
@@ -44,6 +50,7 @@ export function StatusMeter({
   projected,
   need,
   needNote,
+  figureWords = { need: "Need", projected: "projected" },
   detail,
   explanation,
 }: StatusMeterProps) {
@@ -68,8 +75,8 @@ export function StatusMeter({
       </div>
 
       <div className="status-meter-figures">
-        Need {need.text}
-        {needNote === undefined ? "" : ` ${needNote}`} · projected {projected.text}
+        {figureWords.need} {need.text}
+        {needNote === undefined ? "" : ` ${needNote}`} · {figureWords.projected} {projected.text}
         {detail === undefined ? "" : ` · ${detail}`}
       </div>
 
