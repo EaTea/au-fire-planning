@@ -6,6 +6,7 @@ import {
   formatFactor,
   formatPercent,
   formatYear,
+  formatYearRuns,
   parseAge,
   parseDollars,
   parsePercent,
@@ -129,5 +130,14 @@ describe("parseYear and formatYear", () => {
     expect(parseYear("2030.5")).toBeNaN();
     expect(parseYear("20x0")).toBeNaN();
     expect(parseYear("-3")).toBeNaN();
+  });
+});
+
+describe("formatYearRuns", () => {
+  it("collapses consecutive years into ranges and joins runs with commas", () => {
+    expect(formatYearRuns([2035, 2031, 2036])).toBe("2031, 2035 – 2036");
+    expect(formatYearRuns([2033, 2034, 2035])).toBe("2033 – 2035");
+    expect(formatYearRuns([2040])).toBe("2040");
+    expect(formatYearRuns([])).toBe("");
   });
 });

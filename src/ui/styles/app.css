@@ -781,6 +781,83 @@ button:focus-visible {
   gap: var(--space-medium);
 }
 
+/* ---------- Status meter (the bridge check) ---------- */
+
+/* A labelled bar of projected against need. The status is always written as a
+   word in .status-meter-word; the fill colour only reinforces it. Role
+   variables only: the fill and need marker are graphics (3:1 on the page). */
+.status-meter {
+  padding: var(--space-medium) 0;
+  border-bottom: 1px solid var(--colour-border-soft);
+}
+
+.status-meter:last-child {
+  border-bottom: 0;
+}
+
+.status-meter-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-medium);
+  font-size: 14px;
+  color: var(--colour-text);
+}
+
+.status-meter-label {
+  font-weight: 700;
+}
+
+.status-meter-word {
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--colour-text-highlight);
+}
+
+.status-meter-short .status-meter-word {
+  color: var(--colour-text-error);
+}
+
+.status-meter-notYet .status-meter-word {
+  color: var(--colour-text-muted);
+}
+
+.status-meter-track {
+  position: relative;
+  height: 12px;
+  margin: var(--space-small) 0;
+  border: 1.5px solid var(--colour-border);
+  border-radius: 6px;
+}
+
+.status-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--colour-chart-primary);
+}
+
+.status-meter-short .status-meter-fill {
+  background: var(--colour-chart-band);
+}
+
+.status-meter-notYet .status-meter-fill {
+  background: var(--colour-chart-secondary);
+}
+
+/* The marked need: a white tick standing proud of the track. */
+.status-meter-need-marker {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 0;
+  border-left: 2px solid var(--colour-chart-reference);
+  transform: translateX(-1px);
+}
+
+.status-meter-figures {
+  font-size: 13px;
+  color: var(--colour-text-muted);
+}
+
 /* ---------- Milestones timeline ---------- */
 
 /* One horizontal line of milestones; the line is each item's top border, so it

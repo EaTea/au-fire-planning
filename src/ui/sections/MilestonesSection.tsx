@@ -1,3 +1,4 @@
+import { projectionHasSuper } from "../../engine/bridge";
 import type { ProjectionSummary } from "../../engine/fiNumber";
 import { Card } from "../components/Card";
 import { MilestoneTimeline, type MilestoneItem } from "../components/MilestoneTimeline";
@@ -17,8 +18,34 @@ function statusForYear(year: number, startYear: number): MilestoneItem["status"]
 }
 
 /**
+ * The "Super accessible" milestone (OUT-4): the year of the effective access
+ * age, the first age super can be drawn while retired. If the plan ends
+ * before that age it is an undated "not reached" item. Used by
+ * buildMilestoneItems, only when the plan has super.
+ */
+function buildSuperAccessibleItem(
+  projection: CompleteProjection,
+  startYear: number,
+): MilestoneItem {
+  const accessAge = projection.superAccessAge as number;
+  const accessRow = projection.rows.find((row) => row.age === accessAge);
+
+  if (accessRow === undefined) {
+    return { label: `Super accessible: not by age ${projection.endAge}`, status: "notReached" };
+  }
+
+  return {
+    year: accessRow.calendarYear,
+    label: "Super accessible",
+    detail: `Age ${accessAge}`,
+    status: statusForYear(accessRow.calendarYear, startYear),
+  };
+}
+
+/**
  * Turns the projection summary into the timeline's items: Coast FIRE, FI
- * reached, retirement (the target) and whether the money lasts. A milestone
+ * reached, retirement (the target), whether the money lasts and, with super,
+ * when super becomes accessible. A milestone
  * that never happens becomes an undated "not reached" item. The first
  * projection row's year is "today". Called by MilestonesSection.
  */
@@ -67,7 +94,14 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
           status: statusForYear(solvency.year, startYear),
         };
 
-  return [coastItem, fiItem, retirementItem, moneyItem];
+  const items = [coastItem, fiItem, retirementItem, moneyItem];
+
+  // "Super accessible" only when the plan has super.
+  if (projection.superAccessAge !== undefined && projectionHasSuper(projection.rows)) {
+    items.push(buildSuperAccessibleItem(projection, startYear));
+  }
+
+  return items;
 }
 
 /**

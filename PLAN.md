@@ -1877,7 +1877,42 @@ sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
 
 #### Step 7 · Results: the bridge check, milestones and Year by year
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `StatusMeter` takes a label, a kind ("met", "short", "coasting", "notYet") with
+  its status word, and the projected and need amounts as `{ amount, text }` (the
+  caller formats `text`; `amount` sizes the bar and places the need marker). It
+  also takes an optional `needNote` ("in 2042"), `detail` and `explanation`. It
+  uses existing role variables only (gold, error pink, green-white fills at 3:1
+  on the page, and the white need marker), so `tokens.test.ts` has no new pairs.
+- **"No super" is derived, not stored.** The engine always carries a super
+  account (an empty one when nothing is entered), so `projectionHasSuper(rows)`
+  in `bridge.ts` (super holds money in some year) decides whether the card, the
+  milestone and the bridge bands appear. A plan with no super keeps the single
+  "Retired" band.
+- `BridgeSection` (`src/ui/sections/`) has the id `bridge`. Headings use the
+  part's own years, like the breakdowns: "Bridge: outside super, 2028 – 2035" and
+  "After super is accessible, 2036 – 2037" (a single year is written alone). Each figure is
+  stated in the year before its part starts ("Need $X in 2042"), formatted with
+  that row's inflation index, and the breakdown's dollar lines follow the toggle
+  too. "Withdrawals are tax-free from age 60" is the last line of the
+  after-access breakdown only (the engine adds it to that part's projected
+  working; `ExplainPanel` keeps the result bold when a "rule" line follows it). Short years read "short in 2033 – 2035" (`formatYearRuns` in `format.ts`,
+  now shared with the Year by year banner).
+- **Year by year bands, top to bottom:** "Working · contributing"; then, for a
+  plan with super, "Bridge · retired, super locked until {age}" for the retired
+  years before access and "Super accessible" from then on. These replace the
+  single "Retired" band for plans with super (two band rows in a row for the
+  first retired year would be clunky); with no bridge, "Super accessible" opens
+  the retired years.
+- Milestones add "Super accessible" (year and age) at the effective access age,
+  or an undated "not reached" item when the plan ends first.
+- The "Not yet modelled" banner still says super is only drawn from 65; its
+  wording is left for the wrap-up step.
+- E2E: `bridgeResults.spec.ts` (B1, B2 and A) and a contrast test with B2 and both
+  breakdowns open. B1, B2, A and the bands are also unit-tested in
+  `ResultsBridge.test.tsx`.
 
 1. `StatusMeter` in `src/ui/components/`, with tests (each status, the
    need marker, text that doesn't rely on colour).

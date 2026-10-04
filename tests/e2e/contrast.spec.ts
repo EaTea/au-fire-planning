@@ -467,3 +467,47 @@ test("results has readable text with a shortfall, its banners and an outlined ro
     expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
   }
 });
+
+test("the bridge check has readable text with SHORT showing and both breakdowns open", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B2 (tests/worked-examples/m6-bridge.json): the bridge is SHORT, after access is MET.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "55"],
+    ["#/household", "Target retirement age", "56"],
+    ["#/household", "Plan until age", "66"],
+    ["#/income-expenses", "Per year, after tax", "20000"],
+    ["#/assets", "Super balance", "100000"],
+    ["#/assets", "Return, net of fees", "0"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "0"],
+    ["#/assets", "Cash savings", "0"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "0"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  await page.goto("#/results?view=bridge");
+  const card = page.locator("#bridge");
+  await expect(card.getByText("SHORT", { exact: true })).toBeVisible();
+  await expect(card.getByText("MET", { exact: true })).toBeVisible();
+
+  // Open both breakdowns, so the working's text is checked too.
+  for (const toggle of await card.getByRole("button", { name: "How is this calculated?" }).all()) {
+    await toggle.click();
+  }
+  await expect(card.locator(".explain-panel")).toHaveCount(2);
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});

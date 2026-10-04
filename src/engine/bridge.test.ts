@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bundledRuleSet } from "../rules/bundledRuleSet";
-import { assessBridge } from "./bridge";
+import { assessBridge, projectionHasSuper } from "./bridge";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
 
 // Unit tests for the bridge check (M6 step 3), beyond the worked examples in
@@ -96,12 +96,26 @@ describe("assessBridge", () => {
     expect(result.afterAccess?.need.lines.map((line) => line.label).join("|")).toContain("5%");
   });
 
-  it("names the discount rate and says withdrawals are tax-free from 60", () => {
+  it("names the discount rate, and only the after-access working says withdrawals are tax-free from 60", () => {
     const result = assess(bridgeInputs());
     const labels = result.bridge?.need.lines.map((line) => line.label) ?? [];
 
     expect(labels.some((label) => label.includes("the portfolio's return"))).toBe(true);
-    expect(labels).toContain("Withdrawals are tax-free from 60");
+
+    const bridgeLines = [
+      ...(result.bridge?.need.lines ?? []),
+      ...(result.bridge?.projected.lines ?? []),
+    ];
+    expect(bridgeLines.map((line) => line.label)).not.toContain(
+      "Withdrawals are tax-free from age",
+    );
+
+    const lastAfterAccessLine = result.afterAccess?.projected.lines.at(-1);
+    expect(lastAfterAccessLine).toMatchObject({
+      label: "Withdrawals are tax-free from age",
+      value: 60,
+      unit: "years",
+    });
   });
 
   it("projected is portfolio plus cash at retirement, then super plus both after access", () => {
@@ -111,5 +125,28 @@ describe("assessBridge", () => {
     expect(result.afterAccess?.projected.value).toBe(
       projectPortfolio(bridgeInputs({ cashOpening: 5_000 }), 2026)[4]?.investableClosing,
     );
+  });
+});
+
+describe("projectionHasSuper", () => {
+  it("is true when super holds money in some year", () => {
+    const inputs = bridgeInputs();
+
+    expect(projectionHasSuper(projectPortfolio(inputs, 2026))).toBe(true);
+  });
+
+  it("is false for an empty super account that never receives anything", () => {
+    const inputs = bridgeInputs();
+    const emptyAccount = { ...inputs.superAccount!, opening: 0 };
+
+    expect(
+      projectionHasSuper(projectPortfolio({ ...inputs, superAccount: emptyAccount }, 2026)),
+    ).toBe(false);
+  });
+
+  it("is false when the plan has no super account at all", () => {
+    const withoutSuper = { ...bridgeInputs(), superAccount: undefined };
+
+    expect(projectionHasSuper(projectPortfolio(withoutSuper, 2026))).toBe(false);
   });
 });

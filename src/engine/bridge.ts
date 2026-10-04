@@ -88,7 +88,7 @@ export function assessBridge(
   const preservationAge = rulesForYear(account.ruleSet, startYear, inputs.inflationRate)
     .superannuation.preservationAgeYears;
   const taxFreeNote: ExplanationLine = {
-    label: `Withdrawals are tax-free from ${preservationAge}`,
+    label: "Withdrawals are tax-free from age",
     value: preservationAge,
     unit: "years",
     source: "rule",
@@ -112,8 +112,7 @@ export function assessBridge(
         { label: "Portfolio", value: retirementRow.portfolioClosing },
         { label: "Cash", value: retirementRow.cashClosing },
       ],
-      partName: "bridge",
-      taxFreeNote,
+      partPhrase: "for the bridge",
     });
   }
 
@@ -143,7 +142,7 @@ export function assessBridge(
         { label: "Portfolio", value: baseRow.portfolioClosing },
         { label: "Cash", value: baseRow.cashClosing },
       ],
-      partName: "after access",
+      partPhrase: "after super is accessible",
       taxFreeNote,
     });
   }
@@ -153,6 +152,17 @@ export function assessBridge(
     ...(bridge === undefined ? {} : { bridge }),
     ...(afterAccess === undefined ? {} : { afterAccess }),
   };
+}
+
+/**
+ * Whether the plan has any super to speak of: super holds money in at least one
+ * year. The engine always carries a super account (an empty one when nothing
+ * was entered), so this is how Results tells "no super" from "super": the
+ * bridge card, the "Super accessible" milestone and the bridge bands appear
+ * only when it is true. Called by the Results screens.
+ */
+export function projectionHasSuper(rows: readonly ProjectionRow[]): boolean {
+  return rows.some((row) => row.superClosing > 0);
 }
 
 /** What `describePart` needs to describe one part of the check. */
@@ -166,9 +176,10 @@ interface PartDescription {
   readonly discountRateName: string;
   readonly projectedAmount: number;
   readonly projectedLines: readonly { label: string; value: number }[];
-  /** "bridge" or "after access", used in labels. */
-  readonly partName: string;
-  readonly taxFreeNote: ExplanationLine;
+  /** "for the bridge" or "after super is accessible": completes "Need …" and "Projected …" labels. */
+  readonly partPhrase: string;
+  /** Added as the last line of the projected working, for parts that withdraw super. */
+  readonly taxFreeNote?: ExplanationLine;
 }
 
 /**
@@ -212,13 +223,12 @@ function describePart(description: PartDescription): BridgePart {
         source: "calculated",
       },
       {
-        label: `Need for the ${description.partName} at ${baseRow.calendarYear}`,
+        label: `Need ${description.partPhrase} at ${baseRow.calendarYear}`,
         value: need,
         unit: "dollars",
         operator: "=",
         source: "calculated",
       },
-      description.taxFreeNote,
     ],
   };
 
@@ -234,12 +244,13 @@ function describePart(description: PartDescription): BridgePart {
         source: "calculated",
       })),
       {
-        label: `Projected for the ${description.partName}`,
+        label: `Projected ${description.partPhrase}`,
         value: description.projectedAmount,
         unit: "dollars",
         operator: "=",
         source: "calculated",
       },
+      ...(description.taxFreeNote === undefined ? [] : [description.taxFreeNote]),
     ],
   };
 

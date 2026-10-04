@@ -1,10 +1,12 @@
 import { useSearchParams } from "react-router";
 
+import { projectionHasSuper } from "../../engine/bridge";
 import type { ProjectionSummary } from "../../engine/fiNumber";
 import { isShortfallWithSuperLocked, type ProjectionRow } from "../../engine/projection";
 import { Banner } from "../components/Banner";
 import { ProjectionTable, type ProjectionColumn } from "../components/ProjectionTable";
 import { useMoneyFormatter } from "../dollarsMode";
+import { formatYearRuns } from "../format";
 
 /** The complete variant of the projection summary: the only one with rows to show. */
 type CompleteProjection = Extract<ProjectionSummary, { status: "complete" }>;
@@ -21,7 +23,8 @@ interface YearByYearSectionProps {
  * The Year by year section at the bottom of Results (OUT-1 – OUT-3): the
  * projection of cash, the portfolio and super as a table, from today to the
  * plan-until age, in whichever dollars the page's toggle shows. Bands mark
- * the working and retired phases, the FI row is highlighted, years that
+ * the working phase and the retired years (split into the bridge and super
+ * accessible when there is super), the FI row is highlighted, years that
  * can't be funded say "Shortfall" and are summarised in a banner above the
  * table, and `?year=` scrolls to and outlines a row (the chart and the
  * runs-out banner link there). Rendered by ResultsScreen only when the
@@ -30,6 +33,9 @@ interface YearByYearSectionProps {
 export function YearByYearSection({ projection }: YearByYearSectionProps) {
   const formatMoney = useMoneyFormatter();
   const [searchParams] = useSearchParams();
+
+  // The engine always carries a super account, so "no super" means it never holds money.
+  const hasSuper = projectionHasSuper(projection.rows);
 
   const fiYearIndex = projection.fiReached?.yearIndex;
 
@@ -113,14 +119,35 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         columns={columns}
         getRowKey={(row) => row.yearIndex}
         isHighlighted={(row) => row.yearIndex === fiYearIndex}
-        getBandText={(row) => phaseBandText[row.phase]}
+        getBandText={(row) => bandTextForRow(row, hasSuper ? projection.superAccessAge : undefined)}
         scrollToKey={requestedRow?.yearIndex}
       />
     </section>
   );
 }
 
-/** The heading of each phase's band row in the table. */
+/**
+ * The band a row belongs to. The ordering, top to bottom:
+ *
+ *   Working · contributing
+ *   Bridge · retired, super locked until {age}   (retired years before super opens)
+ *   Super accessible                             (retired years from then on)
+ *
+ * With no super (`superAccessAge` undefined) the two retired bands are
+ * replaced by the single "Retired" band, as before M6. When you retire at or
+ * after the access age there is no bridge, so "Super accessible" opens the
+ * retired years directly. A band row opens wherever the text changes, so each
+ * of these appears once. Used by YearByYearSection.
+ */
+function bandTextForRow(row: ProjectionRow, superAccessAge: number | undefined): string {
+  if (row.phase === "working" || superAccessAge === undefined) return phaseBandText[row.phase];
+
+  return row.superAccessible
+    ? "Super accessible"
+    : `Bridge · retired, super locked until ${superAccessAge}`;
+}
+
+/** The heading of each phase's band row in the table, for plans without super. */
 const phaseBandText: Record<ProjectionRow["phase"], string> = {
   working: "Working · contributing",
   retired: "Retired · spending drawn from the portfolio, then cash",
@@ -132,23 +159,7 @@ const phaseBandText: Record<ProjectionRow["phase"], string> = {
  * ("2031, 2035 – 2036"). Used by YearByYearSection when the money runs out.
  */
 function describeShortfallYears(years: readonly number[]): string {
-  const sortedYears = [...years].sort((first, second) => first - second);
+  const countText = years.length === 1 ? "1 year" : `${years.length} years`;
 
-  // Group into runs of consecutive years.
-  const runs: { first: number; last: number }[] = [];
-  for (const year of sortedYears) {
-    const lastRun = runs[runs.length - 1];
-    if (lastRun !== undefined && year === lastRun.last + 1) {
-      lastRun.last = year;
-    } else {
-      runs.push({ first: year, last: year });
-    }
-  }
-
-  const rangeText = runs
-    .map((run) => (run.first === run.last ? String(run.first) : `${run.first} – ${run.last}`))
-    .join(", ");
-  const countText = sortedYears.length === 1 ? "1 year" : `${sortedYears.length} years`;
-
-  return `${countText} can't be funded: ${rangeText}`;
+  return `${countText} can't be funded: ${formatYearRuns(years)}`;
 }
