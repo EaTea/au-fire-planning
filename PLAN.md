@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 plan and implementation are in review as stacked PRs.
+**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 (super access and the bridge period) is implemented; the plan and implementation PRs are stacked and await the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M5 and the side plans done. M6 plan and implementation in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M5 and the side plans done. M6 implemented, in review |
 
 ## 1. Requirement ordering
 
@@ -1454,7 +1454,7 @@ Conventions settled while building M5, which later milestones rely on:
 
 ### M6 · Super access and the bridge period: step-by-step plan
 
-**Status:** draft. At the owner's request, the plan PR and the
+**Status:** implemented, awaiting the owner's verification. At the owner's request, the plan PR and the
 implementation PR are opened together, stacked: the implementation PR's
 base is the plan branch. The plan is still reviewed first, and the
 implementation follows any change to it.
@@ -1975,7 +1975,16 @@ sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
 
 #### Step 9 · E2E, README and wrap-up (end of the implementation PR)
 
-- [ ] Done
+- [x] Done
+
+**As built:** `tests/e2e/bridge.spec.ts` is one flow with the clock fixed in 2026:
+B2 entered through the screens (SHORT 2033–2035, after access MET, the Bridge
+band and "super locked until 65"), then "Super accessible at" set to 60 (B1,
+both MET, band says 60), then a reload, after waiting for the autosave to store
+`superAccessAgeYears`, keeps the age and the result. Run 10 times with
+`--repeat-each 10`. The Results "Not yet modelled" banner no longer says super
+is drawn only from 65. README "What it does" now covers the access age, the
+bridge check and chart, and the Coast FIRE split.
 
 1. `tests/e2e/bridge.spec.ts`, with the clock fixed in 2026:
    - **B2 entered through the screens:**
@@ -2052,5 +2061,7 @@ implementation PR**, stacked on this plan PR.
       verification.
 - [x] Owner verifies and merges M5 PR B.
 - [ ] Approve the M6 step-by-step plan (plan PR).
-- [ ] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
+- [x] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
       plan PR, then the owner verifies and merges both.
+- [ ] Owner verifies and merges the M6 PRs (the owner verifies the two new
+      rule values: preservation age 60 and unconditional release at 65).

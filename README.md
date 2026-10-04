@@ -24,9 +24,14 @@ Everything is calculated in your browser and saved only on your device.
   salary sacrifice and after-tax (non-concessional) contributions with start
   and end years. Contributions are taxed 15% going in and earnings at 15%
   (or a lower effective rate you enter). Super counts towards investable net
-  worth and is drawn on only from age 65; a year before then that only super
-  could fund shows as a shortfall in Year by year. Employer contributions stop
-  at retirement. The statutory rates live in dated data files, not in code.
+  worth. Employer contributions stop at retirement. The statutory rates live
+  in dated data files, not in code.
+- **Household, super access age:** "Super accessible at" is when your super
+  can be drawn. It is usually 65. You can choose 60 to 64 (your preservation
+  age onwards) if you'll have retired by then; super then opens at that age,
+  or the year after you retire if that is later, and at 65 regardless. A year
+  before it opens that only super could fund shows as a shortfall in Year by
+  year, which says "super locked until" that age.
 - **Results:** your FI number (in today's dollars, and in nominal dollars at
   your retirement age), your progress to it, the year you reach FI, and
   whether your money lasts to the age you plan until (or the age it runs out),
@@ -44,13 +49,23 @@ Everything is calculated in your browser and saved only on your device.
   savings on current contributions, today's savings with no more
   contributions, the Coast FIRE number and the FI number up to retirement;
   hover for the values, or click a year to jump to it in the table.
+- **Results, the bridge:** "Can you bridge to super?" checks the years you are
+  retired before super opens: whether your portfolio and cash cover them (the
+  bridge), and whether super plus what is left covers the years after. Each
+  part reads MET or SHORT, with the short years listed. A "Super accessible"
+  milestone marks the year super opens. A "Bridge period" chart stacks
+  outside-super money and super by year, with the bridge years shaded.
+- **Results, Coast FIRE split:** "Super and outside super" asks two stricter
+  Coast FIRE questions: what you need today outside super to fund the bridge,
+  and what you need in super to fund the years after it on its own, each with
+  the year you reach it. The combined Coast FIRE above stays the overall answer.
 - **Results, year by year:** at the bottom of Results, the projection of cash
   and the portfolio, one row per year to the plan-until age. Retirement
   spending is drawn from cash first, then the portfolio. The year FI is
   reached is highlighted, and years that can't be funded are flagged. One
   today's/nominal toggle at the top of Results covers the whole page.
 
-Super, tax and property aren't modelled yet; see
+Tax and property aren't modelled yet; see
 [PLAN.md](PLAN.md) for what comes next.
 
 ## Project layout

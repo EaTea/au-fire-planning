@@ -90,10 +90,7 @@ export function ResultsScreen() {
           <MissingInputsBanner missing={summary.missing} />
         )}
 
-        <Banner tone="info">
-          Not yet modelled: super is only drawn from 65 (M6 lets you change this and checks the
-          years before), tax (M8), property (M12) and more.
-        </Banner>
+        <Banner tone="info">Not yet modelled: tax (M8), property (M12) and more.</Banner>
       </div>
 
       {projection?.status === "complete" && <YearByYearSection projection={projection} />}
