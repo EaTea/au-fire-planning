@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { BridgePart } from "../../src/engine/bridge";
+import type { CoastSplitPart } from "../../src/engine/coastSplit";
 import { summarisePlan } from "../../src/engine/fiNumber";
 import { bundledRuleSet } from "../../src/rules/bundledRuleSet";
 import { createNewPlan } from "../../src/plan/createNewPlan";
@@ -74,6 +76,10 @@ interface WorkedScenario {
     readonly superRows?: readonly ExpectedSuperRow[];
     /** M6 figures: the effective super access age (the first age super can be drawn while retired). */
     readonly superAccessAge?: number;
+    /** M6 figures: the bridge check. Only the listed fields are checked. */
+    readonly bridge?: ExpectedBridge;
+    /** M6 figures: Coast FIRE for super and outside super. Only the listed fields are checked. */
+    readonly coastSplit?: ExpectedCoastSplit;
   };
 }
 
@@ -93,6 +99,36 @@ interface ExpectedSuperRow {
   readonly investableClosing?: number;
   /** M6: whether super can be drawn in that row. */
   readonly superAccessible?: boolean;
+}
+
+/** One part of the expected bridge check; unlisted fields aren't checked. */
+interface ExpectedBridgePart {
+  readonly firstYear?: number;
+  readonly lastYear?: number;
+  readonly need?: number;
+  readonly projected?: number;
+  readonly status?: "met" | "short";
+  readonly shortYears?: readonly number[];
+}
+
+/** The expected bridge check; `null` for a part means it is absent (for example "no bridge needed"). */
+interface ExpectedBridge {
+  readonly effectiveAccessAge?: number;
+  readonly bridge?: ExpectedBridgePart | null;
+  readonly afterAccess?: ExpectedBridgePart | null;
+}
+
+/** One of the two Coast FIRE tests. `reached: null` means it isn't reached before retirement. */
+interface ExpectedCoastSplitPart {
+  readonly needToday: number;
+  readonly hasToday: number;
+  readonly reached: { readonly calendarYear: number; readonly age: number } | null;
+}
+
+/** The expected split; `null` for a part means it is absent (for example "no bridge"). */
+interface ExpectedCoastSplit {
+  readonly outside?: ExpectedCoastSplitPart | null;
+  readonly super?: ExpectedCoastSplitPart | null;
 }
 
 /** The expected Coast FIRE figures. Only the listed fields are checked. */
@@ -394,6 +430,84 @@ function checkSalaryFigures(summary: CompleteSummary, expected: WorkedScenario["
   }
 }
 
+/** Checks one part of the bridge check against a fixture, field by field. */
+function checkBridgePart(
+  name: string,
+  actual: BridgePart | undefined,
+  expected: ExpectedBridgePart | null | undefined,
+) {
+  if (expected === undefined) return;
+  if (expected === null) {
+    expect(actual, `${name} should be absent`).toBeUndefined();
+    return;
+  }
+
+  expect(actual, `${name} should be present`).toBeDefined();
+  if (actual === undefined) return;
+
+  if (expected.firstYear !== undefined) expect(actual.firstYear).toBe(expected.firstYear);
+  if (expected.lastYear !== undefined) expect(actual.lastYear).toBe(expected.lastYear);
+  if (expected.need !== undefined) expectToTheCent(actual.need.value, expected.need);
+  if (expected.projected !== undefined) expectToTheCent(actual.projected.value, expected.projected);
+  if (expected.status !== undefined) expect(actual.status).toBe(expected.status);
+  if (expected.shortYears !== undefined) expect(actual.shortYears).toEqual(expected.shortYears);
+}
+
+/** Checks the bridge check (M6 step 3) when the scenario lists it. */
+function checkBridgeFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.bridge === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+  const { bridge } = summary.projection;
+
+  if (expected.bridge.effectiveAccessAge !== undefined) {
+    expect(bridge.effectiveAccessAge).toBe(expected.bridge.effectiveAccessAge);
+  }
+  checkBridgePart("bridge", bridge.bridge, expected.bridge.bridge);
+  checkBridgePart("after access", bridge.afterAccess, expected.bridge.afterAccess);
+}
+
+/** Checks one of the two split Coast FIRE tests against a fixture. */
+function checkCoastSplitPart(
+  name: string,
+  actual: CoastSplitPart | undefined,
+  expected: ExpectedCoastSplitPart | null | undefined,
+) {
+  if (expected === undefined) return;
+  if (expected === null) {
+    expect(actual, `${name} should be absent`).toBeUndefined();
+    return;
+  }
+
+  expect(actual, `${name} should be present`).toBeDefined();
+  if (actual === undefined) return;
+
+  expectToTheCent(actual.needToday.value, expected.needToday);
+  expectToTheCent(actual.hasToday, expected.hasToday);
+
+  if (expected.reached === null) {
+    expect(actual.reached, `${name} should not be reached`).toBeUndefined();
+  } else {
+    expect(actual.reached?.calendarYear, `${name} reached year`).toBe(
+      expected.reached.calendarYear,
+    );
+    expect(actual.reached?.age, `${name} reached age`).toBe(expected.reached.age);
+  }
+}
+
+/** Checks Coast FIRE for super and outside super (M6 step 4) when the scenario lists it. */
+function checkCoastSplitFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.coastSplit === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+  const { split } = summary.projection.coast;
+
+  checkCoastSplitPart("outside super", split.outside, expected.coastSplit.outside);
+  checkCoastSplitPart("super", split.super, expected.coastSplit.super);
+}
+
 /** Checks the listed super figures in the listed rows (M5 step 5). */
 function checkSuperFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
   if (expected.superRows === undefined) return;
@@ -493,6 +607,8 @@ describe("worked examples", () => {
           checkCoastFigures(summary, scenario.expected);
           checkSalaryFigures(summary, scenario.expected);
           checkSuperFigures(summary, scenario.expected);
+          checkBridgeFigures(summary, scenario.expected);
+          checkCoastSplitFigures(summary, scenario.expected);
         },
       );
     });

@@ -1773,7 +1773,21 @@ pinned.
 
 #### Step 3 · Engine: the bridge check
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `assessBridge(rows, inputs)` returns `{ effectiveAccessAge?, bridge?, afterAccess? }`.
+  Each part has first/last year and age, `need` and `projected` (both `Explained`),
+  `status` ("met" | "short") and `shortYears`. Everything is empty without super.
+  The start year is read from `rows[0]`.
+- "No bridge" is `bridge` being absent, and "access after the plan ends" is
+  `afterAccess` being absent. After access never starts before row 1, with row 0
+  as its base when access is already open.
+- The need's explanation names the discount rate and ends with the line
+  "Withdrawals are tax-free from 60" (the value is the preservation age, source
+  "rule", unit years).
+- All plan figures match to the cent (B1 to B3, A at 65 and 60, and C). They are
+  in `m6-bridge.json`, which gained the scenarios A, A at 60 and C.
 
 1. `src/engine/bridge.ts`, with `assessBridge(rows, inputs)` returning the
    bridge and after-access parts as described: years, need, projected,
@@ -1791,7 +1805,25 @@ pinned.
 
 #### Step 4 · Engine: Coast FIRE for super and outside super
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- New `coastSplit.ts` (`calculateCoastSplit(rows, inputs, bridge)`), added to the
+  summary as `coast.split` with `outside?` and `super?`. Each part has
+  `needToday` (`Explained`), `hasToday` and `reached?`.
+- `portfolioNeededFromRow` in `coastFire.ts` is exported and takes the target at
+  retirement as a parameter (the FI number by default).
+- **Outside super counts cash on both sides.** The plan's figures ($338,666.95
+  needed and $740,000 had in example A) are portfolio needed + cash against
+  portfolio + cash, so `needToday` and `hasToday` include cash. Reached is the
+  first row where the portfolio is at least the portfolio needed.
+- **Super's linear form** reads G(k) and E(k) from `projectPortfolio` runs (no
+  spending, nothing outside super, voluntary contributions stopped after row k),
+  with $1 in super and with none, so no super rule is copied. Reached is checked
+  from today to the retirement row (or the row before access if that is earlier).
+- Absent parts: `outside` when there is no bridge, `super` when there is no super
+  or no years after access.
+- All plan figures match (B1, B2, A, C; B3 has no outside part).
 
 1. `coastSplit` in `coastFire.ts` (or a new `coastSplit.ts`), returning
    `outside` and `super`. Each has today's need, today's balance, the

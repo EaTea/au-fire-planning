@@ -1,6 +1,6 @@
 {
   "milestone": "M6",
-  "description": "Super access and the bridge period: the effective access age, the condition of release and the rows it produces (step 2). Bridge and Coast FIRE figures are added in steps 3 and 4.",
+  "description": "Super access and the bridge period: the effective access age and the condition of release (step 2), and the bridge check (step 3). Step 4 adds Coast FIRE for super and outside super.",
   "startYear": 2026,
   "scenarios": [
     {
@@ -30,7 +30,8 @@
         "Age 55, retire at 56, plan until 66 (2026 to 2037). Portfolio $100,000 and super $100,000, both at 0%, $20,000 a year, no inflation, no salary",
         "Retired years start in 2028 (age 57). Super accessible at 60 and retiring at 56 is before that, so the effective access age is 60 (2031)",
         "Portfolio pays first: 2028 to 2032 leave 80,000, 60,000, 40,000, 20,000, 0. Super is accessible from 2031 but isn't touched until the portfolio is empty",
-        "Super pays 2033 to 2037: 80,000, 60,000, 40,000, 20,000, 0. No shortfall in any year"
+        "Super pays 2033 to 2037: 80,000, 60,000, 40,000, 20,000, 0. No shortfall in any year",
+        "Coast split: outside super needs the bridge need $60,000 today (0% growth) and has $100,000, so it is reached in 2026. Super alone needs the after-access need $140,000 and has $100,000, so it is not reached, though the plan is funded"
       ],
       "expected": {
         "rows": [
@@ -88,6 +89,40 @@
         "solvency": {
           "status": "lasts",
           "investableClosing": 0
+        },
+        "bridge": {
+          "effectiveAccessAge": 60,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2030,
+            "need": 60000,
+            "projected": 100000,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2031,
+            "lastYear": 2037,
+            "need": 140000,
+            "projected": 140000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "coastSplit": {
+          "outside": {
+            "needToday": 60000,
+            "hasToday": 100000,
+            "reached": {
+              "calendarYear": 2026,
+              "age": 55
+            }
+          },
+          "super": {
+            "needToday": 140000,
+            "hasToday": 100000,
+            "reached": null
+          }
         }
       }
     },
@@ -116,7 +151,8 @@
       "arithmetic": [
         "B1 with 'Super accessible at' left unset, so it defaults to 65. Effective access age 65 (2036)",
         "Portfolio pays 2028 to 2032 and runs out. 2033, 2034 and 2035 (ages 62 to 64) can't be funded: super $100,000 is locked, so each is a $20,000 shortfall",
-        "Super pays 2036 and 2037 (ages 65 and 66): 80,000, then 60,000"
+        "Super pays 2036 and 2037 (ages 65 and 66): 80,000, then 60,000",
+        "Coast split: outside super needs $160,000 and has $100,000, not reached. Super needs $40,000 and has $100,000, reached in 2026"
       ],
       "expected": {
         "rows": [
@@ -171,6 +207,40 @@
           "age": 62,
           "shortfallYears": [2033, 2034, 2035],
           "shortfall": 20000
+        },
+        "bridge": {
+          "effectiveAccessAge": 65,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2035,
+            "need": 160000,
+            "projected": 100000,
+            "status": "short",
+            "shortYears": [2033, 2034, 2035]
+          },
+          "afterAccess": {
+            "firstYear": 2036,
+            "lastYear": 2037,
+            "need": 40000,
+            "projected": 100000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "coastSplit": {
+          "outside": {
+            "needToday": 160000,
+            "hasToday": 100000,
+            "reached": null
+          },
+          "super": {
+            "needToday": 40000,
+            "hasToday": 100000,
+            "reached": {
+              "calendarYear": 2026,
+              "age": 55
+            }
+          }
         }
       }
     },
@@ -201,7 +271,8 @@
         "B1 with retirement at 61 and the plan until 64 (2026 to 2035). Retired years start in 2033 (age 62)",
         "Access age 60 but retirement at 61: the condition of release needs age > retirement age, so super opens in the first retired year, age 62 (2033), not at 60. No bridge is needed",
         "Super is locked at 61 (2032) and accessible from 62 (2033)",
-        "Portfolio pays first: 2033 to 2035 leave 80,000, 60,000, 40,000, so super isn't drawn and stays 100,000"
+        "Portfolio pays first: 2033 to 2035 leave 80,000, 60,000, 40,000, so super isn't drawn and stays 100,000",
+        "Coast split: no bridge, so outside super has nothing to coast to"
       ],
       "expected": {
         "rows": [
@@ -252,6 +323,215 @@
         "solvency": {
           "status": "lasts",
           "investableClosing": 140000
+        },
+        "bridge": {
+          "effectiveAccessAge": 62,
+          "bridge": null,
+          "afterAccess": {
+            "firstYear": 2033,
+            "lastYear": 2035,
+            "need": 60000,
+            "projected": 200000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "coastSplit": {
+          "outside": null
+        }
+      }
+    },
+    {
+      "name": "A: M5's example A, super accessible at the default 65",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "salaryAnnual": 145000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0.01
+        },
+        "superAccount": {
+          "balance": 185000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        }
+      },
+      "arithmetic": [
+        "M5's example A with 'Super accessible at' unset (65). Retire at 50 (2042); the effective access age is 65 (2057)",
+        "Bridge 2043 to 2056 (ages 51 to 64): spending discounted to 2042 at the portfolio's 7% is $978,216.63; portfolio + cash at the end of 2042 is $2,999,659.13; met",
+        "After access 2057 to 2087 (ages 65 to 95): spending discounted to 2056 at super's 7% x (1 - 15%) = 5.95% is $2,559,159.99; super + portfolio + cash at the end of 2056 is $7,821,131.69; met",
+        "Coast split: outside super needs $338,666.95 today and has $740,000 (reached 2026); super needs $256,832.52 and has $185,000, reached in 2039 at age 47"
+      ],
+      "expected": {
+        "superAccessAge": 65,
+        "bridge": {
+          "effectiveAccessAge": 65,
+          "bridge": {
+            "firstYear": 2043,
+            "lastYear": 2056,
+            "need": 978216.63,
+            "projected": 2999659.13,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2057,
+            "lastYear": 2087,
+            "need": 2559159.99,
+            "projected": 7821131.69,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "coastSplit": {
+          "outside": {
+            "needToday": 338666.95,
+            "hasToday": 740000,
+            "reached": {
+              "calendarYear": 2026,
+              "age": 34
+            }
+          },
+          "super": {
+            "needToday": 256832.52,
+            "hasToday": 185000,
+            "reached": {
+              "calendarYear": 2039,
+              "age": 47
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "A with super accessible at 60",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "salaryAnnual": 145000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0.01
+        },
+        "superAccount": {
+          "balance": 185000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        },
+        "superAccessAge": 60
+      },
+      "arithmetic": [
+        "Example A with super accessible at 60: retiring at 50 is before it, so the effective access age is 60 (2052)",
+        "Bridge 2043 to 2051 (ages 51 to 59): spending discounted to 2042 at 7% is $694,023.03"
+      ],
+      "expected": {
+        "superAccessAge": 60,
+        "bridge": {
+          "effectiveAccessAge": 60,
+          "bridge": {
+            "firstYear": 2043,
+            "lastYear": 2051,
+            "need": 694023.03
+          }
+        }
+      }
+    },
+    {
+      "name": "C: M5's example C, super accessible at 65",
+      "checkedBy": "independent calculation (not the app's code), per the M6 plan",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 300000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "salaryAnnual": 120000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0
+        },
+        "superAccount": {
+          "balance": 100000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        }
+      },
+      "arithmetic": [
+        "M5's example C with the default access age 65. Bridge 2043 to 2056: need $978,216.63 at 2042, projected $1,759,750.36, met",
+        "Coast split: outside super needs $338,666.95 and has $320,000, reached in 2027 at age 35; super needs $302,392.90 and has $100,000, not before retirement"
+      ],
+      "expected": {
+        "superAccessAge": 65,
+        "bridge": {
+          "effectiveAccessAge": 65,
+          "bridge": {
+            "firstYear": 2043,
+            "lastYear": 2056,
+            "need": 978216.63,
+            "projected": 1759750.36,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "coastSplit": {
+          "outside": {
+            "needToday": 338666.95,
+            "hasToday": 320000,
+            "reached": {
+              "calendarYear": 2027,
+              "age": 35
+            }
+          },
+          "super": {
+            "needToday": 302392.9,
+            "hasToday": 100000,
+            "reached": null
+          }
         }
       }
     }
