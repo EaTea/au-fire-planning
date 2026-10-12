@@ -13,6 +13,8 @@ import type {
   Plan,
   Portfolio,
   RetirementSpending,
+  SuperAccount,
+  SuperContribution,
 } from "../plan/types";
 import { CURRENT_SCHEMA_VERSION, type PlanDocumentV1 } from "./planDocument";
 
@@ -112,6 +114,76 @@ function growthRateFromWire(wireGrowth: WireGrowthRate): GrowthRate {
   }
 }
 
+/** The wire form of a super account, taken from the document type. */
+type WireSuperAccount = NonNullable<PlanDocumentV1["household"]["people"][number]["superAccount"]>;
+
+/** The wire form of a voluntary super contribution, taken from the document type. */
+type WireSuperContribution = NonNullable<WireSuperAccount["salarySacrifice"]>;
+
+/** Maps a voluntary contribution to its wire form; unset fields are left out. */
+function superContributionToWire(contribution: SuperContribution): WireSuperContribution {
+  return {
+    ...(contribution.annual !== undefined ? { annualDollars: contribution.annual } : {}),
+    ...(contribution.fromYear !== undefined ? { fromYear: contribution.fromYear } : {}),
+    ...(contribution.toYear !== undefined ? { toYear: contribution.toYear } : {}),
+  };
+}
+
+/** Inverse of `superContributionToWire`. */
+function superContributionFromWire(wireContribution: WireSuperContribution): SuperContribution {
+  return {
+    ...(wireContribution.annualDollars !== undefined
+      ? { annual: wireContribution.annualDollars }
+      : {}),
+    ...(wireContribution.fromYear !== undefined ? { fromYear: wireContribution.fromYear } : {}),
+    ...(wireContribution.toYear !== undefined ? { toYear: wireContribution.toYear } : {}),
+  };
+}
+
+/** Maps a super account to its wire form: rates become percents, unset fields are left out. */
+function superAccountToWire(account: SuperAccount): WireSuperAccount {
+  return {
+    ...(account.balance !== undefined ? { balanceDollars: account.balance } : {}),
+    ...(account.returnRate !== undefined
+      ? { returnPercent: fractionToPercent(account.returnRate) }
+      : {}),
+    ...(account.employerRate !== undefined
+      ? { employerRatePercent: fractionToPercent(account.employerRate) }
+      : {}),
+    ...(account.salarySacrifice !== undefined
+      ? { salarySacrifice: superContributionToWire(account.salarySacrifice) }
+      : {}),
+    ...(account.nonConcessional !== undefined
+      ? { nonConcessional: superContributionToWire(account.nonConcessional) }
+      : {}),
+    ...(account.earningsTaxRate !== undefined
+      ? { earningsTaxPercent: fractionToPercent(account.earningsTaxRate) }
+      : {}),
+  };
+}
+
+/** Inverse of `superAccountToWire`: converts stored percents back to fractions. */
+function superAccountFromWire(wireAccount: WireSuperAccount): SuperAccount {
+  return {
+    ...(wireAccount.balanceDollars !== undefined ? { balance: wireAccount.balanceDollars } : {}),
+    ...(wireAccount.returnPercent !== undefined
+      ? { returnRate: percentToFraction(wireAccount.returnPercent) }
+      : {}),
+    ...(wireAccount.employerRatePercent !== undefined
+      ? { employerRate: percentToFraction(wireAccount.employerRatePercent) }
+      : {}),
+    ...(wireAccount.salarySacrifice !== undefined
+      ? { salarySacrifice: superContributionFromWire(wireAccount.salarySacrifice) }
+      : {}),
+    ...(wireAccount.nonConcessional !== undefined
+      ? { nonConcessional: superContributionFromWire(wireAccount.nonConcessional) }
+      : {}),
+    ...(wireAccount.earningsTaxPercent !== undefined
+      ? { earningsTaxRate: percentToFraction(wireAccount.earningsTaxPercent) }
+      : {}),
+  };
+}
+
 /**
  * Converts the in-memory plan to the stored document. Called by the save path
  * just before validation and writing. Only values that are set are written
@@ -168,6 +240,13 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
               : {}),
           };
         }
+        // The super section is written only once something in it is set.
+        if (person.superAccount !== undefined) {
+          const wireSuperAccount = superAccountToWire(person.superAccount);
+          if (Object.keys(wireSuperAccount).length > 0) {
+            wirePerson.superAccount = wireSuperAccount;
+          }
+        }
         return wirePerson;
       }),
     },
@@ -222,6 +301,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
               : {}),
           },
         }
+      : {}),
+    ...(wirePerson.superAccount !== undefined
+      ? { superAccount: superAccountFromWire(wirePerson.superAccount) }
       : {}),
   }));
 

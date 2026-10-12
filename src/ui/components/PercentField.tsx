@@ -8,6 +8,8 @@ interface PercentFieldProps {
   readonly value?: number;
   /** Shown in the dashed "default" style while `value` is unset. */
   readonly defaultValue?: number;
+  /** Replaces the formatted default while it is shown, e.g. "12% (legislated)". */
+  readonly defaultText?: string;
   /** Called with a valid new fraction, or undefined when the user clears the field. */
   readonly onChange: (value?: number) => void;
   readonly hint?: string;

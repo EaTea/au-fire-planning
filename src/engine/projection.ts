@@ -13,8 +13,18 @@
 //       retirement spending × index    (only if age > retirement age)
 //     + dated expenses for this year × index
 //
-//   take it from: 1. portfolio available   2. cash available
-//   anything left over = shortfall for this year (cash and portfolio end at $0)
+//   super (M5), in this order:
+//     employer      = rate × min(salary, maximum contribution base)   (before sacrifice)
+//     sacrifice     = salary sacrifice, only while working and in its years
+//     concessional  = employer + sacrifice;  tax = 15% of it
+//     earnings      = super opening × return;  tax = earnings × earnings tax rate
+//     super available = opening + earnings − earnings tax
+//                     + concessional − contributions tax + non-concessional
+//
+//   take it from: 1. portfolio available
+//                 2. super available, only if age ≥ the super access age (65)
+//                 3. cash available (last, as a buffer)
+//   anything left over = shortfall for this year (everything drawn ends at $0)
 //
 // Cash is drawn last so it acts as a buffer: it is only touched once the
 // portfolio is empty. That holds in working years too, so a dated expense
@@ -23,7 +33,9 @@
 // Every value in row k shares one inflation index, (1+i)^k, so converting any
 // of them to today's dollars divides by that single number.
 
+import { DEFAULT_SUPER_ACCESS_AGE } from "../plan/defaults";
 import type { SalaryGrowth } from "../plan/types";
+import { rulesForYear, type RuleSet } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
 
 /** A dated expense as the projection needs it: today's dollars per year, over calendar years. */
@@ -42,6 +54,32 @@ export interface ProjectionSalary {
   readonly annual: number;
   /** How it grows each year. */
   readonly growth: SalaryGrowth;
+}
+
+/** A voluntary super contribution as the projection needs it (IN-23). */
+export interface ProjectionSuperContribution {
+  /** Dollars per year. */
+  readonly annual: number;
+  /** First calendar year it is paid; absent means from the first projected year. */
+  readonly fromYear?: number;
+  /** Last calendar year it is paid; absent means to the retirement year (so the retirement-age search can move it). */
+  readonly toYear?: number;
+}
+
+/** A person's super account as the projection needs it (IN-21 to IN-24). */
+export interface ProjectionSuper {
+  /** Balance today. */
+  readonly opening: number;
+  /** Return net of fees, as a fraction. */
+  readonly returnRate: number;
+  /** The user's employer rate; absent means the legislated rate from each row's rules. */
+  readonly employerRate?: number;
+  /** The user's earnings tax rate; absent means the legislated rate from each row's rules. */
+  readonly earningsTaxRate?: number;
+  readonly salarySacrifice: ProjectionSuperContribution;
+  readonly nonConcessional: ProjectionSuperContribution;
+  /** The statutory rules, from which each row takes its rates and the contribution base. */
+  readonly ruleSet: RuleSet;
 }
 
 /** Plain numbers the projection needs, all resolved (see ResolvedProjectionInputs). */
@@ -73,8 +111,10 @@ export interface ProjectionInputs {
   readonly datedExpenses: readonly ProjectionDatedExpense[];
   /** M1's FI number in today's dollars. */
   readonly fiNumberToday: number;
-  /** Gross salary (IN-7). Absent means no salary. It affects only each row's `salary` for now. */
+  /** Gross salary (IN-7). Absent means no salary. It sets employer super contributions. */
   readonly salary?: ProjectionSalary;
+  /** The super account (IN-21 to IN-24). Absent means no super at all. */
+  readonly superAccount?: ProjectionSuper;
 }
 
 /** Whether a year is before or after the target retirement age. */
@@ -101,16 +141,42 @@ export interface ProjectionRow {
   readonly spending: number;
   /** The part of spending paid from the portfolio, which is drawn first. */
   readonly fromPortfolio: number;
-  /** The part of spending paid from cash, once the portfolio is empty. */
+  /** The part of spending paid from cash, drawn last: once the portfolio (and accessible super) are empty. */
   readonly fromCash: number;
   /** The part of spending that couldn't be funded; 0 in a funded year. */
   readonly shortfall: number;
-  /** Cash plus portfolio at the end of the year. */
+  /** The part of spending paid from super, after the portfolio and before cash; 0 before the super access age. */
+  readonly fromSuper: number;
+  /** Cash plus portfolio plus super at the end of the year. */
   readonly investableClosing: number;
   readonly livingExpenses: number;
   readonly fiNumber: number;
-  /** Gross salary this year (nominal); 0 once retired or when there is none. Sets employer super from M5 step 5. */
+  /** Gross salary this year (nominal); 0 once retired or when there is none. */
   readonly salary: number;
+  /** Employer contributions this year, before contributions tax. */
+  readonly employerContribution: number;
+  /** Salary sacrifice this year, before contributions tax. */
+  readonly salarySacrifice: number;
+  /** Non-concessional contributions this year (not taxed on entry). */
+  readonly nonConcessional: number;
+  /** Tax on concessional contributions (employer + salary sacrifice). */
+  readonly contributionsTax: number;
+  readonly superOpening: number;
+  /** Earnings on the opening balance, before earnings tax. */
+  readonly superEarnings: number;
+  readonly superEarningsTax: number;
+  readonly superClosing: number;
+}
+
+/**
+ * True when a year can't be fully funded while some super sits locked: the
+ * person is younger than the access age and has a super balance that could
+ * not be drawn. Used by the Year by year status and by the "Money runs out"
+ * breakdown, so both say the same thing about the same year. M6 replaces the
+ * fixed access age with the person's own.
+ */
+export function isShortfallWithSuperLocked(row: ProjectionRow): boolean {
+  return row.shortfall > 0 && row.age < DEFAULT_SUPER_ACCESS_AGE && row.superClosing > 0;
 }
 
 /** The year investable net worth first reaches the FI number, with the working behind it. */
@@ -123,7 +189,7 @@ export interface FiMilestone {
 }
 
 /**
- * Projects cash and the portfolio year by year from today to the end age.
+ * Projects cash, the portfolio and super year by year from today to the end age.
  *
  * Called by `summarisePlan` (src/engine/fiNumber.ts); the Results screen
  * shows its rows (chart and Year by year table), and `assessSolvency` reads the shortfalls.
@@ -132,6 +198,8 @@ export interface FiMilestone {
  * age, only row 0 is returned.
  */
 export function projectPortfolio(inputs: ProjectionInputs, startYear: number): ProjectionRow[] {
+  const superOpeningToday = inputs.superAccount?.opening ?? 0;
+
   const rows: ProjectionRow[] = [
     {
       yearIndex: 0,
@@ -150,15 +218,25 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       fromCash: 0,
       fromPortfolio: 0,
       shortfall: 0,
-      investableClosing: inputs.cashOpening + inputs.portfolioOpening,
+      fromSuper: 0,
+      investableClosing: inputs.cashOpening + inputs.portfolioOpening + superOpeningToday,
       livingExpenses: inputs.livingAnnual,
       fiNumber: inputs.fiNumberToday,
       salary: salaryInYear(inputs, 0),
+      employerContribution: 0,
+      salarySacrifice: 0,
+      nonConcessional: 0,
+      contributionsTax: 0,
+      superOpening: superOpeningToday,
+      superEarnings: 0,
+      superEarningsTax: 0,
+      superClosing: superOpeningToday,
     },
   ];
 
   let cash = inputs.cashOpening;
   let portfolio = inputs.portfolioOpening;
+  let superBalance = superOpeningToday;
 
   for (let yearIndex = 1; inputs.currentAge + yearIndex <= inputs.endAge; yearIndex++) {
     const age = inputs.currentAge + yearIndex;
@@ -175,6 +253,8 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
     // The year you turn the stop age is the last one with a contribution.
     const contribution = age <= inputs.contributionsStopAge ? inputs.annualContribution : 0;
 
+    const superYear = projectSuperYear(inputs, yearIndex, calendarYear, superBalance);
+
     const cashAvailable = cashOpening + cashInterest;
     const portfolioAvailable = portfolioOpening + portfolioGrowth + contribution;
 
@@ -186,14 +266,20 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       sumDatedExpensesInYear(inputs.datedExpenses, calendarYear) * inflationIndex;
     const spending = retirementSpending + datedSpending;
 
-    // The portfolio is drawn first and cash last, so cash stays as a buffer
-    // until the portfolio is empty; whatever is left over is the shortfall.
+    // The portfolio is drawn first, then super but only from the access age,
+    // and cash last, so cash stays as a buffer until everything else is
+    // spent; whatever is left over is the shortfall.
     const fromPortfolio = Math.min(spending, portfolioAvailable);
-    const fromCash = Math.min(spending - fromPortfolio, cashAvailable);
-    const shortfall = spending - fromPortfolio - fromCash;
+    const superIsAccessible = age >= DEFAULT_SUPER_ACCESS_AGE;
+    const fromSuper = superIsAccessible
+      ? Math.min(spending - fromPortfolio, superYear.available)
+      : 0;
+    const fromCash = Math.min(spending - fromPortfolio - fromSuper, cashAvailable);
+    const shortfall = spending - fromPortfolio - fromSuper - fromCash;
 
     cash = cashAvailable - fromCash;
     portfolio = portfolioAvailable - fromPortfolio;
+    superBalance = superYear.available - fromSuper;
 
     rows.push({
       yearIndex,
@@ -212,14 +298,121 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       fromCash,
       fromPortfolio,
       shortfall,
-      investableClosing: cash + portfolio,
+      fromSuper,
+      investableClosing: cash + portfolio + superBalance,
       livingExpenses: inputs.livingAnnual * inflationIndex,
       fiNumber: inputs.fiNumberToday * inflationIndex,
       salary: salaryInYear(inputs, yearIndex),
+      employerContribution: superYear.employer,
+      salarySacrifice: superYear.salarySacrifice,
+      nonConcessional: superYear.nonConcessional,
+      contributionsTax: superYear.contributionsTax,
+      superOpening: superYear.opening,
+      superEarnings: superYear.earnings,
+      superEarningsTax: superYear.earningsTax,
+      superClosing: superBalance,
     });
   }
 
   return rows;
+}
+
+/** One year of super before any drawing, as worked out by `projectSuperYear`. */
+interface SuperYear {
+  readonly opening: number;
+  readonly employer: number;
+  readonly salarySacrifice: number;
+  readonly nonConcessional: number;
+  readonly contributionsTax: number;
+  readonly earnings: number;
+  readonly earningsTax: number;
+  /** Opening + earnings − earnings tax + concessional − contributions tax + non-concessional. */
+  readonly available: number;
+}
+
+/**
+ * Super for one row, in the order the plan sets out (M5 "Super each year"):
+ * employer contributions on salary before sacrifice and capped at the
+ * maximum contribution base, then salary sacrifice (only while working),
+ * non-concessional contributions (their years, working or not), contributions
+ * tax, then earnings on the opening balance and earnings tax. The rates and
+ * the base come from `rulesForYear`, so no statutory figure lives here.
+ * Called by `projectPortfolio` for every row after row 0; the drawing happens
+ * there, on the `available` it returns.
+ */
+function projectSuperYear(
+  inputs: ProjectionInputs,
+  yearIndex: number,
+  calendarYear: number,
+  opening: number,
+): SuperYear {
+  const account = inputs.superAccount;
+
+  if (account === undefined) {
+    return {
+      opening,
+      employer: 0,
+      salarySacrifice: 0,
+      nonConcessional: 0,
+      contributionsTax: 0,
+      earnings: 0,
+      earningsTax: 0,
+      available: opening,
+    };
+  }
+
+  const age = inputs.currentAge + yearIndex;
+  const isWorking = age <= inputs.retirementAge;
+  const rules = rulesForYear(account.ruleSet, calendarYear, inputs.inflationRate).superannuation;
+
+  const salary = salaryInYear(inputs, yearIndex);
+  const employerRate = account.employerRate ?? rules.guaranteeRate;
+  const employer = employerRate * Math.min(salary, rules.maximumContributionBaseAnnualDollars);
+
+  // Salary sacrifice comes out of salary, so it is paid only while working.
+  const salarySacrifice =
+    isWorking && isInContributionYears(account.salarySacrifice, calendarYear, isWorking)
+      ? account.salarySacrifice.annual
+      : 0;
+
+  const nonConcessional = isInContributionYears(account.nonConcessional, calendarYear, isWorking)
+    ? account.nonConcessional.annual
+    : 0;
+
+  const concessional = employer + salarySacrifice;
+  const contributionsTax = concessional * rules.contributionsTaxRate;
+
+  const earnings = opening * account.returnRate;
+  const earningsTax = earnings * (account.earningsTaxRate ?? rules.earningsTaxRate);
+
+  return {
+    opening,
+    employer,
+    salarySacrifice,
+    nonConcessional,
+    contributionsTax,
+    earnings,
+    earningsTax,
+    available: opening + earnings - earningsTax + concessional - contributionsTax + nonConcessional,
+  };
+}
+
+/**
+ * Whether a voluntary contribution is paid in a calendar year. A missing
+ * start means "from the first projected year" and a missing end means "to the
+ * retirement year" (`isWorking`), which is what lets the earliest-retirement
+ * search move the end with the age it tries. Called by `projectSuperYear`.
+ */
+function isInContributionYears(
+  contribution: ProjectionSuperContribution,
+  calendarYear: number,
+  isWorking: boolean,
+): boolean {
+  const afterStart = contribution.fromYear === undefined || calendarYear >= contribution.fromYear;
+  const beforeEnd =
+    contribution.toYear === undefined ? isWorking : calendarYear <= contribution.toYear;
+
+  return afterStart && beforeEnd;
 }
 
 /**
@@ -275,7 +468,7 @@ function sumDatedExpensesInYear(
 }
 
 /**
- * Finds the first row whose investable net worth (cash + portfolio) is at
+ * Finds the first row whose investable net worth (cash + portfolio + super) is at
  * least that row's FI number (for row 0 that is today's total).
  *
  * Returns `undefined` if no row reaches it by the end of the projection. Called

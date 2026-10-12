@@ -113,6 +113,26 @@ function renderYearByYear(plan: Plan, route = "/results") {
   );
 }
 
+/** The table's column headers, in order. */
+function headerTexts(): string[] {
+  return screen.getAllByRole("columnheader").map((header) => header.textContent ?? "");
+}
+
+/** The text of one cell of the row for `year`, found by its column header rather than its position. */
+function cellFor(year: number, header: string): string {
+  const columnIndex = headerTexts().indexOf(header);
+  if (columnIndex < 0) throw new Error(`No column headed "${header}"`);
+
+  return rowFor(year)[columnIndex] ?? "";
+}
+
+/** A row's cells keyed by column header, so a test names the column it checks. */
+function rowRecord(year: number): Record<string, string> {
+  const headers = headerTexts();
+
+  return Object.fromEntries(rowFor(year).map((text, index) => [headers[index], text]));
+}
+
 /** The cell texts of the table row whose first cell is `year`. */
 function rowFor(year: number): string[] {
   const row = screen
@@ -144,11 +164,13 @@ describe("YearByYearSection", () => {
       "Year",
       "Age",
       "Salary",
-      "Contributions",
+      "Into portfolio",
+      "Into super",
       "Growth & interest",
       "Spending",
       "Cash",
       "Portfolio",
+      "Super",
       "Investable",
       "FI number",
       "Status",
@@ -164,16 +186,16 @@ describe("YearByYearSection", () => {
     expect(screen.getByRole("button", { name: "Nominal" })).toHaveAttribute("aria-pressed", "true");
 
     // Row 1: growth $50,400, contribution $30,000, portfolio $800,400. Row 2's portfolio is $886,428.
-    expect(rowFor(2027).slice(3, 5)).toEqual(["$30,000", "$50,400"]);
-    expect(rowFor(2027)[7]).toBe("$800,400");
-    expect(rowFor(2028)[7]).toBe("$886,428");
+    expect(cellFor(2027, "Into portfolio")).toBe("$30,000");
+    expect(cellFor(2027, "Growth & interest")).toBe("$50,400");
+    expect(cellFor(2027, "Portfolio")).toBe("$800,400");
+    expect(cellFor(2028, "Portfolio")).toBe("$886,428");
 
     // Row 12 (2038, age 46): investable $2,158,231 against an FI number of $2,151,822.
-    const fiRow = rowFor(2038);
-    expect(fiRow[7]).toBe("$2,158,231");
-    expect(fiRow[8]).toBe("$2,158,231");
-    expect(fiRow[9]).toBe("$2,151,822");
-    expect(fiRow[10]).toBe("✓");
+    expect(cellFor(2038, "Portfolio")).toBe("$2,158,231");
+    expect(cellFor(2038, "Investable")).toBe("$2,158,231");
+    expect(cellFor(2038, "FI number")).toBe("$2,151,822");
+    expect(cellFor(2038, "Status")).toBe("✓");
   });
 
   it("shows today's dollars after switching: row 1's contribution is $30,000 ÷ 1.025", async () => {
@@ -182,10 +204,9 @@ describe("YearByYearSection", () => {
 
     await user.click(screen.getByRole("button", { name: "Today's dollars" }));
 
-    const row = rowFor(2027);
-    expect(row[0]).toBe("2027");
-    expect(row[1]).toBe("35");
-    expect(row[3]).toBe("$29,268");
+    expect(cellFor(2027, "Year")).toBe("2027");
+    expect(cellFor(2027, "Age")).toBe("35");
+    expect(cellFor(2027, "Into portfolio")).toBe("$29,268");
   });
 
   it("shows the salary until retirement, then a dash, and follows the dollars toggle", async () => {
@@ -205,20 +226,20 @@ describe("YearByYearSection", () => {
       },
     });
 
-    expect(rowFor(2027)[2]).toBe("$150,075");
-    expect(rowFor(2042)[2]).toBe("$251,428");
+    expect(cellFor(2027, "Salary")).toBe("$150,075");
+    expect(cellFor(2042, "Salary")).toBe("$251,428");
     // 2043 is the first retired year (age 51).
-    expect(rowFor(2043)[2]).toBe("—");
+    expect(cellFor(2043, "Salary")).toBe("—");
 
     // Today's dollars: $150,075 ÷ 1.025.
     await user.click(screen.getByRole("button", { name: "Today's dollars" }));
-    expect(rowFor(2027)[2]).toBe("$146,415");
+    expect(cellFor(2027, "Salary")).toBe("$146,415");
   });
 
   it("shows a dash in the salary column when there is no salary", () => {
     renderYearByYear(exampleA);
 
-    expect(rowFor(2027)[2]).toBe("—");
+    expect(cellFor(2027, "Salary")).toBe("—");
   });
 
   it("highlights only the FI row", () => {
@@ -261,38 +282,44 @@ describe("YearByYearSection", () => {
   it("shows example B's five years and flags the 2031 shortfall, in nominal dollars", () => {
     renderYearByYear(exampleB);
 
-    // [year, age, salary, contributions, growth & interest, spending, cash, portfolio, investable, FI number, status]
-    expect(rowFor(2027)).toEqual([
-      "2027",
-      "61",
-      "—",
-      "$0",
-      "$10,500",
-      "$30,000",
-      "$10,500",
-      "$80,000",
-      "$90,500",
-      "$750,000",
-      "✓",
-    ]);
-    expect(rowFor(2028).slice(4, 8)).toEqual(["$8,525", "$30,000", "$11,025", "$58,000"]);
-    expect(rowFor(2029)[7]).toBe("$33,800");
-    expect(rowFor(2030)[7]).toBe("$7,180");
+    expect(rowRecord(2027)).toEqual({
+      Year: "2027",
+      Age: "61",
+      Salary: "—",
+      "Into portfolio": "$0",
+      "Into super": "$0",
+      "Growth & interest": "$10,500",
+      Spending: "$30,000",
+      Cash: "$10,500",
+      Portfolio: "$80,000",
+      Super: "$0",
+      Investable: "$90,500",
+      "FI number": "$750,000",
+      Status: "✓",
+    });
+    expect(cellFor(2028, "Growth & interest")).toBe("$8,525");
+    expect(cellFor(2028, "Spending")).toBe("$30,000");
+    expect(cellFor(2028, "Cash")).toBe("$11,025");
+    expect(cellFor(2028, "Portfolio")).toBe("$58,000");
+    expect(cellFor(2029, "Portfolio")).toBe("$33,800");
+    expect(cellFor(2030, "Portfolio")).toBe("$7,180");
 
-    // 2031: the portfolio's $7,898 and cash's $12,763 against $30,000 spending, so $9,339 is unfunded and everything ends at $0.
-    expect(rowFor(2031)).toEqual([
-      "2031",
-      "65",
-      "—",
-      "$0",
-      "$1,326",
-      "$30,000",
-      "$0",
-      "$0",
-      "$0",
-      "$750,000",
-      "Shortfall −$9,339",
-    ]);
+    // 2031: the portfolio's $7,898 and cash's $12,763 against $30,000 spending (cash drawn last), so $9,339 is unfunded and everything ends at $0.
+    expect(rowRecord(2031)).toEqual({
+      Year: "2031",
+      Age: "65",
+      Salary: "—",
+      "Into portfolio": "$0",
+      "Into super": "$0",
+      "Growth & interest": "$1,326",
+      Spending: "$30,000",
+      Cash: "$0",
+      Portfolio: "$0",
+      Super: "$0",
+      Investable: "$0",
+      "FI number": "$750,000",
+      Status: "Shortfall −$9,339",
+    });
     expect(screen.getByText("Shortfall −$9,339")).toHaveClass("projection-shortfall");
     expect(screen.getAllByText("Shortfall", { exact: false })).toHaveLength(1);
   });
@@ -301,13 +328,79 @@ describe("YearByYearSection", () => {
     renderYearByYear(exampleCDated);
 
     // $30,000 × 1.02² = $31,212 spent from the portfolio in a working year; portfolio $230,288.
-    const row = rowFor(2028);
-    expect(row[1]).toBe("42");
-    expect(row[3]).toBe("$20,000");
-    expect(row[5]).toBe("$31,212");
-    expect(row[6]).toBe("$0");
-    expect(row[7]).toBe("$230,288");
-    expect(row[10]).toBe("✓");
+    expect(cellFor(2028, "Age")).toBe("42");
+    expect(cellFor(2028, "Into portfolio")).toBe("$20,000");
+    expect(cellFor(2028, "Spending")).toBe("$31,212");
+    expect(cellFor(2028, "Cash")).toBe("$0");
+    expect(cellFor(2028, "Portfolio")).toBe("$230,288");
+    expect(cellFor(2028, "Status")).toBe("✓");
+  });
+
+  it("shows example A's super: 2027 salary $150,075, into super $23,808, super $219,815", () => {
+    // tests/worked-examples/m5-super.json example A: employer 12% ($18,009) plus $10,000 salary
+    // sacrifice, less 15% contributions tax ($4,201.35), is $23,807.65 into super.
+    const [person] = exampleA.household.people;
+    renderYearByYear({
+      ...exampleA,
+      cash: { balance: 20000 },
+      household: {
+        ...exampleA.household,
+        people: [
+          {
+            ...person!,
+            salary: { annual: 145000, growth: { kind: "inflationPlus", margin: 0.01 } },
+            superAccount: {
+              balance: 185000,
+              salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2042 },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(cellFor(2027, "Salary")).toBe("$150,075");
+    expect(cellFor(2027, "Into super")).toBe("$23,808");
+    expect(cellFor(2027, "Super")).toBe("$219,815");
+    // Investable includes super: $1,041,015.15.
+    expect(cellFor(2027, "Investable")).toBe("$1,041,015");
+  });
+
+  it("says super is locked in S4's shortfall years, then draws from it at 65", () => {
+    // S4: retired at 60 with $500,000 super and nothing else; $20,000 a year, no inflation, no return.
+    const [person] = exampleB.household.people;
+    renderYearByYear({
+      ...blankPlan,
+      household: {
+        people: [
+          {
+            ...person!,
+            currentAge: 60,
+            targetRetirementAge: 60,
+            superAccount: { balance: 500000, returnRate: 0 },
+          },
+        ],
+        projectionEndAge: 67,
+      },
+      expenses: { livingAnnual: 20000 },
+      assumptions: { inflationRate: 0 },
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", expectedReturn: 0.07 }],
+    });
+
+    for (const year of [2027, 2028, 2029, 2030]) {
+      expect(cellFor(year, "Status")).toBe("Shortfall −$20,000 · super locked until 65");
+      expect(cellFor(year, "Super")).toBe("$500,000");
+    }
+
+    // 2031 (age 65): drawn from super, so funded and no longer locked.
+    expect(cellFor(2031, "Status")).toBe("✓");
+    expect(cellFor(2031, "Super")).toBe("$480,000");
+    expect(screen.getByRole("alert")).toHaveTextContent("4 years can't be funded: 2027 – 2030");
+  });
+
+  it("doesn't say super is locked when there is none", () => {
+    renderYearByYear(exampleB);
+
+    expect(screen.queryByText(/super locked/)).not.toBeInTheDocument();
   });
 
   it("shows a banner with the unfunded years as a single year", () => {

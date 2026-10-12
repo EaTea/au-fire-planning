@@ -17,8 +17,18 @@ import {
   DEFAULT_SAFE_WITHDRAWAL_RATE,
   DEFAULT_SALARY_ANNUAL,
   DEFAULT_SALARY_GROWTH,
+  DEFAULT_SUPER_BALANCE,
+  DEFAULT_SUPER_CONTRIBUTION_ANNUAL,
+  DEFAULT_SUPER_RETURN,
 } from "./defaults";
-import type { Plan, RetirementSpending, SalaryGrowth, Sourced } from "./types";
+import type {
+  Plan,
+  RetirementSpending,
+  SalaryGrowth,
+  Sourced,
+  SuperAccount,
+  SuperContribution,
+} from "./types";
 
 /** An input the user still has to provide. The UI maps `field` to the step where it is entered. */
 export interface MissingInput {
@@ -48,6 +58,31 @@ export interface ResolvedDatedExpense {
   readonly toYear: number;
 }
 
+/** A voluntary super contribution with its amount resolved; the years stay optional (see `SuperContribution`). */
+export interface ResolvedSuperContribution {
+  readonly annual: Sourced<number>;
+  /** `undefined` means from next year. */
+  readonly fromYear?: number;
+  /** `undefined` means to the retirement year, so the earliest-retirement search can follow the age it tries. */
+  readonly toYear?: number;
+}
+
+/** The super account with defaults applied (IN-21 to IN-23). */
+export interface ResolvedSuperAccount {
+  readonly balance: Sourced<number>;
+  /** Return net of fees, a fraction (default 7%). */
+  readonly returnRate: Sourced<number>;
+  /**
+   * The user's employer rate, or `undefined` with source "rule" when it is
+   * left to the law: the rate then comes from each row's rules.
+   */
+  readonly employerRate: Sourced<number | undefined>;
+  readonly salarySacrifice: ResolvedSuperContribution;
+  readonly nonConcessional: ResolvedSuperContribution;
+  /** The user's earnings tax rate, or `undefined` with source "rule" for the legislated rate. */
+  readonly earningsTaxRate: Sourced<number | undefined>;
+}
+
 /**
  * The inputs the year-by-year projection needs, all resolved. M2 has one
  * person and one portfolio, so these come from the first of each.
@@ -71,6 +106,8 @@ export interface ResolvedProjectionInputs {
   readonly salaryAnnual: Sourced<number>;
   /** How the salary grows (default: with inflation). */
   readonly salaryGrowth: Sourced<SalaryGrowth>;
+  /** The super account (default: empty, $0). */
+  readonly superAccount: ResolvedSuperAccount;
 }
 
 /**
@@ -222,7 +259,38 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
       })),
       salaryAnnual: sourceOrDefault(person?.salary?.annual, DEFAULT_SALARY_ANNUAL),
       salaryGrowth: sourceOrDefault(person?.salary?.growth, DEFAULT_SALARY_GROWTH),
+      superAccount: resolveSuperAccount(person?.superAccount),
     },
+  };
+}
+
+/**
+ * Applies the super defaults (IN-21 to IN-23). The employer rate and the
+ * earnings tax rate left unset resolve to `undefined` with source "rule": the
+ * projection then reads the legislated rate for each row from the rules data.
+ * Called by `resolveProjectionInputs`.
+ */
+function resolveSuperAccount(account: SuperAccount | undefined): ResolvedSuperAccount {
+  const resolveContribution = (
+    contribution: SuperContribution | undefined,
+  ): ResolvedSuperContribution => ({
+    annual: sourceOrDefault(contribution?.annual, DEFAULT_SUPER_CONTRIBUTION_ANNUAL),
+    ...(contribution?.fromYear !== undefined ? { fromYear: contribution.fromYear } : {}),
+    ...(contribution?.toYear !== undefined ? { toYear: contribution.toYear } : {}),
+  });
+
+  const sourceOrRule = (userValue: number | undefined): Sourced<number | undefined> =>
+    userValue === undefined
+      ? { value: undefined, source: "rule" }
+      : { value: userValue, source: "input" };
+
+  return {
+    balance: sourceOrDefault(account?.balance, DEFAULT_SUPER_BALANCE),
+    returnRate: sourceOrDefault(account?.returnRate, DEFAULT_SUPER_RETURN),
+    employerRate: sourceOrRule(account?.employerRate),
+    salarySacrifice: resolveContribution(account?.salarySacrifice),
+    nonConcessional: resolveContribution(account?.nonConcessional),
+    earningsTaxRate: sourceOrRule(account?.earningsTaxRate),
   };
 }
 

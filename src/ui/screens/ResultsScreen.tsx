@@ -84,7 +84,8 @@ export function ResultsScreen() {
         )}
 
         <Banner tone="info">
-          Not yet modelled: super (M5), the bridge to super (M6), tax (M8), property (M12) and more.
+          Not yet modelled: super is only drawn from 65 (M6 lets you change this and checks the
+          years before), tax (M8), property (M12) and more.
         </Banner>
       </div>
 

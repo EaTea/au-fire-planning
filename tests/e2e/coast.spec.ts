@@ -13,8 +13,8 @@ import { expect, startFresh, test } from "./fixtures";
 
 /** Types `value` into the field with `label` and presses Tab to commit it. */
 async function enter(page: Page, label: string, value: string): Promise<void> {
-  await page.getByLabel(label).fill(value);
-  await page.getByLabel(label).press("Tab");
+  await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel(label, { exact: true }).press("Tab");
 }
 
 /** Reads the autosaved plan's current age, or undefined before the first save. */

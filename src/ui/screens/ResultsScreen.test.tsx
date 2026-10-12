@@ -137,7 +137,10 @@ describe("ResultsScreen", () => {
 
     const rows = explanationRows();
     expect(rows).toEqual([
-      "Investable amount$720,000",
+      "Share portfolio$720,000",
+      "+ Cash savings (default)$0",
+      "+ Super (default)$0",
+      "= Investable amount$720,000",
       "÷ FI number$1,600,000",
       "= Progress to FI45%",
     ]);
@@ -173,7 +176,9 @@ describe("ResultsScreen", () => {
     renderResults(blankPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: super \(M5\), the bridge to super \(M6\)/),
+      screen.getByText(
+        /Not yet modelled: super is only drawn from 65 \(M6 lets you change this and checks the years before\), tax \(M8\)/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -181,7 +186,9 @@ describe("ResultsScreen", () => {
     renderResults(workedPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: super \(M5\), the bridge to super \(M6\)/),
+      screen.getByText(
+        /Not yet modelled: super is only drawn from 65 \(M6 lets you change this and checks the years before\), tax \(M8\)/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -295,6 +302,37 @@ describe("ResultsScreen", () => {
         "Spending to fund in 2031$30,000",
         "− Cash and portfolio available$20,661",
         "= Shortfall$9,339",
+      ]);
+    });
+
+    it("adds the locked super to the breakdown of a year only super could fund (S4)", async () => {
+      const user = userEvent.setup();
+      // S4: retired at 60 with $500,000 super and nothing else; super is locked until 65.
+      renderResults({
+        ...blankPlan,
+        household: {
+          people: [
+            {
+              id: "person-1",
+              label: "Person 1",
+              currentAge: 60,
+              targetRetirementAge: 60,
+              superAccount: { balance: 500000, returnRate: 0 },
+            },
+          ],
+          projectionEndAge: 67,
+        },
+        expenses: { livingAnnual: 20000 },
+        assumptions: { inflationRate: 0 },
+      });
+
+      await openExplanation(user, "Money lasts");
+
+      expect(explanationRows()).toEqual([
+        "Spending to fund in 2027$20,000",
+        "− Cash and portfolio available$0",
+        "= Shortfall$20,000",
+        "Super (not accessible until 65)$500,000",
       ]);
     });
 
@@ -445,7 +483,11 @@ describe("ResultsScreen", () => {
       expect(rows).toContain("= Coast FIRE number$811,877");
       expect(rows).toContain("Investable at end of 2029 (age 37)$1,000,975");
       expect(rows).toContain("− Coast FIRE number in 2029$992,580");
-      expect(rows[rows.length - 1]).toBe("= Coast FIRE reached$8,395");
+      expect(rows).toContain("= Coast FIRE reached$8,395");
+      expect(
+        rows.some((row) => row?.startsWith("If you stop voluntary contributions after 2029")),
+      ).toBe(true);
+      expect(rows[rows.length - 1]).toBe("FI number at 2042$2,375,209");
     });
 
     it("includes the dated-expense line when one falls before retirement (example C)", async () => {
@@ -743,6 +785,71 @@ describe("ResultsScreen", () => {
       expect(screen.queryByRole("table", { name: "Year by year projection" })).toBeNull();
       expect(screen.queryByRole("navigation", { name: "On this page" })).toBeNull();
       expect(screen.getAllByRole("link", { name: "Current age → Household" })).toHaveLength(1);
+    });
+  });
+
+  describe("with super", () => {
+    /** Example A with $185,000 super, a $145,000 salary and salary sacrifice (tests/worked-examples/m5-super.json). */
+    const exampleAWithSuper: Plan = {
+      ...exampleA,
+      cash: { balance: 20000 },
+      assumptions: { interestRate: 0.04 },
+      household: {
+        people: [
+          {
+            id: "person-1",
+            label: "Person 1",
+            currentAge: 34,
+            targetRetirementAge: 50,
+            salary: { annual: 145000, growth: { kind: "inflationPlus", margin: 0.01 } },
+            superAccount: {
+              balance: 185000,
+              salarySacrifice: { annual: 10000, fromYear: 2027, toYear: 2042 },
+            },
+          },
+        ],
+      },
+    };
+
+    it("shows super as its own line in the money-lasts breakdown", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithSuper);
+
+      await openExplanation(user, "Money lasts");
+
+      const rows = explanationRows();
+      expect(rows[0]).toMatch(/^Cash at end of 2087/);
+      expect(rows.some((row) => row?.startsWith("+ Super$"))).toBe(true);
+      expect(rows[rows.length - 1]).toMatch(/^= Investable net worth/);
+    });
+
+    it("shows super as its own line in the progress breakdown", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithSuper);
+
+      await openExplanation(user, "Progress to FI");
+
+      expect(explanationRows()).toEqual([
+        "Share portfolio$720,000",
+        "+ Cash savings$20,000",
+        "+ Super$185,000",
+        "= Investable amount$925,000",
+        "÷ FI number$1,600,000",
+        "= Progress to FI57.8%",
+      ]);
+    });
+
+    it("shows the super lines in the Coast FIRE breakdown", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleAWithSuper);
+
+      await openExplanation(user, "Coast FIRE");
+
+      const rows = explanationRows();
+      expect(rows.some((row) => row?.startsWith("+ Your super today"))).toBe(true);
+      expect(rows.some((row) => row?.startsWith("− Your super, growing at 7% net of fees"))).toBe(
+        true,
+      );
     });
   });
 });

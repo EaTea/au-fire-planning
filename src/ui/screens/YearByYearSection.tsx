@@ -1,7 +1,8 @@
 import { useSearchParams } from "react-router";
 
 import type { ProjectionSummary } from "../../engine/fiNumber";
-import type { ProjectionRow } from "../../engine/projection";
+import { isShortfallWithSuperLocked, type ProjectionRow } from "../../engine/projection";
+import { DEFAULT_SUPER_ACCESS_AGE } from "../../plan/defaults";
 import { Banner } from "../components/Banner";
 import { ProjectionTable, type ProjectionColumn } from "../components/ProjectionTable";
 import { useMoneyFormatter } from "../dollarsMode";
@@ -19,7 +20,7 @@ interface YearByYearSectionProps {
 
 /**
  * The Year by year section at the bottom of Results (OUT-1 – OUT-3): the
- * projection of cash and the portfolio as a table, from today to the
+ * projection of cash, the portfolio and super as a table, from today to the
  * plan-until age, in whichever dollars the page's toggle shows. Bands mark
  * the working and retired phases, the FI row is highlighted, years that
  * can't be funded say "Shortfall" and are summarised in a banner above the
@@ -50,8 +51,20 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
       cell: (row) => (row.salary > 0 ? formatMoney(row.salary, row.inflationIndex) : "—"),
     },
     {
-      header: "Contributions",
+      header: "Into portfolio",
       cell: (row) => formatMoney(row.contribution, row.inflationIndex),
+    },
+    {
+      header: "Into super",
+      // Concessional contributions after the 15% tax, plus non-concessional (which isn't taxed going in).
+      cell: (row) =>
+        formatMoney(
+          row.employerContribution +
+            row.salarySacrifice -
+            row.contributionsTax +
+            row.nonConcessional,
+          row.inflationIndex,
+        ),
     },
     {
       header: "Growth & interest",
@@ -60,6 +73,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
     { header: "Spending", cell: (row) => formatMoney(row.spending, row.inflationIndex) },
     { header: "Cash", cell: (row) => formatMoney(row.cashClosing, row.inflationIndex) },
     { header: "Portfolio", cell: (row) => formatMoney(row.portfolioClosing, row.inflationIndex) },
+    { header: "Super", cell: (row) => formatMoney(row.superClosing, row.inflationIndex) },
     {
       header: "Investable",
       cell: (row) => formatMoney(row.investableClosing, row.inflationIndex),
@@ -72,6 +86,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         row.shortfall > 0 ? (
           <span className="projection-shortfall">
             Shortfall −{formatMoney(row.shortfall, row.inflationIndex)}
+            {isShortfallWithSuperLocked(row) && ` · super locked until ${DEFAULT_SUPER_ACCESS_AGE}`}
           </span>
         ) : (
           "✓"
@@ -83,7 +98,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
     <section className="year-by-year-section" aria-labelledby={YEAR_BY_YEAR_SECTION_ID}>
       <h2 id={YEAR_BY_YEAR_SECTION_ID}>Year by year</h2>
       <p className="section-intro">
-        Your cash and portfolio each year: contributions, growth, spending and whether the money
+        Your cash, portfolio and super each year: money in, growth, spending and whether the money
         lasts.
       </p>
 

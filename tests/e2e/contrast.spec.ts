@@ -117,7 +117,7 @@ function findLowContrastText(page: Page, onlyHoveredOrFocused = false): Promise<
 async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
   const failures: string[] = [];
 
-  for (const control of await page.locator("a, button, input, select").all()) {
+  for (const control of await page.locator("a, button, input, select, summary").all()) {
     if (!(await control.isVisible())) {
       continue;
     }
@@ -135,20 +135,26 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
 /**
  * Types a value into every input on the current page, then moves focus away.
  * "valid" uses a value every field accepts: 50 for ages (15 to 100), 90 for
- * "Plan until age" (50 to 110, and after the other ages), and 5 for everything
- * else (percentages are capped at 15%). "invalid" uses -5, which every field
+ * "Plan until age" (50 to 110, and after the other ages), 2030 for a contribution
+ * year, and 5 for everything else (percentages are capped at 15%). "invalid" uses -5, which every field
  * rejects.
  */
 async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<void> {
+  // Open every "Advanced" disclosure first, so the inputs inside are visible and get filled.
+  for (const summary of await page.locator("details:not([open]) > summary").all()) {
+    await summary.click();
+  }
+
   for (const input of await page.locator("input").all()) {
     const labelText = await labelTextOf(input);
     const isAge = /age/i.test(labelText);
     const isEndAge = /plan until age/i.test(labelText);
+    const isContributionYear = /(from|to) year$/i.test(labelText);
 
     if (values === "invalid") {
       await input.fill("-5");
     } else {
-      await input.fill(isEndAge ? "90" : isAge ? "50" : "5");
+      await input.fill(isEndAge ? "90" : isAge ? "50" : isContributionYear ? "2030" : "5");
     }
   }
   await page.locator("h1").click();
@@ -216,6 +222,18 @@ test("every step page has readable text with its fields empty", async ({ page })
 
     expect(await findLowContrastText(page), stepPage).toEqual([]);
     expect(await findLowContrastWhileInteracting(page), stepPage).toEqual([]);
+
+    // A page with an "Advanced" disclosure (Assets) is checked closed (above) and open.
+    const closedSummaries = await page.locator("details:not([open]) > summary").all();
+    for (const summary of closedSummaries) {
+      await summary.click();
+    }
+    if (closedSummaries.length > 0) {
+      expect(await findLowContrastText(page), `${stepPage} with Advanced open`).toEqual([]);
+      expect(await findLowContrastWhileInteracting(page), `${stepPage} with Advanced open`).toEqual(
+        [],
+      );
+    }
   }
 });
 
@@ -256,7 +274,7 @@ test("the salary card has readable text with every growth option chosen, includi
 
     // Custom options show their percentage box; the other two don't.
     const hasNumberBox = option.includes("…");
-    await expect(page.getByLabel("Grows at percentage")).toHaveCount(hasNumberBox ? 1 : 0);
+    await expect(page.getByLabel(/inflation by|Fixed rate/)).toHaveCount(hasNumberBox ? 1 : 0);
 
     expect(await findLowContrastText(page), option).toEqual([]);
     expect(await findLowContrastWhileInteracting(page), option).toEqual([]);
@@ -272,8 +290,8 @@ test("the salary card has readable text with every growth option chosen, includi
 
   // An invalid percentage shows its error text.
   await growth.selectOption({ label: "Fixed …%" });
-  await page.getByLabel("Grows at percentage").fill("20");
-  await page.getByLabel("Grows at percentage").press("Enter");
+  await page.getByLabel("Fixed rate").fill("20");
+  await page.getByLabel("Fixed rate").press("Enter");
   await expect(page.locator(".field-error")).toBeVisible();
   expect(await findLowContrastText(page), "invalid percentage").toEqual([]);
 });
@@ -315,8 +333,8 @@ test("the results page with its chart has readable text in both dollar modes, wi
   ];
   for (const [route, label, value] of entries) {
     await page.goto(route);
-    await page.getByLabel(label).fill(value);
-    await page.getByLabel(label).press("Tab");
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
   }
 
   await page.goto("#/results");
@@ -359,8 +377,8 @@ test("the results page with the Coast FIRE chart has readable text in both dolla
   ];
   for (const [route, label, value] of entries) {
     await page.goto(route);
-    await page.getByLabel(label).fill(value);
-    await page.getByLabel(label).press("Tab");
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
   }
 
   await page.goto("#/results");
@@ -419,8 +437,8 @@ test("results has readable text with a shortfall, its banners and an outlined ro
   ];
   for (const [route, label, value] of entries) {
     await page.goto(route);
-    await page.getByLabel(label).fill(value);
-    await page.getByLabel(label).press("Tab");
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
   }
 
   // Results with the "Money lasts" tile, the runs-out banner and every explanation open.

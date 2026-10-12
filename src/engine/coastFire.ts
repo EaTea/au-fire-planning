@@ -2,50 +2,54 @@
 // no further contributions, you would still reach your FI number by your
 // target retirement age; and the first year your actual savings get there.
 //
-// What has to be solved. Contributions go only into the portfolio, and each
-// year's dated expenses are paid from the portfolio first and from cash only
-// once the portfolio is empty (see projection.ts). Looking forward from row k
-// to the retirement row n (m = n − k years) with nothing more contributed,
-// cash starts at cash(k) and only the portfolio's starting amount P is ours to
-// choose. portfolioNeeded(k) is the smallest P that still reaches the FI
-// number at row n:
+// What has to be solved. Coasting means you stop the contributions you
+// choose to make: the portfolio's, salary sacrifice and non-concessional.
+// Your employer keeps paying while you work, so super grows to superLeft(k)
+// at the retirement row with employer contributions only; that path comes
+// from `projectPortfolio` with voluntary contributions switched off after
+// row k. Each year's dated expenses are paid from the portfolio first, then
+// super (from 65) and cash last (see projection.ts). Looking forward from
+// row k to the retirement row n (m = n − k years), only the portfolio's
+// starting amount P is ours to choose. portfolioNeeded(k) is the smallest P
+// that still reaches the FI number at row n:
 //
 //   coast path from row k, starting with portfolio P and cash(k):
 //     each row j: portfolio grows at r, cash at the interest rate g;
 //                 the portfolio pays row j's dated expenses, cash pays what
-//                 the portfolio can't
-//     at row n:   portfolioLeft(P) + cashLeft(P)  must be ≥ FI number at row n
+//                 the portfolio can't (super is left untouched here)
+//     at row n:   portfolioLeft(P) + cashLeft(P) + superLeft(k)
+//                 must be ≥ the FI number at row n, and every dated expense
+//                 on the way must have been paid
 //
 // In the usual case the portfolio pays every dated expense, cash is never
 // touched and grows to cash(k) × (1+g)^m, and P has a closed form:
 //
-//                  FI number at row n − cash(k) × (1+g)^m + Σ dated(j) × (1+r)^(n−j)
-//   portfolioNeeded(k) = ──────────────────────────────────────────────────────────  (at least 0)
-//                                             (1+r)^m
+//                  FI number − cash(k) × (1+g)^m − superLeft(k) + Σ dated(j) × (1+r)^(n−j)
+//   portfolioNeeded(k) = ─────────────────────────────────────────────────────────────────  (at least 0)
+//                                               (1+r)^m
 //
-// (If the result is at least what the cash can't cover by itself, the
-// portfolio is never emptied on the way, so the closed form is exact.) When
-// cash alone would beat the FI number but the dated expenses would empty a
-// smaller portfolio and dip into cash, the closed form doesn't apply, and P is
-// found by bisection on the coast path itself (it only ever grows with P).
+// When cash and super alone would beat the FI number but the dated expenses
+// would empty a smaller portfolio and dip into cash, the closed form doesn't
+// apply, and P is found by bisection on the coast path (it only grows with P).
 //
-//   coast(k) = cash(k) + portfolioNeeded(k)        (nominal, in year k's dollars)
+//   coast(k) = cash(k) + super(k) + portfolioNeeded(k)   (nominal, in year k's dollars)
 //
 //   row:    0 ──────── k ──────────────── n (retirement)
 //           │          │                   │
 //           │          └─ coast(k): what you need at row k to coast from here
 //           └─ coast(0): "the Coast FIRE number"
 //
-// Coast FIRE is reached in the first row k where investable net worth on the
-// current path is at least coast(k). Both paths share cash(k) at row k, so
-// that is the same as "the portfolio is at least portfolioNeeded(k)", which
-// means: if you stopped contributing after year k, you would still reach the
-// FI number by retirement.
+// Coast FIRE is reached in the first row k from which stopping your voluntary
+// contributions still reaches the FI number by retirement. That is decided
+// exactly, by re-running the projection with the contributions stopped after
+// row k (see `testStoppingAfterRow`). The closed form above gives the number
+// and the chart line, and agrees with the exact test except when a dated
+// expense from age 65 is paid from super, which the formula doesn't model.
 //
 // Everything is derived from the projection rows, so none of the projection's
-// rules are copied here. The one exception is the "today's savings with no
-// further contributions" path, which calls `projectPortfolio` with a $0
-// contribution rather than re-implementing it.
+// rules are copied here. The paths "with voluntary contributions stopped after
+// row k" call `projectPortfolio` with the contributions switched off rather
+// than re-implementing it.
 //
 // Called by `summariseProjection` (src/engine/fiNumber.ts). Pure, like the
 // rest of the engine.
@@ -61,13 +65,13 @@ export interface CoastPathPoint {
   readonly age: number;
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
   readonly inflationIndex: number;
-  /** coast(k) = cash(k) + portfolioNeeded(k): the savings you need in this year to coast. */
+  /** coast(k) = cash(k) + super(k) + portfolioNeeded(k): the savings you need in this year to coast. */
   readonly coastNumber: number;
   /** The portfolio part of the Coast FIRE number in this year, at least 0. */
   readonly portfolioNeeded: number;
-  /** Cash plus portfolio on the current path (with contributions). */
+  /** Cash plus portfolio plus super on the current path (with contributions). */
   readonly investable: number;
-  /** Cash plus portfolio if today's savings were left alone from now on (no contributions). */
+  /** Investable if you stopped your voluntary contributions now (employer contributions continue). */
   readonly withoutContributions: number;
   /** The FI number in this year's dollars. */
   readonly fiNumber: number;
@@ -115,22 +119,23 @@ export function calculateCoastFire(
   );
   const workingRows = rows.slice(0, retirementRowIndex + 1);
 
-  // "Today's savings with no further contributions": the real projection,
-  // with the contribution switched off.
+  // "Voluntary contributions stopped from now": the real projection, with
+  // them switched off after row 0.
   const withoutContributionsRows = projectPortfolio(
-    { ...inputs, annualContribution: 0 },
+    inputsWithVoluntaryContributionsStoppedAfter(inputs, 0, startYear),
     startYear,
   );
 
   const path = workingRows.map((row): CoastPathPoint => {
-    const need = portfolioNeededFromRow(workingRows, row.yearIndex, inputs);
+    const superLeft = superAtRetirementWhenCoastingFrom(inputs, row.yearIndex, startYear);
+    const need = portfolioNeededFromRow(workingRows, row.yearIndex, inputs, superLeft);
 
     return {
       yearIndex: row.yearIndex,
       calendarYear: row.calendarYear,
       age: row.age,
       inflationIndex: row.inflationIndex,
-      coastNumber: row.cashClosing + need.portfolioNeeded,
+      coastNumber: row.cashClosing + row.superClosing + need.portfolioNeeded,
       portfolioNeeded: need.portfolioNeeded,
       investable: row.investableClosing,
       withoutContributions:
@@ -152,9 +157,14 @@ export function calculateCoastFire(
     };
   }
 
-  const todayNeed = portfolioNeededFromRow(workingRows, 0, inputs);
+  const todayNeed = portfolioNeededFromRow(
+    workingRows,
+    0,
+    inputs,
+    superAtRetirementWhenCoastingFrom(inputs, 0, startYear),
+  );
   const number = explainCoastNumber(todayRow, retirementRow, todayNeed, today, inputs);
-  const reached = findCoastReached(path);
+  const reached = findCoastReached(path, workingRows, inputs, startYear);
 
   return {
     number,
@@ -162,6 +172,70 @@ export function calculateCoastFire(
     path,
     ...(reached === undefined ? {} : { reached }),
   };
+}
+
+/**
+ * The inputs for a projection in which every contribution you choose to make
+ * (portfolio, salary sacrifice, non-concessional) stops after row `yearIndex`.
+ * Employer contributions are untouched. The portfolio stop age and the
+ * voluntary super end years are only ever pulled earlier, never later.
+ * Called by `calculateCoastFire`; the rules themselves stay in `projectPortfolio`.
+ */
+function inputsWithVoluntaryContributionsStoppedAfter(
+  inputs: ProjectionInputs,
+  yearIndex: number,
+  startYear: number,
+): ProjectionInputs {
+  const stopAge = inputs.currentAge + yearIndex;
+  const lastYear = startYear + yearIndex;
+  const account = inputs.superAccount;
+
+  return {
+    ...inputs,
+    contributionsStopAge: Math.min(inputs.contributionsStopAge, stopAge),
+    ...(account === undefined
+      ? {}
+      : {
+          superAccount: {
+            ...account,
+            salarySacrifice: {
+              ...account.salarySacrifice,
+              toYear: Math.min(account.salarySacrifice.toYear ?? lastYear, lastYear),
+            },
+            nonConcessional: {
+              ...account.nonConcessional,
+              toYear: Math.min(account.nonConcessional.toYear ?? lastYear, lastYear),
+            },
+          },
+        }),
+  };
+}
+
+/**
+ * superLeft(k): super at the retirement row if voluntary contributions stop
+ * after row `fromIndex` and employer contributions carry on. Taken from
+ * `projectPortfolio` with no dated expenses, since the Coast FIRE formula has
+ * the portfolio (then cash) pay them, leaving super untouched before retirement.
+ * 0 when there is no super account. Called by `calculateCoastFire` per row.
+ */
+function superAtRetirementWhenCoastingFrom(
+  inputs: ProjectionInputs,
+  fromIndex: number,
+  startYear: number,
+): number {
+  if (inputs.superAccount === undefined) return 0;
+
+  const retirementRowIndex = inputs.retirementAge - inputs.currentAge;
+  const coastingRows = projectPortfolio(
+    {
+      ...inputsWithVoluntaryContributionsStoppedAfter(inputs, fromIndex, startYear),
+      datedExpenses: [],
+      endAge: inputs.retirementAge,
+    },
+    startYear,
+  );
+
+  return coastingRows[retirementRowIndex]?.superClosing ?? 0;
 }
 
 /** What coasting from one row needs, with the pieces that go into its explanation. */
@@ -172,6 +246,8 @@ interface PortfolioNeed {
   readonly fiNumberAtRetirement: number;
   /** Cash left at the retirement row on the coast path, after paying what the portfolio couldn't. */
   readonly cashLeftAtRetirement: number;
+  /** Super at the retirement row with employer contributions only, untouched by dated expenses. */
+  readonly superLeftAtRetirement: number;
   /** Dated expenses the portfolio pays on the coast path, each grown to the retirement row at the portfolio return, summed. */
   readonly portfolioPaymentsGrownToRetirement: number;
   /** (1+r)^(years from that row to retirement). */
@@ -186,6 +262,12 @@ interface CoastPathEnd {
   readonly cashLeft: number;
   /** Dated expenses the portfolio paid, each grown to the retirement row at the portfolio return, summed. */
   readonly portfolioPaymentsGrownToRetirement: number;
+  /**
+   * Dated expenses neither the portfolio nor cash could pay. Super is left
+   * untouched on the coast path, so with little cash this can be above 0 even
+   * when cash and super cover the FI number; such a path doesn't count.
+   */
+  readonly unpaid: number;
 }
 
 /** Bisection steps when the closed form doesn't apply: enough to reach floating-point precision. */
@@ -198,12 +280,14 @@ const BISECTION_STEPS = 200;
  *
  * Before retirement a row's `spending` is only dated expenses (retirement
  * spending starts the year after), so they are read straight off the
- * projection rows instead of being recomputed.
+ * projection rows instead of being recomputed. `superLeftAtRetirement` is
+ * superLeft(k), from `superAtRetirementWhenCoastingFrom`.
  */
 function portfolioNeededFromRow(
   workingRows: readonly ProjectionRow[],
   fromIndex: number,
   inputs: ProjectionInputs,
+  superLeftAtRetirement: number,
 ): PortfolioNeed {
   const retirementRowIndex = workingRows.length - 1;
   const fromRow = workingRows[fromIndex];
@@ -214,6 +298,7 @@ function portfolioNeededFromRow(
       portfolioNeeded: 0,
       fiNumberAtRetirement: 0,
       cashLeftAtRetirement: 0,
+      superLeftAtRetirement: 0,
       portfolioPaymentsGrownToRetirement: 0,
       portfolioGrowthFactor: 1,
       hasDatedExpenses: false,
@@ -244,22 +329,26 @@ function portfolioNeededFromRow(
       retirementRowIndex,
       inputs,
     );
-  const reachesFi = (end: CoastPathEnd) => end.portfolioLeft + end.cashLeft >= fiNumber;
+  // A path only counts if it also pays every dated expense on the way. A
+  // fully paid expense nets to exactly 0 unpaid, so no tolerance is needed.
+  const reachesFi = (end: CoastPathEnd) =>
+    end.unpaid <= 0 && end.portfolioLeft + end.cashLeft + superLeftAtRetirement >= fiNumber;
 
   let portfolioNeeded: number;
 
   if (reachesFi(endsWith(0))) {
-    // Cash alone (paying any dated expenses) gets there.
+    // Cash and super alone (cash paying any dated expenses) get there.
     portfolioNeeded = 0;
-  } else if (fiNumber >= cashGrownUntouched) {
+  } else if (fiNumber - superLeftAtRetirement >= cashGrownUntouched) {
     // The usual case: the closed form in the header. The portfolio left at
-    // retirement is FI − untouched cash ≥ 0, so it never ran dry on the way
-    // and the cash was never touched.
+    // retirement is FI − untouched cash − super ≥ 0, so it never ran dry on
+    // the way and the cash was never touched.
     portfolioNeeded =
-      (fiNumber - cashGrownUntouched + allDatedSpendingGrown) / portfolioGrowthFactor;
+      (fiNumber - cashGrownUntouched - superLeftAtRetirement + allDatedSpendingGrown) /
+      portfolioGrowthFactor;
   } else {
-    // Untouched cash would beat the FI number, but the dated expenses would
-    // drain it. The answer lies between 0 (not enough) and the amount that
+    // Untouched cash and super would beat the FI number, but the dated
+    // expenses would drain the cash. The answer lies between 0 (not enough) and the amount that
     // pays every expense and reaches the FI number on its own.
     let tooLittle = 0;
     let enough = (fiNumber + allDatedSpendingGrown) / portfolioGrowthFactor;
@@ -282,6 +371,7 @@ function portfolioNeededFromRow(
     portfolioNeeded,
     fiNumberAtRetirement: fiNumber,
     cashLeftAtRetirement: end.cashLeft,
+    superLeftAtRetirement,
     portfolioPaymentsGrownToRetirement: end.portfolioPaymentsGrownToRetirement,
     portfolioGrowthFactor,
     hasDatedExpenses,
@@ -305,6 +395,7 @@ function followCoastPath(
   let portfolio = startingPortfolio;
   let cash = startingCash;
   let portfolioPaymentsGrownToRetirement = 0;
+  let unpaid = 0;
 
   for (const { rowIndex, datedSpending } of datedSpendingByRow) {
     portfolio *= 1 + inputs.expectedReturn;
@@ -315,6 +406,7 @@ function followCoastPath(
 
     portfolio -= fromPortfolio;
     cash -= fromCash;
+    unpaid += datedSpending - fromPortfolio - fromCash;
 
     // A payment in row j would otherwise have kept growing at the portfolio's
     // return to the retirement row, so that is what it costs the portfolio.
@@ -322,15 +414,13 @@ function followCoastPath(
       fromPortfolio * Math.pow(1 + inputs.expectedReturn, retirementRowIndex - rowIndex);
   }
 
-  return { portfolioLeft: portfolio, cashLeft: cash, portfolioPaymentsGrownToRetirement };
+  return { portfolioLeft: portfolio, cashLeft: cash, portfolioPaymentsGrownToRetirement, unpaid };
 }
 
 /**
  * Builds the Coast FIRE number's breakdown (row 0, today's dollars), line by
  * line as the formula runs. The dated-expense line is shown only when a dated
- * expense falls before retirement, and the cash line says so. The cash and
- * dated-expense lines come from the coast path at the answer, so the lines
- * add up whichever way the answer was found.
+ * expense falls before retirement, and the cash line says so.
  */
 function explainCoastNumber(
   todayRow: ProjectionRow,
@@ -361,6 +451,19 @@ function explainCoastNumber(
       source: "calculated",
     },
   ];
+
+  // Shown only when there is super, so plans without any read as in M4.
+  const hasSuper = need.superLeftAtRetirement !== 0 || todayRow.superClosing !== 0;
+
+  if (hasSuper) {
+    lines.push({
+      label: `Your super, growing at ${formatPercent(inputs.superAccount?.returnRate ?? 0)} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
+      value: need.superLeftAtRetirement,
+      unit: "dollars",
+      operator: "−",
+      source: "calculated",
+    });
+  }
 
   if (need.hasDatedExpenses) {
     lines.push({
@@ -394,60 +497,160 @@ function explainCoastNumber(
       operator: "+",
       source: "calculated",
     },
-    {
-      label: "Coast FIRE number",
-      value: today.coastNumber,
-      unit: "dollars",
-      operator: "=",
-      source: "calculated",
-    },
   );
+
+  if (hasSuper) {
+    lines.push({
+      label: "Your super today",
+      value: todayRow.superClosing,
+      unit: "dollars",
+      operator: "+",
+      source: "calculated",
+    });
+  }
+
+  lines.push({
+    label: "Coast FIRE number",
+    value: today.coastNumber,
+    unit: "dollars",
+    operator: "=",
+    source: "calculated",
+  });
 
   return { value: today.coastNumber, unit: "dollars", lines };
 }
 
 /**
- * Finds the first row (today included) where investable net worth is at least
- * the Coast FIRE number, with the margin as its explanation. `undefined` when
- * no row up to retirement gets there.
+ * What the exact "could I stop now?" test found for one row: whether stopping
+ * the voluntary contributions after it still works, and the figures behind that.
  */
-function findCoastReached(path: readonly CoastPathPoint[]): CoastMilestone | undefined {
-  const point = path.find((candidate) => candidate.investable >= candidate.coastNumber);
+interface StopTest {
+  readonly succeeds: boolean;
+  /** Investable at the retirement row if you stop after this row. */
+  readonly investableAtRetirement: number;
+}
 
-  if (point === undefined) {
-    return undefined;
+/**
+ * The exact test for one row k: run the real projection with every voluntary
+ * contribution stopped after row k (employer contributions carry on), up to
+ * the retirement row. It succeeds when investable at the retirement row is at
+ * least that row's FI number, and no year after k has a shortfall that the
+ * plan with its contributions doesn't already have. Called by `findCoastReached`.
+ *
+ * This test, not the closed-form number, decides "reached", because the
+ * formula assumes the portfolio pays every dated expense while the projection
+ * draws super for one from age 65, before cash. They agree except in that
+ * edge case.
+ */
+function testStoppingAfterRow(
+  workingRows: readonly ProjectionRow[],
+  inputs: ProjectionInputs,
+  rowIndex: number,
+  startYear: number,
+): StopTest {
+  const retirementRowIndex = workingRows.length - 1;
+  const retirementRow = workingRows[retirementRowIndex];
+
+  const stoppedRows = projectPortfolio(
+    {
+      ...inputsWithVoluntaryContributionsStoppedAfter(inputs, rowIndex, startYear),
+      endAge: inputs.retirementAge,
+    },
+    startYear,
+  );
+  const stoppedRetirementRow = stoppedRows[retirementRowIndex];
+
+  if (retirementRow === undefined || stoppedRetirementRow === undefined) {
+    return { succeeds: false, investableAtRetirement: 0 };
   }
 
-  const lines: ExplanationLine[] = [
-    {
-      label: `Investable at end of ${point.calendarYear} (age ${point.age})`,
-      value: point.investable,
-      unit: "dollars",
-      source: "calculated",
-    },
-    {
-      label: `Coast FIRE number in ${point.calendarYear}`,
-      value: point.coastNumber,
-      unit: "dollars",
-      operator: "−",
-      source: "calculated",
-    },
-    {
-      // The margin by which savings are at or above the Coast FIRE number.
-      label: "Coast FIRE reached",
-      value: point.investable - point.coastNumber,
-      unit: "dollars",
-      operator: "=",
-      source: "calculated",
-    },
-  ];
+  // A small allowance for floating-point noise, relative to the size of the numbers.
+  const noise = 1e-9 * Math.max(1, Math.abs(retirementRow.fiNumber));
+  const reachesFiNumber = stoppedRetirementRow.investableClosing >= retirementRow.fiNumber - noise;
+
+  let hasNewShortfall = false;
+  for (let index = rowIndex + 1; index <= retirementRowIndex; index++) {
+    const stoppedShortfall = stoppedRows[index]?.shortfall ?? 0;
+    const plannedShortfall = workingRows[index]?.shortfall ?? 0;
+
+    if (stoppedShortfall > noise && plannedShortfall <= noise) hasNewShortfall = true;
+  }
 
   return {
-    yearIndex: point.yearIndex,
-    calendarYear: point.calendarYear,
-    age: point.age,
-    explanation: { value: point.investable, unit: "dollars", lines },
+    succeeds: reachesFiNumber && !hasNewShortfall,
+    investableAtRetirement: stoppedRetirementRow.investableClosing,
   };
+}
+
+/**
+ * Finds the first row (today included) from which stopping your voluntary
+ * contributions still gets you to the FI number by retirement, decided exactly
+ * by `testStoppingAfterRow` (n + 1 short projections). `undefined` when no row
+ * up to retirement works.
+ *
+ * The explanation keeps the closed-form margin lines, then adds the two lines
+ * that state the exact test. In the edge case the formula and the test differ
+ * (see `testStoppingAfterRow`), the margin can be slightly negative while the
+ * appended lines show why it still counts as reached.
+ */
+function findCoastReached(
+  path: readonly CoastPathPoint[],
+  workingRows: readonly ProjectionRow[],
+  inputs: ProjectionInputs,
+  startYear: number,
+): CoastMilestone | undefined {
+  const retirementRow = workingRows[workingRows.length - 1];
+
+  for (const point of path) {
+    const stopTest = testStoppingAfterRow(workingRows, inputs, point.yearIndex, startYear);
+
+    if (!stopTest.succeeds || retirementRow === undefined) continue;
+
+    const lines: ExplanationLine[] = [
+      {
+        label: `Investable at end of ${point.calendarYear} (age ${point.age})`,
+        value: point.investable,
+        unit: "dollars",
+        source: "calculated",
+      },
+      {
+        label: `Coast FIRE number in ${point.calendarYear}`,
+        value: point.coastNumber,
+        unit: "dollars",
+        operator: "−",
+        source: "calculated",
+      },
+      {
+        // The margin by which savings are at or above the Coast FIRE number.
+        label: "Coast FIRE reached",
+        value: point.investable - point.coastNumber,
+        unit: "dollars",
+        operator: "=",
+        source: "calculated",
+      },
+      {
+        label: `If you stop voluntary contributions after ${point.calendarYear}: investable at ${retirementRow.calendarYear}`,
+        value: stopTest.investableAtRetirement,
+        unit: "dollars",
+        source: "calculated",
+      },
+      {
+        label: `FI number at ${retirementRow.calendarYear}`,
+        value: retirementRow.fiNumber,
+        unit: "dollars",
+        source: "calculated",
+      },
+    ];
+
+    return {
+      yearIndex: point.yearIndex,
+      calendarYear: point.calendarYear,
+      age: point.age,
+      explanation: { value: point.investable, unit: "dollars", lines },
+    };
+  }
+
+  return undefined;
 }
 
 /** Shows a fraction as a percentage without floating-point noise: 0.07 becomes "7%". */

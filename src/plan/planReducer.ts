@@ -14,6 +14,8 @@ import type {
   RetirementSpending,
   Salary,
   SalaryGrowth,
+  SuperAccount,
+  SuperContribution,
 } from "./types";
 
 /**
@@ -30,6 +32,28 @@ export type PlanAction =
   | { readonly type: "setTargetRetirementAge"; readonly personId: string; readonly age?: number }
   | { readonly type: "setSalary"; readonly personId: string; readonly annual?: number }
   | { readonly type: "setSalaryGrowth"; readonly personId: string; readonly growth?: SalaryGrowth }
+  | { readonly type: "setSuperBalance"; readonly personId: string; readonly balance?: number }
+  | { readonly type: "setSuperReturn"; readonly personId: string; readonly rate?: number }
+  | { readonly type: "setEmployerRate"; readonly personId: string; readonly rate?: number }
+  | { readonly type: "setEarningsTaxRate"; readonly personId: string; readonly rate?: number }
+  | { readonly type: "setSalarySacrifice"; readonly personId: string; readonly annual?: number }
+  | {
+      readonly type: "setSalarySacrificeFromYear";
+      readonly personId: string;
+      readonly year?: number;
+    }
+  | { readonly type: "setSalarySacrificeToYear"; readonly personId: string; readonly year?: number }
+  | { readonly type: "setNonConcessional"; readonly personId: string; readonly annual?: number }
+  | {
+      readonly type: "setNonConcessionalFromYear";
+      readonly personId: string;
+      readonly year?: number;
+    }
+  | {
+      readonly type: "setNonConcessionalToYear";
+      readonly personId: string;
+      readonly year?: number;
+    }
   | { readonly type: "setInflationRate"; readonly rate?: number }
   | { readonly type: "setExpectedReturn"; readonly portfolioId: string; readonly rate?: number }
   | {
@@ -101,6 +125,36 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
 
     case "setSalaryGrowth":
       return updateSalary(plan, action.personId, { growth: action.growth });
+
+    case "setSuperBalance":
+      return updateSuperAccount(plan, action.personId, () => ({ balance: action.balance }));
+
+    case "setSuperReturn":
+      return updateSuperAccount(plan, action.personId, () => ({ returnRate: action.rate }));
+
+    case "setEmployerRate":
+      return updateSuperAccount(plan, action.personId, () => ({ employerRate: action.rate }));
+
+    case "setEarningsTaxRate":
+      return updateSuperAccount(plan, action.personId, () => ({ earningsTaxRate: action.rate }));
+
+    case "setSalarySacrifice":
+      return updateContribution(plan, action.personId, "salarySacrifice", "annual", action.annual);
+
+    case "setSalarySacrificeFromYear":
+      return updateContribution(plan, action.personId, "salarySacrifice", "fromYear", action.year);
+
+    case "setSalarySacrificeToYear":
+      return updateContribution(plan, action.personId, "salarySacrifice", "toYear", action.year);
+
+    case "setNonConcessional":
+      return updateContribution(plan, action.personId, "nonConcessional", "annual", action.annual);
+
+    case "setNonConcessionalFromYear":
+      return updateContribution(plan, action.personId, "nonConcessional", "fromYear", action.year);
+
+    case "setNonConcessionalToYear":
+      return updateContribution(plan, action.personId, "nonConcessional", "toYear", action.year);
 
     case "setInflationRate":
       return { ...plan, assumptions: { ...plan.assumptions, inflationRate: action.rate } };
@@ -234,6 +288,96 @@ function updateSalary(plan: Plan, personId: string, changes: Partial<Salary>): P
       ),
     },
   };
+}
+
+/**
+ * Returns the plan with one person's super account changed. `makeChanges`
+ * receives the current account and returns the fields to overwrite; a field
+ * set to `undefined` is cleared. Empty results are tidied away: a
+ * contribution with nothing set is dropped, and when the whole account is
+ * empty the person's `superAccount` is removed, so an untouched account stays
+ * absent (and is not written to the stored document). An unknown person id
+ * leaves the plan unchanged. Used by the super actions.
+ */
+function updateSuperAccount(
+  plan: Plan,
+  personId: string,
+  makeChanges: (account: SuperAccount) => Partial<SuperAccount>,
+): Plan {
+  const person = plan.household.people.find((candidate) => candidate.id === personId);
+  if (person === undefined) {
+    return plan;
+  }
+
+  const currentAccount = person.superAccount ?? {};
+  const merged = { ...currentAccount, ...makeChanges(currentAccount) };
+
+  // Rebuild the account without any unset (undefined) or empty fields.
+  const account: SuperAccount = {
+    ...(merged.balance !== undefined ? { balance: merged.balance } : {}),
+    ...(merged.returnRate !== undefined ? { returnRate: merged.returnRate } : {}),
+    ...(merged.employerRate !== undefined ? { employerRate: merged.employerRate } : {}),
+    ...(merged.salarySacrifice !== undefined && !isContributionEmpty(merged.salarySacrifice)
+      ? { salarySacrifice: merged.salarySacrifice }
+      : {}),
+    ...(merged.nonConcessional !== undefined && !isContributionEmpty(merged.nonConcessional)
+      ? { nonConcessional: merged.nonConcessional }
+      : {}),
+    ...(merged.earningsTaxRate !== undefined ? { earningsTaxRate: merged.earningsTaxRate } : {}),
+  };
+
+  const { superAccount: previousAccount, ...personWithoutAccount } = person;
+  void previousAccount;
+  const updatedPerson: Person =
+    Object.keys(account).length === 0
+      ? personWithoutAccount
+      : { ...personWithoutAccount, superAccount: account };
+
+  return {
+    ...plan,
+    household: {
+      ...plan.household,
+      people: plan.household.people.map((candidate) =>
+        candidate.id === personId ? updatedPerson : candidate,
+      ),
+    },
+  };
+}
+
+/** True when a voluntary contribution has none of its fields set. Used to tidy up empty ones. */
+function isContributionEmpty(contribution: SuperContribution): boolean {
+  return (
+    contribution.annual === undefined &&
+    contribution.fromYear === undefined &&
+    contribution.toYear === undefined
+  );
+}
+
+/**
+ * Sets one field of a person's salary sacrifice or non-concessional
+ * contribution (or clears it with `undefined`), keeping `toYear >= fromYear`
+ * the way dated expenses do: moving "From" past "To" raises "To" to match, and
+ * a "To" typed before "From" is raised to "From". When either year is unset
+ * there is nothing to compare, so nothing is adjusted. Used by the
+ * contribution actions.
+ */
+function updateContribution(
+  plan: Plan,
+  personId: string,
+  which: "salarySacrifice" | "nonConcessional",
+  field: keyof SuperContribution,
+  value: number | undefined,
+): Plan {
+  return updateSuperAccount(plan, personId, (account) => {
+    const changed: SuperContribution = { ...account[which], [field]: value };
+
+    const needsToYearRaised =
+      changed.fromYear !== undefined &&
+      changed.toYear !== undefined &&
+      changed.toYear < changed.fromYear;
+
+    return { [which]: needsToYearRaised ? { ...changed, toYear: changed.fromYear } : changed };
+  });
 }
 
 /** Returns the plan with the given changes applied to one portfolio; others are untouched. Used by the growth actions. */
