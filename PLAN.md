@@ -4,7 +4,7 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 (super access and the bridge period) is implemented; the plan and implementation PRs are stacked and await the owner's verification.
+**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 (super access and the bridge period) is implemented; the plan and implementation PRs are stacked and await the owner's verification. Start over from the logo is implemented and awaits the owner's verification.
 
 | Part | Contents | Status |
 | --- | --- | --- |
@@ -588,6 +588,7 @@ is split, it is finished in the last milestone listed.
 | **NFR-5** Disclaimer | Must | M1 |
 | **NFR-6** Accuracy tests with worked examples | Must | M1 → every milestone |
 | **NFR-7** Further reading links | Should | M21 |
+| **NFR-8** Start over | Must | Start over from the logo (side plan) |
 ### Decisions
 
 Agreed in review of part 1:
@@ -2016,7 +2017,8 @@ implementation PR**, stacked on this plan PR.
 
 ### Start over from the logo: step-by-step plan
 
-**Kind:** behavior change. **Status:** plan awaiting the owner's review.
+**Kind:** behavior change. **Status:** plan approved (PR #31); step 1
+implemented and awaiting the owner's verification.
 
 **Why.** The owner wants a quick way to throw away the current plan and
 begin again. The "AU FIRE Planner" logo at the top left is where people
@@ -2083,8 +2085,10 @@ the persistence layer don't change.
    apart from its ids. Unit tests: a new plan is blank; any entered value,
    renamed portfolio or dated expense makes it not blank.
 2. `StartOverDialog`: the confirmation dialog, with `onConfirm` and
-   `onCancel`. Component tests: Keep my plan has focus on open, Escape and
-   Keep my plan cancel, Start over confirms.
+   `onCancel`. Component tests: Keep my plan has focus on open, Keep my
+   plan cancels, Start over confirms. jsdom has no modal dialog, so Escape,
+   the backdrop and focus returning to the logo are covered by the E2E
+   test instead, and the contrast sweep gains a check of the open dialog.
 3. `AppShell`: the logo button, hidden as a button on the welcome page.
    On confirm (or straight away for a blank plan) it dispatches
    `replacePlan` with a new plan and navigates to Household. Component
@@ -2154,5 +2158,6 @@ depend on any other work in progress, so it can merge at any time.
       plan PR, then the owner verifies and merges both.
 - [ ] Owner verifies and merges the M6 PRs (the owner verifies the two new
       rule values: preservation age 60 and unconditional release at 65).
-- [ ] Approve the start over plan.
-- [ ] Implement start over (step 1), then open it for verification.
+- [x] Approve the start over plan.
+- [x] Implement start over (step 1), then open it for verification.
+- [ ] Owner verifies and merges the start over PR.
