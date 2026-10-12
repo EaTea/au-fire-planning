@@ -559,3 +559,27 @@ test("the bridge chart and the Coast FIRE split card have readable text in both 
     expect(await findLowContrastText(page), mode).toEqual([]);
   }
 });
+
+test("the Start over dialog has readable text, including while hovering and focusing its buttons", async ({
+  page,
+}) => {
+  await startFresh(page, "./#/income-expenses");
+  await page.getByLabel("Per year, after tax").fill("64000");
+  await page.getByLabel("Per year, after tax").press("Tab");
+
+  await page.getByRole("button", { name: "AU FIRE Planner, start over" }).click();
+  const dialog = page.getByRole("dialog", { name: "Start over?" });
+  await expect(dialog).toBeVisible();
+
+  expect(await findLowContrastText(page)).toEqual([]);
+
+  // The modal blocks the page behind it, so only its own buttons can be hovered.
+  const failures: string[] = [];
+  for (const button of await dialog.getByRole("button").all()) {
+    await button.hover();
+    failures.push(...(await findLowContrastText(page, true)).map((line) => `hover: ${line}`));
+    await button.focus();
+    failures.push(...(await findLowContrastText(page, true)).map((line) => `focus: ${line}`));
+  }
+  expect(failures).toEqual([]);
+});
