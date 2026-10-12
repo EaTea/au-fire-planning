@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { bundledRuleSet } from "../rules/bundledRuleSet";
-import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { projectPortfolio } from "./projection";
 import { assessSolvency } from "./solvency";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 /** The plan's example B (by hand, runs out): ages 60 to 65, $100,000 + $10,000 cash, $30,000 a year. */
-const runsOutInputs: ProjectionInputs = {
+const runsOutSettings: OnePersonSettings = {
   currentAge: 60,
   endAge: 65,
   retirementAge: 60,
@@ -26,7 +27,10 @@ const runsOutInputs: ProjectionInputs = {
 describe("assessSolvency", () => {
   // No shortfall rows: the answer is the investable net worth at the end age.
   it("says the money lasts, valued at the investable net worth at the end", () => {
-    const rows = projectPortfolio({ ...runsOutInputs, portfolioOpening: 1000000 }, 2026);
+    const rows = projectPortfolio(
+      onePersonInputs({ ...runsOutSettings, portfolioOpening: 1000000 }),
+      2026,
+    );
     const result = assessSolvency(rows);
 
     expect(result.status).toBe("lasts");
@@ -40,7 +44,7 @@ describe("assessSolvency", () => {
 
   // The plan's example B: only the last year is short, by $9,339.18 (portfolio first, cash last).
   it("finds the first shortfall year and explains it", () => {
-    const result = assessSolvency(projectPortfolio(runsOutInputs, 2026));
+    const result = assessSolvency(projectPortfolio(onePersonInputs(runsOutSettings), 2026));
 
     expect(result).toMatchObject({
       status: "runsOut",
@@ -60,7 +64,9 @@ describe("assessSolvency", () => {
 
   // A shortfall is followed by more shortfall years, all listed.
   it("lists every shortfall year when the money stays out", () => {
-    const result = assessSolvency(projectPortfolio({ ...runsOutInputs, endAge: 68 }, 2026));
+    const result = assessSolvency(
+      projectPortfolio(onePersonInputs({ ...runsOutSettings, endAge: 68 }), 2026),
+    );
 
     expect(result).toMatchObject({
       status: "runsOut",
@@ -72,13 +78,13 @@ describe("assessSolvency", () => {
   // A shortfall year in the middle counts even if later rows are funded (e.g. no spending later).
   it("treats an expense-only shortfall while working as running out", () => {
     const rows = projectPortfolio(
-      {
-        ...runsOutInputs,
+      onePersonInputs({
+        ...runsOutSettings,
         retirementAge: 65,
         portfolioOpening: 1000,
         cashOpening: 0,
         datedExpenses: [{ annual: 50000, fromYear: 2027, toYear: 2027 }],
-      },
+      }),
       2026,
     );
 
@@ -87,8 +93,8 @@ describe("assessSolvency", () => {
 
   // S4 (tests/worked-examples/m5-super.json): retired at 60 with only locked super.
   describe("with super", () => {
-    const lockedSuperInputs: ProjectionInputs = {
-      ...runsOutInputs,
+    const lockedSuperSettings: OnePersonSettings = {
+      ...runsOutSettings,
       endAge: 67,
       portfolioOpening: 0,
       cashOpening: 0,
@@ -109,7 +115,10 @@ describe("assessSolvency", () => {
     };
 
     it("notes the locked super in a shortfall year before 65", () => {
-      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026), 65);
+      const result = assessSolvency(
+        projectPortfolio(onePersonInputs(lockedSuperSettings), 2026),
+        65,
+      );
 
       expect(result).toMatchObject({
         status: "runsOut",
@@ -127,7 +136,10 @@ describe("assessSolvency", () => {
     });
 
     it("quotes the effective access age it is given, not a fixed 65", () => {
-      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026), 62);
+      const result = assessSolvency(
+        projectPortfolio(onePersonInputs(lockedSuperSettings), 2026),
+        62,
+      );
       if (result.status !== "runsOut") throw new Error("expected a shortfall");
 
       expect(result.explanation.lines.map((line) => line.label)).toContain(
@@ -139,13 +151,13 @@ describe("assessSolvency", () => {
       // $490,000 at 65 pays $20,000 a year for 24 years, then only $10,000 of the 25th (age 89).
       const result = assessSolvency(
         projectPortfolio(
-          {
-            ...lockedSuperInputs,
+          onePersonInputs({
+            ...lockedSuperSettings,
             currentAge: 64,
             retirementAge: 64,
             endAge: 95,
-            superAccount: { ...lockedSuperInputs.superAccount!, opening: 490000 },
-          },
+            superAccount: { ...lockedSuperSettings.superAccount!, opening: 490000 },
+          }),
           2026,
         ),
       );
@@ -164,7 +176,10 @@ describe("assessSolvency", () => {
 
     it("adds super to the 'lasts' breakdown so the lines still sum", () => {
       const result = assessSolvency(
-        projectPortfolio({ ...lockedSuperInputs, endAge: 61, retirementAge: 70 }, 2026),
+        projectPortfolio(
+          onePersonInputs({ ...lockedSuperSettings, endAge: 61, retirementAge: 70 }),
+          2026,
+        ),
       );
 
       expect(result.status).toBe("lasts");

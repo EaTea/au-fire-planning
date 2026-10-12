@@ -7,6 +7,7 @@ import {
   type ProjectionInputs,
   type ProjectionSuper,
 } from "./projection";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 // Unit tests for super accumulation and access (M5 step 5), one rule at a
 // time. The whole-plan figures are in tests/worked-examples/m5-super.json.
@@ -21,7 +22,7 @@ const emptySuper: ProjectionSuper = {
 };
 
 /** A person aged 40 who retires at 42 with no inflation and no money outside super. */
-function inputsWith(overrides: Partial<ProjectionInputs>): ProjectionInputs {
+function settingsWith(overrides: Partial<OnePersonSettings>): OnePersonSettings {
   return {
     currentAge: 40,
     endAge: 44,
@@ -39,6 +40,11 @@ function inputsWith(overrides: Partial<ProjectionInputs>): ProjectionInputs {
     fiNumberToday: 1_000_000,
     ...overrides,
   };
+}
+
+/** The same household as `settingsWith`, as the engine's inputs. */
+function inputsWith(overrides: Partial<OnePersonSettings>): ProjectionInputs {
+  return onePersonInputs(settingsWith(overrides));
 }
 
 describe("super contributions", () => {
@@ -201,7 +207,7 @@ describe("super earnings", () => {
 
 describe("drawing on super", () => {
   /** Aged 60, retired, only super ($500,000 at 0%), spending $20,000 a year until 67. */
-  const lockedSuper = inputsWith({
+  const lockedSuper = settingsWith({
     currentAge: 60,
     endAge: 67,
     retirementAge: 60,
@@ -210,9 +216,11 @@ describe("drawing on super", () => {
   });
 
   it("does not draw before 65: those years are shortfalls", () => {
-    const rows = projectPortfolio(lockedSuper, 2026);
+    const rows = projectPortfolio(onePersonInputs(lockedSuper), 2026);
 
-    for (const row of rows.filter((candidate) => candidate.age >= 61 && candidate.age <= 64)) {
+    for (const row of rows.filter(
+      (candidate) => candidate.people[0].age >= 61 && candidate.people[0].age <= 64,
+    )) {
       expect(row.fromSuper).toBe(0);
       expect(row.shortfall).toBe(20_000);
       expect(row.superClosing).toBe(500_000);
@@ -221,10 +229,10 @@ describe("drawing on super", () => {
 
   it("draws from 65, once the portfolio is empty", () => {
     const rows = projectPortfolio(
-      { ...lockedSuper, cashOpening: 5_000, portfolioOpening: 10_000 },
+      onePersonInputs({ ...lockedSuper, cashOpening: 5_000, portfolioOpening: 10_000 }),
       2026,
     );
-    const age65 = rows.find((row) => row.age === 65);
+    const age65 = rows.find((row) => row.people[0].age === 65);
 
     // The portfolio, then cash, paid what they could before 65, so by 65 both are empty.
     expect(age65?.fromCash).toBe(0);
@@ -235,7 +243,12 @@ describe("drawing on super", () => {
 
   it("draws the portfolio first, then super, and leaves cash until last (cash drawn last)", () => {
     const rows = projectPortfolio(
-      { ...lockedSuper, currentAge: 64, cashOpening: 5_000, portfolioOpening: 8_000 },
+      onePersonInputs({
+        ...lockedSuper,
+        currentAge: 64,
+        cashOpening: 5_000,
+        portfolioOpening: 8_000,
+      }),
       2026,
     );
 
@@ -249,12 +262,12 @@ describe("drawing on super", () => {
 
   it("draws cash only when the portfolio and super can't fund the year", () => {
     const rows = projectPortfolio(
-      {
+      onePersonInputs({
         ...lockedSuper,
         currentAge: 64,
         cashOpening: 5_000,
         superAccount: { ...emptySuper, opening: 16_000 },
-      },
+      }),
       2026,
     );
 
@@ -267,7 +280,7 @@ describe("drawing on super", () => {
 
   it("counts super in investable net worth", () => {
     const rows = projectPortfolio(
-      { ...lockedSuper, cashOpening: 1_000, portfolioOpening: 2_000 },
+      onePersonInputs({ ...lockedSuper, cashOpening: 1_000, portfolioOpening: 2_000 }),
       2026,
     );
 
@@ -298,7 +311,7 @@ describe("the condition of release", () => {
   function accessibleAges(inputs: ProjectionInputs): number[] {
     return projectPortfolio(inputs, 2026)
       .filter((row) => row.superAccessible)
-      .map((row) => row.age);
+      .map((row) => row.people[0].age);
   }
 
   it("opens at the access age when retiring before it", () => {
@@ -339,11 +352,15 @@ describe("the condition of release", () => {
     for (const row of rows) {
       if (!row.superAccessible) expect(row.fromSuper).toBe(0);
     }
-    expect(rows.find((row) => row.age === 60)?.fromSuper).toBe(20_000);
+    expect(rows.find((row) => row.people[0].age === 60)?.fromSuper).toBe(20_000);
   });
 });
 
 describe("effectiveSuperAccessAge", () => {
+  /** The first person's effective access age, with the rules of 2026. */
+  const accessAgeOf = (inputs: ProjectionInputs) =>
+    effectiveSuperAccessAge(inputs.people[0], inputs, 2026);
+
   const withSuper = (retirementAge: number, accessAge?: number) =>
     inputsWith({
       currentAge: 55,
@@ -353,18 +370,18 @@ describe("effectiveSuperAccessAge", () => {
     });
 
   it("is the access age when retiring before it", () => {
-    expect(effectiveSuperAccessAge(withSuper(56, 60), 2026)).toBe(60);
-    expect(effectiveSuperAccessAge(withSuper(56), 2026)).toBe(65);
+    expect(accessAgeOf(withSuper(56, 60))).toBe(60);
+    expect(accessAgeOf(withSuper(56))).toBe(65);
   });
 
   it("is the year after retirement when retiring at or after the access age", () => {
-    expect(effectiveSuperAccessAge(withSuper(61, 60), 2026)).toBe(62);
-    expect(effectiveSuperAccessAge(withSuper(60, 60), 2026)).toBe(61);
+    expect(accessAgeOf(withSuper(61, 60))).toBe(62);
+    expect(accessAgeOf(withSuper(60, 60))).toBe(61);
   });
 
   it("is capped at 65 and clamped to the preservation age", () => {
-    expect(effectiveSuperAccessAge(withSuper(70, 60), 2026)).toBe(65);
-    expect(effectiveSuperAccessAge(withSuper(56, 50), 2026)).toBe(60);
+    expect(accessAgeOf(withSuper(70, 60))).toBe(65);
+    expect(accessAgeOf(withSuper(56, 50))).toBe(60);
   });
 
   it("agrees with the first row where super is accessible after retiring", () => {
@@ -377,13 +394,13 @@ describe("effectiveSuperAccessAge", () => {
       const inputs = withSuper(retirementAge, accessAge);
       const firstRetiredAccessibleAge = projectPortfolio(inputs, 2026).find(
         (row) => row.superAccessible && row.phase === "retired",
-      )?.age;
+      )?.people[0].age;
 
-      expect(effectiveSuperAccessAge(inputs, 2026)).toBe(firstRetiredAccessibleAge);
+      expect(accessAgeOf(inputs)).toBe(firstRetiredAccessibleAge);
     }
   });
 
   it("is undefined when there is no super account", () => {
-    expect(effectiveSuperAccessAge(inputsWith({}), 2026)).toBeUndefined();
+    expect(accessAgeOf(inputsWith({}))).toBeUndefined();
   });
 });

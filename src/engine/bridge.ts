@@ -8,7 +8,13 @@
 //
 //   projectPortfolio ─► rows ─┐
 //                             ├─► assessBridge ─► BridgeAssessment ─► Results (M6 step 7)
-//   effectiveSuperAccessAge ──┘
+//   effectiveSuperAccessAge ──┘   (per person)
+//
+// With several people (M7), row R is the last row everybody works
+// (`firstRetirementRowIndex`) and row A is the earliest row at which any
+// person's super opens. The bridge need and the weighting of the partners'
+// super returns for a couple are built in M7 step 5; until then the person
+// whose super opens first supplies the return and the access age.
 //
 // The status of each part comes from the projection's own shortfalls, so it is
 // exact: a part is MET when none of its years has a shortfall. The "need" and
@@ -23,7 +29,13 @@
 // (src/engine/fiNumber.ts).
 
 import type { Explained, ExplanationLine } from "./explained";
-import { effectiveSuperAccessAge, type ProjectionInputs, type ProjectionRow } from "./projection";
+import {
+  effectiveSuperAccessAge,
+  firstRetirementRowIndex,
+  type ProjectionInputs,
+  type ProjectionPerson,
+  type ProjectionRow,
+} from "./projection";
 import { rulesForYear } from "../rules/ruleSet";
 
 /** Whether a part of the plan is funded. The words are shown as text, never by colour alone. */
@@ -49,7 +61,7 @@ export interface BridgePart {
 
 /** The result of the bridge check. Both parts are absent when there is no super. */
 export interface BridgeAssessment {
-  /** The first age super can be drawn while retired (see `effectiveSuperAccessAge`). */
+  /** The first age super can be drawn while retired (see `effectiveSuperAccessAge`), for the person whose super opens first. */
   readonly effectiveAccessAge?: number;
   /** The retired years before super opens. Absent when you retire at or after the access age ("no bridge needed"). */
   readonly bridge?: BridgePart;
@@ -61,8 +73,8 @@ export interface BridgeAssessment {
  * Checks the bridge and the years after access for a projection.
  *
  * `rows` are from `projectPortfolio(inputs, rows[0].calendarYear)`. The bridge
- * is the retired years before the effective access age; its need is the
- * spending in them discounted to the retirement row at the portfolio's return
+ * is the retired years before the effective access age (of the person whose
+ * super opens first); its need is the spending in them discounted to the retirement row at the portfolio's return
  * (the portfolio pays first), and its projected amount is portfolio + cash at
  * the end of the retirement row. After access, the need is that spending
  * discounted to the row before access at super's after-tax return, and the
@@ -73,16 +85,17 @@ export function assessBridge(
   rows: readonly ProjectionRow[],
   inputs: ProjectionInputs,
 ): BridgeAssessment {
-  const account = inputs.superAccount;
   const todayRow = rows[0];
-  if (account === undefined || todayRow === undefined) return {};
+  if (todayRow === undefined) return {};
 
   const startYear = todayRow.calendarYear;
-  const accessAge = effectiveSuperAccessAge(inputs, startYear);
-  if (accessAge === undefined) return {};
+  const opening = firstSuperToOpen(inputs, startYear);
+  if (opening === undefined) return {};
 
-  const retirementRowIndex = inputs.retirementAge - inputs.currentAge;
-  const accessRowIndex = accessAge - inputs.currentAge;
+  const { person: openingPerson, account, accessAge } = opening;
+
+  const retirementRowIndex = firstRetirementRowIndex(inputs);
+  const accessRowIndex = accessAge - openingPerson.currentAge;
   const lastRowIndex = rows.length - 1;
 
   const preservationAge = rulesForYear(account.ruleSet, startYear, inputs.inflationRate)
@@ -152,6 +165,40 @@ export function assessBridge(
     ...(bridge === undefined ? {} : { bridge }),
     ...(afterAccess === undefined ? {} : { afterAccess }),
   };
+}
+
+/** The person whose super opens first, with their super account and effective access age. */
+interface FirstSuperToOpen {
+  readonly person: ProjectionPerson;
+  readonly account: NonNullable<ProjectionPerson["superAccount"]>;
+  readonly accessAge: number;
+}
+
+/**
+ * The person whose super opens first (the earliest access row), with their
+ * effective access age. `undefined` when nobody has a super account. Called
+ * by `assessBridge`.
+ */
+function firstSuperToOpen(
+  inputs: ProjectionInputs,
+  startYear: number,
+): FirstSuperToOpen | undefined {
+  let earliest: FirstSuperToOpen | undefined;
+
+  for (const person of inputs.people) {
+    const account = person.superAccount;
+    const accessAge = effectiveSuperAccessAge(person, inputs, startYear);
+    if (account === undefined || accessAge === undefined) continue;
+
+    // The access row is the age's distance from today; the earliest row wins, the first person on a tie.
+    const isEarlier =
+      earliest === undefined ||
+      accessAge - person.currentAge < earliest.accessAge - earliest.person.currentAge;
+
+    if (isEarlier) earliest = { person, account, accessAge };
+  }
+
+  return earliest;
 }
 
 /**
@@ -257,8 +304,8 @@ function describePart(description: PartDescription): BridgePart {
   return {
     firstYear: firstRow.calendarYear,
     lastYear: lastRow.calendarYear,
-    firstAge: firstRow.age,
-    lastAge: lastRow.age,
+    firstAge: firstRow.people[0].age,
+    lastAge: lastRow.people[0].age,
     need: needExplained,
     projected: projectedExplained,
     status: shortYears.length === 0 ? "met" : "short",

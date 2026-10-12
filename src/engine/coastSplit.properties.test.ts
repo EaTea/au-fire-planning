@@ -5,6 +5,7 @@ import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { assessBridge } from "./bridge";
 import { calculateCoastSplit } from "./coastSplit";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { onePersonInputs } from "./testing/onePersonInputs";
 
 // Property-based tests for Coast FIRE for super and outside super (M6 step 4):
 // a larger balance never makes either test later, and super with a 0% return
@@ -43,32 +44,35 @@ function inputsFrom(
 ): ProjectionInputs {
   const retirementAge = settings.currentAge + settings.yearsToRetirement;
 
-  return {
-    currentAge: settings.currentAge,
-    endAge: retirementAge + settings.yearsAfterRetirement,
-    retirementAge,
-    expectedReturn: 0.06,
-    interestRate: 0.03,
-    inflationRate: settings.inflationRate,
-    annualContribution: settings.contribution,
-    contributionsStopAge: retirementAge,
-    portfolioOpening: overrides.portfolio ?? settings.portfolio,
-    cashOpening: settings.cash,
-    livingAnnual: settings.spending,
-    retirementSpendingAnnual: settings.spending,
-    datedExpenses: [],
-    fiNumberToday: 1_000_000,
-    salary: { annual: settings.salary, growth: { kind: "none" } },
-    superAccount: {
-      opening: overrides.superOpening ?? settings.superOpening,
-      returnRate: overrides.returnRate ?? 0.07,
-      employerRate: overrides.employerRate ?? settings.employerRate,
-      salarySacrifice: { annual: 0 },
-      nonConcessional: { annual: 0 },
-      ...(settings.accessAge === undefined ? {} : { accessAge: settings.accessAge }),
-      ruleSet: bundledRuleSet,
+  return onePersonInputs(
+    {
+      currentAge: settings.currentAge,
+      endAge: retirementAge + settings.yearsAfterRetirement,
+      retirementAge,
+      expectedReturn: 0.06,
+      interestRate: 0.03,
+      inflationRate: settings.inflationRate,
+      annualContribution: settings.contribution,
+      contributionsStopAge: retirementAge,
+      portfolioOpening: overrides.portfolio ?? settings.portfolio,
+      cashOpening: settings.cash,
+      livingAnnual: settings.spending,
+      retirementSpendingAnnual: settings.spending,
+      datedExpenses: [],
+      fiNumberToday: 1_000_000,
+      salary: { annual: settings.salary, growth: { kind: "none" } },
+      superAccount: {
+        opening: overrides.superOpening ?? settings.superOpening,
+        returnRate: overrides.returnRate ?? 0.07,
+        employerRate: overrides.employerRate ?? settings.employerRate,
+        salarySacrifice: { annual: 0 },
+        nonConcessional: { annual: 0 },
+        ...(settings.accessAge === undefined ? {} : { accessAge: settings.accessAge }),
+        ruleSet: bundledRuleSet,
+      },
     },
-  };
+    START_YEAR,
+  );
 }
 
 /** Projects and splits. */

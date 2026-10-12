@@ -3,8 +3,9 @@
 //
 //   projectPortfolio ─► rows ─► assessSolvency ─► Solvency ─► Results screen
 //
-// Pure, like the rest of the engine. PR B's earliest-retirement search will
-// call it once per candidate retirement age.
+// Pure, like the rest of the engine. The earliest-retirement search calls it
+// once per candidate retirement age. Ages quoted are the first person's;
+// naming every partner comes with the couple wording in M7 PR B.
 
 import type { Explained } from "./explained";
 import { isShortfallWithSuperLocked, type ProjectionRow } from "./projection";
@@ -21,7 +22,7 @@ export type Solvency =
       readonly status: "runsOut";
       /** The first calendar year spending can't be fully funded. */
       readonly year: number;
-      /** The age in that year. */
+      /** The first person's age in that year. */
       readonly age: number;
       /** Every calendar year that can't be fully funded, in order. */
       readonly shortfallYears: readonly number[];
@@ -79,7 +80,7 @@ export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: 
     return {
       status: "runsOut",
       year: firstShortfall.calendarYear,
-      age: firstShortfall.age,
+      age: firstShortfall.people[0].age,
       shortfallYears: shortfallRows.map((row) => row.calendarYear),
       explanation: {
         value: firstShortfall.shortfall,
@@ -124,7 +125,7 @@ export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: 
           ? []
           : [
               {
-                label: `Cash at end of ${lastRow.calendarYear} (age ${lastRow.age})`,
+                label: `Cash at end of ${lastRow.calendarYear} (age ${lastRow.people[0].age})`,
                 value: lastRow.cashClosing,
                 unit: "dollars",
                 source: "calculated",

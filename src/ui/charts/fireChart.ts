@@ -50,7 +50,7 @@ export function buildFireChartSeries(
 
   const points: TimeSeriesPoint[] = projection.rows.map((row) => ({
     year: row.calendarYear,
-    age: row.age,
+    age: row.people[0].age,
     values: {
       [INVESTABLE_KEY]: inChosenDollars(row.investableClosing, row.inflationIndex),
       [FI_NUMBER_KEY]: inChosenDollars(row.fiNumber, row.inflationIndex),

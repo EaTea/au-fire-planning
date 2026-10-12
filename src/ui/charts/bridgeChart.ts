@@ -51,7 +51,7 @@ export function buildBridgeChartSeries(
 
   const points: TimeSeriesPoint[] = projection.rows.map((row) => ({
     year: row.calendarYear,
-    age: row.age,
+    age: row.people[0].age,
     values: {
       [OUTSIDE_SUPER_KEY]: inChosenDollars(
         row.portfolioClosing + row.cashClosing,

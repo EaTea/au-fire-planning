@@ -3,40 +3,43 @@ import { describe, expect, it } from "vitest";
 import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { assessBridge, projectionHasSuper } from "./bridge";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 // Unit tests for the bridge check (M6 step 3), beyond the worked examples in
 // tests/worked-examples/m6-bridge.json: the absent parts, the explanation and
 // the arithmetic on a small inflating case.
 
 /** Aged 55, retiring at 56, plan until 66, $100,000 outside and in super, $20,000 a year, 0% everything. */
-function bridgeInputs(overrides: Partial<ProjectionInputs> = {}): ProjectionInputs {
-  return {
-    currentAge: 55,
-    endAge: 66,
-    retirementAge: 56,
-    expectedReturn: 0,
-    interestRate: 0,
-    inflationRate: 0,
-    annualContribution: 0,
-    contributionsStopAge: 56,
-    portfolioOpening: 100_000,
-    cashOpening: 0,
-    livingAnnual: 20_000,
-    retirementSpendingAnnual: 20_000,
-    datedExpenses: [],
-    fiNumberToday: 500_000,
-    superAccount: {
-      opening: 100_000,
-      returnRate: 0,
-      employerRate: 0,
-      earningsTaxRate: 0,
-      salarySacrifice: { annual: 0 },
-      nonConcessional: { annual: 0 },
-      accessAge: 60,
-      ruleSet: bundledRuleSet,
-    },
-    ...overrides,
-  };
+const bridgeSettings: OnePersonSettings = {
+  currentAge: 55,
+  endAge: 66,
+  retirementAge: 56,
+  expectedReturn: 0,
+  interestRate: 0,
+  inflationRate: 0,
+  annualContribution: 0,
+  contributionsStopAge: 56,
+  portfolioOpening: 100_000,
+  cashOpening: 0,
+  livingAnnual: 20_000,
+  retirementSpendingAnnual: 20_000,
+  datedExpenses: [],
+  fiNumberToday: 500_000,
+  superAccount: {
+    opening: 100_000,
+    returnRate: 0,
+    employerRate: 0,
+    earningsTaxRate: 0,
+    salarySacrifice: { annual: 0 },
+    nonConcessional: { annual: 0 },
+    accessAge: 60,
+    ruleSet: bundledRuleSet,
+  },
+};
+
+/** The bridge test household for one person, with any of the settings above changed. */
+function bridgeInputs(overrides: Partial<OnePersonSettings> = {}): ProjectionInputs {
+  return onePersonInputs({ ...bridgeSettings, ...overrides });
 }
 
 /** Projects and assesses in one go. */
@@ -57,7 +60,7 @@ describe("assessBridge", () => {
     const result = assess(
       bridgeInputs({
         endAge: 62,
-        superAccount: { ...bridgeInputs().superAccount!, accessAge: 65 },
+        superAccount: { ...bridgeSettings.superAccount!, accessAge: 65 },
       }),
     );
 
@@ -82,7 +85,7 @@ describe("assessBridge", () => {
       expectedReturn: 0.1,
       retirementSpendingAnnual: 10_000,
       livingAnnual: 10_000,
-      superAccount: { ...bridgeInputs().superAccount!, returnRate: 0.1, earningsTaxRate: 0.5 },
+      superAccount: { ...bridgeSettings.superAccount!, returnRate: 0.1, earningsTaxRate: 0.5 },
     });
     const result = assess(inputs);
 
@@ -136,16 +139,13 @@ describe("projectionHasSuper", () => {
   });
 
   it("is false for an empty super account that never receives anything", () => {
-    const inputs = bridgeInputs();
-    const emptyAccount = { ...inputs.superAccount!, opening: 0 };
+    const inputs = bridgeInputs({ superAccount: { ...bridgeSettings.superAccount!, opening: 0 } });
 
-    expect(
-      projectionHasSuper(projectPortfolio({ ...inputs, superAccount: emptyAccount }, 2026)),
-    ).toBe(false);
+    expect(projectionHasSuper(projectPortfolio(inputs, 2026))).toBe(false);
   });
 
   it("is false when the plan has no super account at all", () => {
-    const withoutSuper = { ...bridgeInputs(), superAccount: undefined };
+    const withoutSuper = bridgeInputs({ superAccount: undefined });
 
     expect(projectionHasSuper(projectPortfolio(withoutSuper, 2026))).toBe(false);
   });

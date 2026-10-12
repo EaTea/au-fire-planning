@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { calculateCoastFire } from "./coastFire";
-import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { projectPortfolio } from "./projection";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 // Small hand-checkable cases for `calculateCoastFire`. Rates are all 0% here
 // so every figure can be checked on paper; the worked examples
 // (tests/worked-examples/m4-coast.json) cover real-world rates.
 
 /** Age 40, retiring at 42, no growth anywhere, $100 cash, $200 portfolio, FI number $1,000. */
-const flatInputs: ProjectionInputs = {
+const flatSettings: OnePersonSettings = {
   currentAge: 40,
   endAge: 50,
   retirementAge: 42,
@@ -27,7 +28,9 @@ const flatInputs: ProjectionInputs = {
 };
 
 /** Runs the real projection, then Coast FIRE on its rows, as `summariseProjection` does. */
-function coastFor(inputs: ProjectionInputs) {
+function coastFor(settings: OnePersonSettings) {
+  const inputs = onePersonInputs(settings);
+
   return calculateCoastFire(projectPortfolio(inputs, 2026), inputs);
 }
 
@@ -35,7 +38,7 @@ function coastFor(inputs: ProjectionInputs) {
 describe("calculateCoastFire", () => {
   // With nothing growing, coasting needs the whole FI number, split between cash and portfolio.
   it("is the FI number when nothing grows and there are no dated expenses", () => {
-    const coast = coastFor(flatInputs);
+    const coast = coastFor(flatSettings);
 
     expect(coast.number.value).toBe(1000);
     expect(coast.path.map((point) => point.coastNumber)).toEqual([1000, 1000, 1000]);
@@ -45,7 +48,7 @@ describe("calculateCoastFire", () => {
   // A $150 expense in 2027 is paid from the portfolio, so the portfolio needs $150 more.
   it("adds a dated expense the portfolio pays before retirement", () => {
     const coast = coastFor({
-      ...flatInputs,
+      ...flatSettings,
       datedExpenses: [{ annual: 150, fromYear: 2027, toYear: 2027 }],
     });
 
@@ -61,7 +64,7 @@ describe("calculateCoastFire", () => {
   // and cash pays $1,000, leaving exactly $1,000: the smallest portfolio that works.
   it("finds the portfolio needed when the expense would also draw on cash", () => {
     const coast = coastFor({
-      ...flatInputs,
+      ...flatSettings,
       cashOpening: 2000,
       datedExpenses: [{ annual: 1500, fromYear: 2027, toYear: 2027 }],
     });
@@ -72,9 +75,9 @@ describe("calculateCoastFire", () => {
 
   // The explanation line appears only when there is a dated expense to explain.
   it("shows the dated-expense line only when there are dated expenses", () => {
-    const without = coastFor(flatInputs).number.lines.map((line) => line.label);
+    const without = coastFor(flatSettings).number.lines.map((line) => line.label);
     const withExpense = coastFor({
-      ...flatInputs,
+      ...flatSettings,
       datedExpenses: [{ annual: 150, fromYear: 2027, toYear: 2027 }],
     }).number.lines.map((line) => line.label);
 
@@ -86,7 +89,7 @@ describe("calculateCoastFire", () => {
   // After retirement, dated expenses are part of "does the money last", not of coasting.
   it("ignores dated expenses after the retirement year", () => {
     const coast = coastFor({
-      ...flatInputs,
+      ...flatSettings,
       datedExpenses: [{ annual: 5000, fromYear: 2029, toYear: 2029 }],
     });
 
@@ -95,7 +98,7 @@ describe("calculateCoastFire", () => {
 
   // With no years to wait, you need the FI number now: cash plus whatever the portfolio must add.
   it("handles a retirement age equal to the current age", () => {
-    const coast = coastFor({ ...flatInputs, retirementAge: 40, contributionsStopAge: 40 });
+    const coast = coastFor({ ...flatSettings, retirementAge: 40, contributionsStopAge: 40 });
 
     expect(coast.path).toHaveLength(1);
     expect(coast.number.value).toBe(1000);
@@ -104,7 +107,7 @@ describe("calculateCoastFire", () => {
 
   // Savings above the FI number at retirement: only the cash counts, and nothing more is needed.
   it("is just the cash when cash alone exceeds the FI number", () => {
-    const coast = coastFor({ ...flatInputs, cashOpening: 5000 });
+    const coast = coastFor({ ...flatSettings, cashOpening: 5000 });
 
     expect(coast.number.value).toBe(5000);
     expect(coast.path[0]?.portfolioNeeded).toBe(0);
@@ -114,7 +117,7 @@ describe("calculateCoastFire", () => {
   // Row 0 reached means "already coasting"; otherwise the first row at or above the number.
   it("finds the first row where investable reaches the Coast FIRE number", () => {
     const coast = coastFor({
-      ...flatInputs,
+      ...flatSettings,
       portfolioOpening: 600,
       annualContribution: 150,
       contributionsStopAge: 42,
@@ -133,9 +136,12 @@ describe("calculateCoastFire", () => {
 
   // The chart's "today's savings" line comes from the real projection with $0 contributions.
   it("runs the no-contributions path through the real projection", () => {
-    const inputs = { ...flatInputs, annualContribution: 150 };
-    const coast = coastFor(inputs);
-    const expected = projectPortfolio({ ...inputs, annualContribution: 0 }, 2026);
+    const settings = { ...flatSettings, annualContribution: 150 };
+    const coast = coastFor(settings);
+    const expected = projectPortfolio(
+      onePersonInputs({ ...settings, annualContribution: 0 }),
+      2026,
+    );
 
     expect(coast.path.map((point) => point.withoutContributions)).toEqual(
       expected.slice(0, 3).map((row) => row.investableClosing),
@@ -177,8 +183,8 @@ describe("calculateCoastFire", () => {
 
 // Coast FIRE with super (M5 step 6), at 0% growth with no salary tax effects to keep it checkable.
 describe("calculateCoastFire with super", () => {
-  const withSuper: ProjectionInputs = {
-    ...flatInputs,
+  const withSuper: OnePersonSettings = {
+    ...flatSettings,
     salary: { annual: 1000, growth: { kind: "none" } },
     superAccount: {
       opening: 300,
@@ -210,7 +216,7 @@ describe("calculateCoastFire with super", () => {
   });
 
   it("leaves the breakdown as before when there is no super", () => {
-    const labels = coastFor(flatInputs).number.lines.map((line) => line.label);
+    const labels = coastFor(flatSettings).number.lines.map((line) => line.label);
 
     expect(labels.some((label) => label.includes("super"))).toBe(false);
   });
@@ -234,8 +240,8 @@ describe("Coast FIRE reached, decided exactly", () => {
   // The review's edge case: retiring at 65 with exactly the FI number in super, and a $1 dated
   // expense in 2053 (age 65), which super pays because it is accessible from 65. The formula's
   // super path leaves out dated expenses, so it thinks super is still $1,000 at retirement.
-  const superPaysAtRetirement: ProjectionInputs = {
-    ...flatInputs,
+  const superPaysAtRetirement: OnePersonSettings = {
+    ...flatSettings,
     currentAge: 38,
     endAge: 70,
     retirementAge: 65,

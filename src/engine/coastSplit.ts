@@ -28,16 +28,31 @@
 // "Reached" is the first row, from today to retirement, where the balance is
 // at least that row's need. Called by `summariseProjection` (fiNumber.ts).
 // Pure, like the rest of the engine.
+//
+// With several people, the outside-super test runs to the first retirement
+// row (where the bridge starts) and the super test to the household
+// retirement row. The couple's version of the super test, which needs each
+// partner's super separately, comes with M7 step 5; until then $1 of super
+// is placed with the first person who has a super account.
 
 import type { BridgeAssessment } from "./bridge";
 import { inputsWithVoluntaryContributionsStoppedAfter, portfolioNeededFromRow } from "./coastFire";
 import type { Explained, ExplanationLine } from "./explained";
-import { projectPortfolio, type ProjectionInputs, type ProjectionRow } from "./projection";
+import {
+  firstRetirementRowIndex,
+  householdRetirementRowIndex,
+  mapNonEmpty,
+  projectPortfolio,
+  youngestAgeAtRow,
+  type ProjectionInputs,
+  type ProjectionRow,
+} from "./projection";
 
 /** The year one of the two tests is first passed, with the working behind it. */
 export interface CoastSplitMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
+  /** The first person's age in that year. */
   readonly age: number;
   /** The balance against the need in that year. */
   readonly explanation: Explained;
@@ -92,7 +107,7 @@ function coastOutsideSuper(
   inputs: ProjectionInputs,
   bridge: BridgeAssessment,
 ): CoastSplitPart | undefined {
-  const retirementRowIndex = inputs.retirementAge - inputs.currentAge;
+  const retirementRowIndex = firstRetirementRowIndex(inputs);
   const workingRows = rows.slice(0, retirementRowIndex + 1);
   const todayRow = workingRows[0];
   const retirementRow = workingRows[retirementRowIndex];
@@ -197,7 +212,8 @@ function coastSuper(
 ): CoastSplitPart | undefined {
   const afterAccess = bridge.afterAccess;
   const todayRow = rows[0];
-  if (afterAccess === undefined || inputs.superAccount === undefined || todayRow === undefined) {
+  const anyoneHasSuper = inputs.people.some((person) => person.superAccount !== undefined);
+  if (afterAccess === undefined || !anyoneHasSuper || todayRow === undefined) {
     return undefined;
   }
 
@@ -207,7 +223,7 @@ function coastSuper(
   if (baseRow === undefined) return undefined;
 
   const startYear = todayRow.calendarYear;
-  const lastCoastRowIndex = Math.min(inputs.retirementAge - inputs.currentAge, baseRowIndex);
+  const lastCoastRowIndex = Math.min(householdRetirementRowIndex(inputs), baseRowIndex);
 
   /** super needed at row k, with the G and E behind it. */
   const neededAt = (rowIndex: number) => {
@@ -296,23 +312,33 @@ function superPathFromRow(
   baseRowIndex: number,
   startYear: number,
 ): SuperPath {
-  const account = inputs.superAccount;
   const stopped = inputsWithVoluntaryContributionsStoppedAfter(inputs, fromIndex, startYear);
 
-  const run = (opening: number) =>
-    projectPortfolio(
+  const run = (opening: number) => {
+    // The test dollar goes to the first person with super; everyone else starts with none.
+    let openingGiven = false;
+
+    return projectPortfolio(
       {
         ...stopped,
-        endAge: inputs.currentAge + baseRowIndex,
+        endAge: youngestAgeAtRow(inputs, baseRowIndex),
         portfolioOpening: 0,
         cashOpening: 0,
         livingAnnual: 0,
         retirementSpendingAnnual: 0,
         datedExpenses: [],
-        ...(account === undefined ? {} : { superAccount: { ...stopped.superAccount!, opening } }),
+        people: mapNonEmpty(stopped.people, (person) => {
+          if (person.superAccount === undefined) return person;
+
+          const personOpening = openingGiven ? 0 : opening;
+          openingGiven = true;
+
+          return { ...person, superAccount: { ...person.superAccount, opening: personOpening } };
+        }),
       },
       startYear,
     );
+  };
 
   const empty = run(0);
   const unit = run(1);
@@ -338,13 +364,13 @@ function milestone(
   return {
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
-    age: row.age,
+    age: row.people[0].age,
     explanation: {
       value: balance,
       unit: "dollars",
       lines: [
         {
-          label: `${balanceLabel} at end of ${row.calendarYear} (age ${row.age})`,
+          label: `${balanceLabel} at end of ${row.calendarYear} (age ${row.people[0].age})`,
           value: balance,
           unit: "dollars",
           source: "calculated",

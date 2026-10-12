@@ -1847,9 +1847,55 @@ access at the default 65.
 
 #### Step 1 · Rows carry each person (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor. No behaviour change.
+
+**As built:**
+- `ProjectionInputs.people` and `ProjectionRow.people` are non-empty lists
+  (`NonEmptyList<T>`, a `[T, ...T[]]` tuple), so `people[0]` needs no
+  undefined check. `mapNonEmpty` keeps them non-empty when they are rebuilt.
+- `PersonYear` has `personId`, `age`, `phase` (`working` | `retired`), the
+  salary and super flows, `fromSuper`, `superClosing` and `superAccessible`.
+  The household fields on the row are the sums, added in person order from 0
+  so one person's figures are bit-for-bit the same as before. The row's
+  `superAccessible` is "anyone's super can be drawn", and
+  `isShortfallWithSuperLocked` is "a shortfall while some person has a locked
+  balance".
+- `endAge` is the age the **youngest** person has in the last row. Helpers
+  beyond the three named in the step: `youngestAgeAtRow` (the engine's way to
+  say "stop the projection at row n"), `lastPortfolioContributionYear`
+  (Coast FIRE pulls the stop earlier without losing the rule's own limit) and
+  `inputsWithRetirementAge` (one person's age changed, for the search).
+- Drawing is pro rata (`drawSuperProRata`): a person's share is computed as
+  `balance / total` before multiplying, so a lone person pays exactly the
+  whole draw.
+- `oneRetired` rows draw no retirement spending yet; the interim amount is
+  step 5. The Year by year band map gained a placeholder `oneRetired` text so
+  it type-checks; the real wording is PR B.
+- The stop rule is mapped in `summariseProjection` (not in
+  `resolvePlanInputs`, which is step 2): a stop age left unset
+  (`source === "default"`) becomes `whileWorking` on the first person, an
+  entered one becomes `throughYear` (start year + stop age − current age).
+  Because `whileWorking` follows the retirement ages by itself,
+  `EarliestRetirementInputs` and its `contributionsStopAgeFollowsRetirementAge`
+  flag are gone: the search takes plain `ProjectionInputs`.
+- Single-person assumptions that remain, to be replaced in step 5 and noted
+  in each module's header: `findEarliestRetirementAge(inputs, startYear,
+  personIndex = 0)` searches one person (step 2 calls it per person); the
+  bridge takes the access age and super return of the person whose super
+  opens first and the first retirement row; the coast split places its $1
+  test dollar of super with the first person who has super; the explanation
+  lines quote `people[0]`'s age.
+- `src/engine/testing/onePersonInputs.ts` has `onePersonInputs(settings,
+  startYear)` (flat one-person settings to `ProjectionInputs`, a
+  `contributionsStopAge` becoming `throughYear`) and `withFirstPerson`. Test
+  data was moved into `OnePersonSettings` objects; no expected value
+  changed. New tests: household fields equal the sums over `people`, ages and
+  row count, the three phases, the stop rule with several owners, pro rata
+  and locked-partner drawing, and the household helpers.
+- Checks: `npm run check` (775 unit tests, up from 762) and `npm run
+  test:e2e` (38) pass.
 
 1. **Per-person rows.** `ProjectionRow` gains `people: PersonYear[]`,
    each holding:

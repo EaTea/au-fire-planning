@@ -1,12 +1,13 @@
 import { fc, test } from "@fast-check/vitest";
 import { describe, expect, it } from "vitest";
 
-import { findEarliestRetirementAge, type EarliestRetirementInputs } from "./earliestRetirement";
+import { findEarliestRetirementAge } from "./earliestRetirement";
 import { projectPortfolio } from "./projection";
 import { assessSolvency } from "./solvency";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 /** Example B (by hand): ages 60 to 65, $100,000 + $10,000 cash, $30,000 a year. Earliest age is 61. */
-const exampleBInputs: EarliestRetirementInputs = {
+const exampleBSettings: OnePersonSettings = {
   currentAge: 60,
   endAge: 65,
   retirementAge: 60,
@@ -14,8 +15,7 @@ const exampleBInputs: EarliestRetirementInputs = {
   interestRate: 0.05,
   inflationRate: 0,
   annualContribution: 0,
-  contributionsStopAge: 60,
-  contributionsStopAgeFollowsRetirementAge: true,
+  // No stop age: contributions stop when the tried retirement age is reached.
   portfolioOpening: 100000,
   cashOpening: 10000,
   livingAnnual: 30000,
@@ -23,19 +23,11 @@ const exampleBInputs: EarliestRetirementInputs = {
   datedExpenses: [],
   fiNumberToday: 750000,
 };
+const exampleBInputs = onePersonInputs(exampleBSettings);
 
 /** Whether the plan's money lasts when retiring at the given age, using the same engine pieces the search uses. */
-function lastsWhenRetiringAt(inputs: EarliestRetirementInputs, age: number): boolean {
-  const rows = projectPortfolio(
-    {
-      ...inputs,
-      retirementAge: age,
-      contributionsStopAge: inputs.contributionsStopAgeFollowsRetirementAge
-        ? age
-        : inputs.contributionsStopAge,
-    },
-    2026,
-  );
+function lastsWhenRetiringAt(settings: OnePersonSettings, age: number): boolean {
+  const rows = projectPortfolio(onePersonInputs({ ...settings, retirementAge: age }), 2026);
 
   return assessSolvency(rows).status === "lasts";
 }
@@ -69,7 +61,7 @@ describe("findEarliestRetirementAge", () => {
   // A plan that is solvent today has nothing to fail first, so the explanation has no failure line.
   it("retires now when the plan is already solvent", () => {
     const result = findEarliestRetirementAge(
-      { ...exampleBInputs, portfolioOpening: 5000000 },
+      onePersonInputs({ ...exampleBSettings, portfolioOpening: 5000000 }),
       2026,
     );
 
@@ -85,10 +77,10 @@ describe("findEarliestRetirementAge", () => {
   // A dated expense far beyond everything you'll ever have fails at every age, even retiring at end age − 1.
   it("reports not feasible when no age works", () => {
     const result = findEarliestRetirementAge(
-      {
-        ...exampleBInputs,
+      onePersonInputs({
+        ...exampleBSettings,
         datedExpenses: [{ annual: 10000000, fromYear: 2028, toYear: 2028 }],
-      },
+      }),
       2026,
     );
 
@@ -99,20 +91,17 @@ describe("findEarliestRetirementAge", () => {
 
   // With an entered stop age, trying a later retirement doesn't add contributions after that age.
   it("keeps a stop age the user entered, instead of following the tried age", () => {
-    const base: EarliestRetirementInputs = {
-      ...exampleBInputs,
+    const base: OnePersonSettings = {
+      ...exampleBSettings,
       annualContribution: 20000,
       portfolioOpening: 60000,
       cashOpening: 0,
       endAge: 70,
     };
 
-    const following = findEarliestRetirementAge(
-      { ...base, contributionsStopAgeFollowsRetirementAge: true },
-      2026,
-    );
+    const following = findEarliestRetirementAge(onePersonInputs(base), 2026);
     const fixed = findEarliestRetirementAge(
-      { ...base, contributionsStopAge: 60, contributionsStopAgeFollowsRetirementAge: false },
+      onePersonInputs({ ...base, contributionsStopAge: 60 }),
       2026,
     );
 
@@ -135,8 +124,8 @@ describe("findEarliestRetirementAge", () => {
   ])(
     "is solvent at the returned age and not at the age before",
     (portfolio, contribution, spending, expectedReturn, followsRetirementAge) => {
-      const inputs: EarliestRetirementInputs = {
-        ...exampleBInputs,
+      const settings: OnePersonSettings = {
+        ...exampleBSettings,
         currentAge: 35,
         endAge: 90,
         portfolioOpening: portfolio,
@@ -144,20 +133,20 @@ describe("findEarliestRetirementAge", () => {
         retirementSpendingAnnual: spending,
         expectedReturn,
         inflationRate: 0.025,
-        contributionsStopAge: 50,
-        contributionsStopAgeFollowsRetirementAge: followsRetirementAge,
+        // Left out, the stop follows the tried retirement age; otherwise it stays at 50.
+        ...(followsRetirementAge ? {} : { contributionsStopAge: 50 }),
       };
 
-      const result = findEarliestRetirementAge(inputs, 2026);
+      const result = findEarliestRetirementAge(onePersonInputs(settings), 2026);
 
       if (result.status === "notFeasible") {
-        expect(lastsWhenRetiringAt(inputs, inputs.endAge - 1)).toBe(false);
+        expect(lastsWhenRetiringAt(settings, settings.endAge - 1)).toBe(false);
         return;
       }
 
-      expect(lastsWhenRetiringAt(inputs, result.age)).toBe(true);
-      if (result.age > inputs.currentAge) {
-        expect(lastsWhenRetiringAt(inputs, result.age - 1)).toBe(false);
+      expect(lastsWhenRetiringAt(settings, result.age)).toBe(true);
+      if (result.age > settings.currentAge) {
+        expect(lastsWhenRetiringAt(settings, result.age - 1)).toBe(false);
       }
     },
   );

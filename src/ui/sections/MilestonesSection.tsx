@@ -28,7 +28,7 @@ function buildSuperAccessibleItem(
   startYear: number,
 ): MilestoneItem {
   const accessAge = projection.superAccessAge as number;
-  const accessRow = projection.rows.find((row) => row.age === accessAge);
+  const accessRow = projection.rows.find((row) => row.people[0].age === accessAge);
 
   if (accessRow === undefined) {
     return { label: `Super accessible: not by age ${projection.endAge}`, status: "notReached" };
