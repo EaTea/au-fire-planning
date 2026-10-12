@@ -35,6 +35,23 @@ body {
   white-space: nowrap;
 }
 
+/*
+ * The logo is also the "Start over" button (AppShell). A <button> brings the
+ * browser's grey background and its own font, so both are reset to match the
+ * plain logo; hover adds the gold border so it reads as clickable.
+ */
+.logo-button {
+  background: transparent;
+  color: var(--colour-header-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logo-button:hover {
+  border-color: var(--colour-accent);
+}
+
 .step-nav {
   display: flex;
   flex-wrap: wrap;
@@ -950,4 +967,57 @@ button:focus-visible {
 .milestone-label {
   color: var(--colour-text);
   font-weight: 700;
+}
+
+/* ---------- Start over confirmation (StartOverDialog) ---------- */
+
+/*
+ * The browser's <dialog> defaults to black on white; this matches the
+ * other raised surfaces and uses the gold accent so it reads as a decision.
+ */
+.start-over-dialog {
+  max-width: min(420px, calc(100vw - 2 * var(--space-page-side)));
+  padding: 0;
+  border: 2px solid var(--colour-accent);
+  border-radius: 6px;
+  background: var(--colour-page-background);
+  color: var(--colour-text);
+}
+
+.start-over-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+/* Padding sits on this inner box so clicks in it never hit the <dialog> itself (see handleClick). */
+.start-over-dialog-content {
+  padding: 18px 20px;
+}
+
+.start-over-dialog h2 {
+  margin: 0 0 var(--space-small);
+  font-size: 18px;
+}
+
+.start-over-dialog p {
+  margin: 0 0 var(--space-medium);
+  color: var(--colour-text-muted);
+}
+
+.start-over-dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-small);
+}
+
+/* The destructive choice is the filled one, so it can't be mistaken for "Keep my plan". */
+.start-over-confirm {
+  background: var(--colour-accent);
+  color: var(--colour-on-accent);
+  border-color: var(--colour-accent);
+}
+
+.start-over-confirm:hover {
+  background: var(--colour-accent);
+  filter: brightness(1.1);
 }

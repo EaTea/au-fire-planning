@@ -256,6 +256,7 @@ by ownership percentage.
 | NFR-5 | **Disclaimer:** The app states that its output is general information and modelling, not personal financial, tax or legal advice. | Must |
 | NFR-6 | **Accuracy:** Calculations are covered by tests using worked examples whose expected values have been checked independently. | Must |
 | NFR-7 | **Further reading:** The app links to reputable sources where the user can re-read and learn more about each concept it models: FIRE, Coast FIRE, the super rules, and the tax treatment of shares and property (e.g. ATO and Moneysmart pages). | Should |
+| NFR-8 | **Start over:** The user can clear their plan and start again from the first step. The app asks for confirmation first, because the cleared data can't be recovered. | Must |
 
 ## 9. Reference values (FY2025–26, to be verified)
 
