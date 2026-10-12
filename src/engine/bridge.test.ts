@@ -51,7 +51,7 @@ describe("assessBridge", () => {
   it("has no bridge when retiring at or after the access age, and says so by omitting it", () => {
     const result = assess(bridgeInputs({ retirementAge: 61, endAge: 64 }));
 
-    expect(result.effectiveAccessAge).toBe(62);
+    expect(result.effectiveAccess?.age).toBe(62);
     expect(result.bridge).toBeUndefined();
     expect(result.afterAccess?.status).toBe("met");
   });
@@ -64,7 +64,7 @@ describe("assessBridge", () => {
       }),
     );
 
-    expect(result.effectiveAccessAge).toBe(65);
+    expect(result.effectiveAccess?.age).toBe(65);
     expect(result.afterAccess).toBeUndefined();
     // Ages 57 to 62 need $120,000 against $100,000: the last year, 2033 (age 62), is short.
     expect(result.bridge).toMatchObject({
@@ -128,6 +128,49 @@ describe("assessBridge", () => {
     expect(result.afterAccess?.projected.value).toBe(
       projectPortfolio(bridgeInputs({ cashOpening: 5_000 }), 2026)[4]?.investableClosing,
     );
+  });
+});
+
+describe("assessBridge with two people", () => {
+  /** An account with nothing in it and no rates, so only what a test puts in moves. */
+  const emptyAccount = { ...bridgeSettings.superAccount!, opening: 0 };
+
+  /** Alex (no super, access 60) and Sam ($100,000 super, access 62), both 55 and retiring at 56. */
+  function alexAndSam(): ProjectionInputs {
+    const single = bridgeInputs();
+    const [person] = single.people;
+
+    return {
+      ...single,
+      people: [
+        { ...person, id: "alex", label: "Alex", superAccount: emptyAccount },
+        {
+          ...person,
+          id: "sam",
+          label: "Sam",
+          superAccount: { ...bridgeSettings.superAccount!, accessAge: 62 },
+        },
+      ],
+    };
+  }
+
+  // An empty account never opens: Alex's access age at 60 must not end the bridge early.
+  it("ends the bridge when the super of the person who has some opens", () => {
+    const result = assess(alexAndSam());
+
+    expect(result.effectiveAccess).toEqual({ personId: "sam", personIndex: 1, age: 62 });
+    expect(result.bridge).toMatchObject({ firstYear: 2028, lastYear: 2032 });
+    expect(result.afterAccess).toMatchObject({ firstYear: 2033 });
+  });
+
+  it("has no bridge check when nobody has super, even with empty accounts", () => {
+    const [alex, sam] = alexAndSam().people;
+    const bothEmpty: ProjectionInputs = {
+      ...alexAndSam(),
+      people: [alex, { ...sam!, superAccount: emptyAccount }],
+    };
+
+    expect(assess(bothEmpty)).toEqual({});
   });
 });
 

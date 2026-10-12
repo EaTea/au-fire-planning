@@ -59,10 +59,24 @@ export interface BridgePart {
   readonly shortYears: readonly number[];
 }
 
+/** An effective super access age and whose it is. */
+export interface EffectiveAccess {
+  /** `ProjectionPerson.id` of the person whose super opens first. */
+  readonly personId: string;
+  /** Their position in `ProjectionInputs.people` (and in each row's `people`). */
+  readonly personIndex: number;
+  /** Their effective access age. */
+  readonly age: number;
+}
+
 /** The result of the bridge check. Both parts are absent when there is no super. */
 export interface BridgeAssessment {
-  /** The first age super can be drawn while retired (see `effectiveSuperAccessAge`), for the person whose super opens first. */
-  readonly effectiveAccessAge?: number;
+  /**
+   * The first age super can be drawn while retired (see `effectiveSuperAccessAge`),
+   * with the person it belongs to: the person who has super and whose super opens
+   * first. The age is that person's own, so readers must not pair it with anyone else.
+   */
+  readonly effectiveAccess?: EffectiveAccess;
   /** The retired years before super opens. Absent when you retire at or after the access age ("no bridge needed"). */
   readonly bridge?: BridgePart;
   /** From the effective access age to the end of the plan. Absent when the plan ends before access. */
@@ -89,10 +103,10 @@ export function assessBridge(
   if (todayRow === undefined) return {};
 
   const startYear = todayRow.calendarYear;
-  const opening = firstSuperToOpen(inputs, startYear);
+  const opening = firstSuperToOpen(rows, inputs, startYear);
   if (opening === undefined) return {};
 
-  const { person: openingPerson, account, accessAge } = opening;
+  const { person: openingPerson, personIndex: openingPersonIndex, account, accessAge } = opening;
 
   const retirementRowIndex = firstRetirementRowIndex(inputs);
   const accessRowIndex = accessAge - openingPerson.currentAge;
@@ -161,7 +175,11 @@ export function assessBridge(
   }
 
   return {
-    effectiveAccessAge: accessAge,
+    effectiveAccess: {
+      personId: openingPerson.id,
+      personIndex: openingPersonIndex,
+      age: accessAge,
+    },
     ...(bridge === undefined ? {} : { bridge }),
     ...(afterAccess === undefined ? {} : { afterAccess }),
   };
@@ -170,32 +188,57 @@ export function assessBridge(
 /** The person whose super opens first, with their super account and effective access age. */
 interface FirstSuperToOpen {
   readonly person: ProjectionPerson;
+  readonly personIndex: number;
   readonly account: NonNullable<ProjectionPerson["superAccount"]>;
   readonly accessAge: number;
 }
 
 /**
- * The person whose super opens first (the earliest access row), with their
- * effective access age. `undefined` when nobody has a super account. Called
- * by `assessBridge`.
+ * Whether one person has any super to speak of: in at least one row they hold
+ * a balance or receive a contribution (employer, salary sacrifice or
+ * non-concessional). The engine carries an empty account for a person who
+ * entered nothing, and that must not count: an empty account never "opens".
+ * Called by `firstSuperToOpen`.
+ */
+function personHasSuper(rows: readonly ProjectionRow[], personIndex: number): boolean {
+  return rows.some((row) => {
+    const personYear = row.people[personIndex];
+
+    return (
+      personYear !== undefined &&
+      (personYear.superClosing > 0 ||
+        personYear.employerContribution > 0 ||
+        personYear.salarySacrifice > 0 ||
+        personYear.nonConcessional > 0)
+    );
+  });
+}
+
+/**
+ * The person whose super opens first (the earliest access row) among the
+ * people who have super (see `personHasSuper`), with their effective access
+ * age. `undefined` when nobody has super, which means there is no bridge
+ * check. Called by `assessBridge`.
  */
 function firstSuperToOpen(
+  rows: readonly ProjectionRow[],
   inputs: ProjectionInputs,
   startYear: number,
 ): FirstSuperToOpen | undefined {
   let earliest: FirstSuperToOpen | undefined;
 
-  for (const person of inputs.people) {
+  for (const [personIndex, person] of inputs.people.entries()) {
     const account = person.superAccount;
     const accessAge = effectiveSuperAccessAge(person, inputs, startYear);
     if (account === undefined || accessAge === undefined) continue;
+    if (!personHasSuper(rows, personIndex)) continue;
 
     // The access row is the age's distance from today; the earliest row wins, the first person on a tie.
     const isEarlier =
       earliest === undefined ||
       accessAge - person.currentAge < earliest.accessAge - earliest.person.currentAge;
 
-    if (isEarlier) earliest = { person, account, accessAge };
+    if (isEarlier) earliest = { person, personIndex, account, accessAge };
   }
 
   return earliest;

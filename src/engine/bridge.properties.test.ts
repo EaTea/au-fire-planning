@@ -81,7 +81,7 @@ test.prop([planArbitrary], { numRuns: 300 })(
   (inputs) => {
     const rows = projectPortfolio(inputs, START_YEAR);
     const result = assessBridge(rows, inputs);
-    const accessAge = result.effectiveAccessAge as number;
+    const accessAge = result.effectiveAccess?.age as number;
 
     if (result.bridge !== undefined) {
       expect(result.bridge.firstAge).toBe(inputs.people[0].retirementAge + 1);

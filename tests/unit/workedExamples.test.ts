@@ -462,7 +462,7 @@ function checkBridgeFigures(summary: CompleteSummary, expected: WorkedScenario["
   const { bridge } = summary.projection;
 
   if (expected.bridge.effectiveAccessAge !== undefined) {
-    expect(bridge.effectiveAccessAge).toBe(expected.bridge.effectiveAccessAge);
+    expect(bridge.effectiveAccess?.age).toBe(expected.bridge.effectiveAccessAge);
   }
   checkBridgePart("bridge", bridge.bridge, expected.bridge.bridge);
   checkBridgePart("after access", bridge.afterAccess, expected.bridge.afterAccess);

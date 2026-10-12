@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 
-import { projectionHasSuper, type BridgePart } from "../../engine/bridge";
+import { projectionHasSuper, type BridgePart, type EffectiveAccess } from "../../engine/bridge";
 import type { Explained } from "../../engine/explained";
 import type { ProjectionSummary } from "../../engine/fiNumber";
 import { buildBridgeChartSeries } from "../charts/bridgeChart";
@@ -30,7 +30,7 @@ export function hasBridgeSection(projection: CompleteProjection): boolean {
 
   return (
     projectionHasSuper(projection.rows) &&
-    bridge.effectiveAccessAge !== undefined &&
+    bridge.effectiveAccess !== undefined &&
     (bridge.bridge !== undefined || bridge.afterAccess !== undefined)
   );
 }
@@ -134,7 +134,8 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
   const chartData = buildBridgeChartSeries(projection, mode);
 
   const { bridge, afterAccess } = projection.bridge;
-  const accessAge = projection.bridge.effectiveAccessAge as number;
+  // `hasBridgeSection` guarantees the access exists. The age is that of the person it names.
+  const { age: accessAge } = projection.bridge.effectiveAccess as EffectiveAccess;
 
   // The row a part's figures are stated at is the one before its first year.
   const inflationIndexBefore = (part: BridgePart): number =>
