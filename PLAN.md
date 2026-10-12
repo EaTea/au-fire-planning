@@ -1857,9 +1857,55 @@ access at the default 65.
 
 #### Step 1 · Rows carry each person (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor. No behaviour change.
+
+**As built:**
+- `ProjectionInputs.people` and `ProjectionRow.people` are non-empty lists
+  (`NonEmptyList<T>`, a `[T, ...T[]]` tuple), so `people[0]` needs no
+  undefined check. `mapNonEmpty` keeps them non-empty when they are rebuilt.
+- `PersonYear` has `personId`, `age`, `phase` (`working` | `retired`), the
+  salary and super flows, `fromSuper`, `superClosing` and `superAccessible`.
+  The household fields on the row are the sums, added in person order from 0
+  so one person's figures are bit-for-bit the same as before. The row's
+  `superAccessible` is "anyone's super can be drawn", and
+  `isShortfallWithSuperLocked` is "a shortfall while some person has a locked
+  balance".
+- `endAge` is the age the **youngest** person has in the last row. Helpers
+  beyond the three named in the step: `youngestAgeAtRow` (the engine's way to
+  say "stop the projection at row n"), `lastPortfolioContributionYear`
+  (Coast FIRE pulls the stop earlier without losing the rule's own limit) and
+  `inputsWithRetirementAge` (one person's age changed, for the search).
+- Drawing is pro rata (`drawSuperProRata`): a person's share is computed as
+  `balance / total` before multiplying, so a lone person pays exactly the
+  whole draw.
+- `oneRetired` rows draw no retirement spending yet; the interim amount is
+  step 5. The Year by year band map gained a placeholder `oneRetired` text so
+  it type-checks; the real wording is PR B.
+- The stop rule is mapped in `summariseProjection` (not in
+  `resolvePlanInputs`, which is step 2): a stop age left unset
+  (`source === "default"`) becomes `whileWorking` on the first person, an
+  entered one becomes `throughYear` (start year + stop age − current age).
+  Because `whileWorking` follows the retirement ages by itself,
+  `EarliestRetirementInputs` and its `contributionsStopAgeFollowsRetirementAge`
+  flag are gone: the search takes plain `ProjectionInputs`.
+- Single-person assumptions that remain, to be replaced in step 5 and noted
+  in each module's header: `findEarliestRetirementAge(inputs, startYear,
+  personIndex = 0)` searches one person (step 2 calls it per person); the
+  bridge takes the access age and super return of the person whose super
+  opens first and the first retirement row; the coast split places its $1
+  test dollar of super with the first person who has super; the explanation
+  lines quote `people[0]`'s age.
+- `src/engine/testing/onePersonInputs.ts` has `onePersonInputs(settings,
+  startYear)` (flat one-person settings to `ProjectionInputs`, a
+  `contributionsStopAge` becoming `throughYear`) and `withFirstPerson`. Test
+  data was moved into `OnePersonSettings` objects; no expected value
+  changed. New tests: household fields equal the sums over `people`, ages and
+  row count, the three phases, the stop rule with several owners, pro rata
+  and locked-partner drawing, and the household helpers.
+- Checks: `npm run check` (775 unit tests, up from 762) and `npm run
+  test:e2e` (38) pass.
 
 1. **Per-person rows.** `ProjectionRow` gains `people: PersonYear[]`,
    each holding:
@@ -1902,9 +1948,51 @@ example changes.
 
 #### Step 2 · Resolve and summarise every person (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor.
+
+**As built:**
+- `ResolvedProjectionInputs.people` is a non-empty list of `ResolvedPerson`
+  (id, label, both ages, salary and growth, super account, access age, each
+  `Sourced`). The household-wide values stay beside it, plus
+  `portfolioOwnerIds` (the first person until ownership is stored in step 4).
+- Missing-input checks run per person. With one person the labels are word
+  for word as before; with several each is prefixed ("Sam: Current age").
+  The plan-until age is checked against the youngest person, and each
+  retirement age against that person's own last age (plan-until age plus how
+  much older than the youngest they are). When a person's current age is
+  unknown, their retirement age is compared with the plan-until age itself,
+  as before. Order of messages for one person is unchanged.
+- The stop-age mapping stays in `summariseProjection`, not in
+  `resolvePlanInputs`: turning a stop age into a calendar year needs the
+  start year, which resolution doesn't have, and adding it would change every
+  caller. Resolution supplies the owners (`portfolioOwnerIds`) and the stop
+  age; `summariseProjection` makes `whileWorking` / `throughYear` from them,
+  measuring an entered stop age on the first owner.
+- `ProjectionSummary.people: PersonSummary[]` (id, label, `retirementAge`,
+  `retirementYear`, `superAccessAge?`, `earliestRetirement`) replaces the four
+  single fields, and `householdRetirementYear` is new. `findEarliestRetirementAge`
+  runs once per person. `assessSolvency` and the UI read `people[0]`; the fire
+  chart's retirement marker and the Coast FIRE "in {year} dollars" line use
+  `householdRetirementYear` (the same year with one person).
+- The investable amount's super line is the sum of the people's balances
+  (one person keeps their own figure and source).
+- Tests: the resolve and summary tests read `people[0]` where the fields
+  moved (no expected value changed), plus new tests for two people in
+  resolution (order, owner, labels, per-person end-age check) and in the
+  summary (one entry per person, household retirement year).
+- After the challenger review of PR A: `drawSuperProRata` gives the last
+  payer the exact remainder (no false shortfall from rounding);
+  `BridgeAssessment.effectiveAccess` is `{ personId, personIndex, age }` and
+  only people who have super (a balance or a contribution in some row) are
+  considered; the FI number and Coast FIRE tiles state the household
+  retirement year with the first person's age in it;
+  `contributionsStopAge` resolves to `Sourced<number | undefined>`
+  (`undefined` with source "default" means while the owners work);
+  `findEarliestRetirementAge` throws a `RangeError` for a person that isn't
+  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0).
+- Checks: `npm run check` (779 unit tests) and `npm run test:e2e` (38) pass.
 
 1. **Resolve every person.** `resolvePlanInputs` resolves every person
    into `ResolvedPerson[]`, each with:
@@ -1930,7 +2018,22 @@ screenshots and figures.
 
 #### Step 3 · Challenger review of PR A, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer ran the old and new `summarisePlan` side by
+side on 9,000 random one-person plans. They were identical, except for:
+- **a missing-input message** that had disappeared (fixed, with a
+  regression test);
+- **a signed zero:** a "−$0" that can no longer occur.
+
+It also found that pro rata drawing could leave a 1e-12 false shortfall
+for a couple. That's fixed: the smallest balance pays the exact
+remainder, and a property test checks it. The plan refinements are in the
+M7 design: empty super never opens, the youngest-person plan-until rule,
+interim spending left out of the coast super run, and locked super
+flagged in the after-access breakdown. Other fixes: an empty account no
+longer ends the bridge, the tiles use the household retirement year, and
+there are two-person engine tests for D and D2.
 
 1. **Review:** the reviewer subagent checks PR A's diff (see "How each
    milestone is delivered"). It looks especially for any place still

@@ -1,6 +1,7 @@
 // Coast FIRE (COAST-1, COAST-2): how much you need saved today so that, with
-// no further contributions, you would still reach your FI number by your
-// target retirement age; and the first year your actual savings get there.
+// no further contributions, you would still reach your FI number by the
+// household retirement row (your target retirement age when on your own);
+// and the first year your actual savings get there.
 //
 // What has to be solved. Coasting means you stop the contributions you
 // choose to make: the portfolio's, salary sacrifice and non-concessional.
@@ -51,17 +52,31 @@
 // row k" call `projectPortfolio` with the contributions switched off rather
 // than re-implementing it.
 //
+// With several people, "retirement" is the household retirement row: the last
+// row in which anybody works (`householdRetirementRowIndex`). Coasting stops
+// every person's voluntary contributions; every employer keeps paying while
+// their person works.
+//
 // Called by `summariseProjection` (src/engine/fiNumber.ts). Pure, like the
 // rest of the engine.
 
 import type { Explained, ExplanationLine } from "./explained";
-import { projectPortfolio, type ProjectionInputs, type ProjectionRow } from "./projection";
+import {
+  householdRetirementRowIndex,
+  lastPortfolioContributionYear,
+  mapNonEmpty,
+  projectPortfolio,
+  youngestAgeAtRow,
+  type ProjectionInputs,
+  type ProjectionRow,
+} from "./projection";
 
 /** One year of the Coast FIRE path, from today (row 0) to the retirement row. All dollars are nominal. */
 export interface CoastPathPoint {
-  /** 0 for today, up to the years until the target retirement age. */
+  /** 0 for today, up to the years until the household retirement row. */
   readonly yearIndex: number;
   readonly calendarYear: number;
+  /** The first person's age in that year. */
   readonly age: number;
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
   readonly inflationIndex: number;
@@ -81,6 +96,7 @@ export interface CoastPathPoint {
 export interface CoastMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
+  /** The first person's age in that year. */
   readonly age: number;
   /** Investable net worth against the Coast FIRE number in that year. */
   readonly explanation: Explained;
@@ -103,7 +119,7 @@ export interface CoastFire {
  *
  * `rows` are the plan's projection (from `projectPortfolio`) and `inputs` are
  * the settings that produced them; row 0's calendar year is the start year.
- * The retirement row is `retirementAge − currentAge`. Called once per summary
+ * The retirement row is the household retirement row. Called once per summary
  * by `summariseProjection`. Never throws on user data.
  */
 export function calculateCoastFire(
@@ -114,7 +130,7 @@ export function calculateCoastFire(
 
   // Rows past the retirement row (the drawdown years) play no part in coasting.
   const retirementRowIndex = Math.min(
-    Math.max(0, inputs.retirementAge - inputs.currentAge),
+    Math.max(0, householdRetirementRowIndex(inputs)),
     Math.max(0, rows.length - 1),
   );
   const workingRows = rows.slice(0, retirementRowIndex + 1);
@@ -133,7 +149,7 @@ export function calculateCoastFire(
     return {
       yearIndex: row.yearIndex,
       calendarYear: row.calendarYear,
-      age: row.age,
+      age: row.people[0].age,
       inflationIndex: row.inflationIndex,
       coastNumber: row.cashClosing + row.superClosing + need.portfolioNeeded,
       portfolioNeeded: need.portfolioNeeded,
@@ -177,8 +193,9 @@ export function calculateCoastFire(
 /**
  * The inputs for a projection in which every contribution you choose to make
  * (portfolio, salary sacrifice, non-concessional) stops after row `yearIndex`.
- * Employer contributions are untouched. The portfolio stop age and the
- * voluntary super end years are only ever pulled earlier, never later.
+ * Employer contributions are untouched. The portfolio's last contribution
+ * year and the voluntary super end years are only ever pulled earlier, never
+ * later. The portfolio's rule becomes a plain `throughYear` rule.
  * Called by `calculateCoastFire`; the rules themselves stay in `projectPortfolio`.
  */
 export function inputsWithVoluntaryContributionsStoppedAfter(
@@ -186,28 +203,33 @@ export function inputsWithVoluntaryContributionsStoppedAfter(
   yearIndex: number,
   startYear: number,
 ): ProjectionInputs {
-  const stopAge = inputs.currentAge + yearIndex;
   const lastYear = startYear + yearIndex;
-  const account = inputs.superAccount;
 
   return {
     ...inputs,
-    contributionsStopAge: Math.min(inputs.contributionsStopAge, stopAge),
-    ...(account === undefined
-      ? {}
-      : {
-          superAccount: {
-            ...account,
-            salarySacrifice: {
-              ...account.salarySacrifice,
-              toYear: Math.min(account.salarySacrifice.toYear ?? lastYear, lastYear),
-            },
-            nonConcessional: {
-              ...account.nonConcessional,
-              toYear: Math.min(account.nonConcessional.toYear ?? lastYear, lastYear),
-            },
+    contributionsStop: {
+      kind: "throughYear",
+      year: Math.min(lastPortfolioContributionYear(inputs, startYear), lastYear),
+    },
+    people: mapNonEmpty(inputs.people, (person) => {
+      const account = person.superAccount;
+      if (account === undefined) return person;
+
+      return {
+        ...person,
+        superAccount: {
+          ...account,
+          salarySacrifice: {
+            ...account.salarySacrifice,
+            toYear: Math.min(account.salarySacrifice.toYear ?? lastYear, lastYear),
           },
-        }),
+          nonConcessional: {
+            ...account.nonConcessional,
+            toYear: Math.min(account.nonConcessional.toYear ?? lastYear, lastYear),
+          },
+        },
+      };
+    }),
   };
 }
 
@@ -216,21 +238,21 @@ export function inputsWithVoluntaryContributionsStoppedAfter(
  * after row `fromIndex` and employer contributions carry on. Taken from
  * `projectPortfolio` with no dated expenses, since the Coast FIRE formula has
  * the portfolio (then cash) pay them, leaving super untouched before retirement.
- * 0 when there is no super account. Called by `calculateCoastFire` per row.
+ * 0 when nobody has a super account. Called by `calculateCoastFire` per row.
  */
 function superAtRetirementWhenCoastingFrom(
   inputs: ProjectionInputs,
   fromIndex: number,
   startYear: number,
 ): number {
-  if (inputs.superAccount === undefined) return 0;
+  if (!inputs.people.some((person) => person.superAccount !== undefined)) return 0;
 
-  const retirementRowIndex = inputs.retirementAge - inputs.currentAge;
+  const retirementRowIndex = householdRetirementRowIndex(inputs);
   const coastingRows = projectPortfolio(
     {
       ...inputsWithVoluntaryContributionsStoppedAfter(inputs, fromIndex, startYear),
       datedExpenses: [],
-      endAge: inputs.retirementAge,
+      endAge: youngestAgeAtRow(inputs, retirementRowIndex),
     },
     startYear,
   );
@@ -441,7 +463,7 @@ function explainCoastNumber(
   const cashLabel = `Your cash, growing at ${interestPercent} to ${retirementRow.calendarYear}`;
   const lines: ExplanationLine[] = [
     {
-      label: `FI number at age ${retirementRow.age} (${retirementRow.calendarYear})`,
+      label: `FI number at age ${retirementRow.people[0].age} (${retirementRow.calendarYear})`,
       value: need.fiNumberAtRetirement,
       unit: "dollars",
       source: "calculated",
@@ -462,7 +484,7 @@ function explainCoastNumber(
 
   if (hasSuper) {
     lines.push({
-      label: `Your super, growing at ${formatPercent(inputs.superAccount?.returnRate ?? 0)} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
+      label: `Your super, growing at ${formatPercent(inputs.people[0].superAccount?.returnRate ?? 0)} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
       value: need.superLeftAtRetirement,
       unit: "dollars",
       operator: "−",
@@ -559,7 +581,7 @@ function testStoppingAfterRow(
   const stoppedRows = projectPortfolio(
     {
       ...inputsWithVoluntaryContributionsStoppedAfter(inputs, rowIndex, startYear),
-      endAge: inputs.retirementAge,
+      endAge: youngestAgeAtRow(inputs, householdRetirementRowIndex(inputs)),
     },
     startYear,
   );

@@ -4,39 +4,42 @@ import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { assessBridge } from "./bridge";
 import { calculateCoastSplit } from "./coastSplit";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 // Unit tests for Coast FIRE for super and outside super (M6 step 4), beyond the
 // worked examples in tests/worked-examples/m6-bridge.json.
 
 /** B1: aged 55, retire at 56, plan until 66, $100,000 outside and in super, $20,000 a year, 0% everything. */
-function splitInputs(overrides: Partial<ProjectionInputs> = {}): ProjectionInputs {
-  return {
-    currentAge: 55,
-    endAge: 66,
-    retirementAge: 56,
-    expectedReturn: 0,
-    interestRate: 0,
-    inflationRate: 0,
-    annualContribution: 0,
-    contributionsStopAge: 56,
-    portfolioOpening: 100_000,
-    cashOpening: 0,
-    livingAnnual: 20_000,
-    retirementSpendingAnnual: 20_000,
-    datedExpenses: [],
-    fiNumberToday: 500_000,
-    superAccount: {
-      opening: 100_000,
-      returnRate: 0,
-      employerRate: 0,
-      earningsTaxRate: 0,
-      salarySacrifice: { annual: 0 },
-      nonConcessional: { annual: 0 },
-      accessAge: 60,
-      ruleSet: bundledRuleSet,
-    },
-    ...overrides,
-  };
+const splitSettings: OnePersonSettings = {
+  currentAge: 55,
+  endAge: 66,
+  retirementAge: 56,
+  expectedReturn: 0,
+  interestRate: 0,
+  inflationRate: 0,
+  annualContribution: 0,
+  contributionsStopAge: 56,
+  portfolioOpening: 100_000,
+  cashOpening: 0,
+  livingAnnual: 20_000,
+  retirementSpendingAnnual: 20_000,
+  datedExpenses: [],
+  fiNumberToday: 500_000,
+  superAccount: {
+    opening: 100_000,
+    returnRate: 0,
+    employerRate: 0,
+    earningsTaxRate: 0,
+    salarySacrifice: { annual: 0 },
+    nonConcessional: { annual: 0 },
+    accessAge: 60,
+    ruleSet: bundledRuleSet,
+  },
+};
+
+/** B1 for one person, with any of the settings above changed. */
+function splitInputs(overrides: Partial<OnePersonSettings> = {}): ProjectionInputs {
+  return onePersonInputs({ ...splitSettings, ...overrides });
 }
 
 /** Projects, assesses the bridge and splits Coast FIRE. */
@@ -54,7 +57,7 @@ describe("calculateCoastSplit", () => {
   it("has nothing for super when the plan ends before access, and nothing for either without super", () => {
     const beforeAccess = splitInputs({
       endAge: 62,
-      superAccount: { ...splitInputs().superAccount!, accessAge: 65 },
+      superAccount: { ...splitSettings.superAccount!, accessAge: 65 },
     });
 
     expect(split(beforeAccess).super).toBeUndefined();
@@ -81,7 +84,7 @@ describe("calculateCoastSplit", () => {
     const result = split(
       splitInputs({
         salary: { annual: 100_000, growth: { kind: "none" } },
-        superAccount: { ...splitInputs().superAccount!, employerRate: 0.1 },
+        superAccount: { ...splitSettings.superAccount!, employerRate: 0.1 },
       }),
     );
 

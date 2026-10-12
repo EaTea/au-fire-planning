@@ -366,7 +366,7 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
   }
 
   if (expected.earliestRetirement !== undefined) {
-    const { earliestRetirement } = projection;
+    const { earliestRetirement } = projection.people[0];
     expect(earliestRetirement.status).toBe(expected.earliestRetirement.status);
     if (earliestRetirement.status === "feasible") {
       expect(earliestRetirement.age).toBe(expected.earliestRetirement.age);
@@ -462,7 +462,7 @@ function checkBridgeFigures(summary: CompleteSummary, expected: WorkedScenario["
   const { bridge } = summary.projection;
 
   if (expected.bridge.effectiveAccessAge !== undefined) {
-    expect(bridge.effectiveAccessAge).toBe(expected.bridge.effectiveAccessAge);
+    expect(bridge.effectiveAccess?.age).toBe(expected.bridge.effectiveAccessAge);
   }
   checkBridgePart("bridge", bridge.bridge, expected.bridge.bridge);
   checkBridgePart("after access", bridge.afterAccess, expected.bridge.afterAccess);
@@ -516,7 +516,7 @@ function checkSuperFigures(summary: CompleteSummary, expected: WorkedScenario["e
   if (summary.projection.status !== "complete") return;
 
   if (expected.superAccessAge !== undefined) {
-    expect(summary.projection.superAccessAge).toBe(expected.superAccessAge);
+    expect(summary.projection.people[0].superAccessAge).toBe(expected.superAccessAge);
   }
 
   for (const expectedRow of expected.superRows) {

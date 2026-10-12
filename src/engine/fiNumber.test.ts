@@ -302,6 +302,32 @@ describe("summarisePlan: projection", () => {
     };
   }
 
+  // A couple: one summary per person, and the household retirement is the later one.
+  it("summarises each person, with the household retirement year the later one", () => {
+    const plan = exampleAPlan({ currentAge: 34, targetRetirementAge: 50 });
+    const [person] = plan.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    const summary = summarisePlan({
+      ...plan,
+      household: {
+        people: [person, { id: "person-2", label: "Sam", currentAge: 32, targetRetirementAge: 55 }],
+      },
+    });
+
+    expect(summary.status).toBe("complete");
+    if (summary.status !== "complete" || summary.projection.status !== "complete") return;
+
+    const { people, householdRetirementYear } = summary.projection;
+    expect(people.map((personSummary) => personSummary.id)).toEqual(["id-1", "person-2"]);
+    expect(people.map((personSummary) => personSummary.retirementYear)).toEqual([2042, 2049]);
+    expect(householdRetirementYear).toBe(2049);
+    expect(people.map((personSummary) => personSummary.earliestRetirement.status)).toEqual([
+      "feasible",
+      "feasible",
+    ]);
+  });
+
   // Missing ages must not hide the FI number.
   it("is incomplete on the projection only when ages are missing", () => {
     const summary = summarisePlan(exampleAPlan({}));
@@ -320,8 +346,9 @@ describe("summarisePlan: projection", () => {
     if (summary.status !== "complete" || summary.projection.status !== "complete") return;
     expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, age: 46 });
     expect(summary.projection.fiNumberAtRetirement.value).toBeCloseTo(2375208.99, 2);
-    expect(summary.projection.retirementAge).toBe(50);
-    expect(summary.projection.retirementYear).toBe(2042);
+    expect(summary.projection.people[0].retirementAge).toBe(50);
+    expect(summary.projection.people[0].retirementYear).toBe(2042);
+    expect(summary.projection.householdRetirementYear).toBe(2042);
     expect(summary.projection.fiNumberAtRetirement.lines.map((line) => line.operator)).toEqual([
       undefined,
       "×",

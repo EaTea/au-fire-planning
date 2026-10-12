@@ -49,7 +49,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
   // All money goes through formatMoney so it follows the dollars toggle.
   const columns: ProjectionColumn<ProjectionRow>[] = [
     { header: "Year", cell: (row) => row.calendarYear },
-    { header: "Age", cell: (row) => row.age },
+    { header: "Age", cell: (row) => row.people[0].age },
     {
       header: "Salary",
       // "—" rather than $0 once retired, so a blank year doesn't read as a zero salary.
@@ -92,8 +92,8 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
           <span className="projection-shortfall">
             Shortfall −{formatMoney(row.shortfall, row.inflationIndex)}
             {isShortfallWithSuperLocked(row) &&
-              projection.superAccessAge !== undefined &&
-              ` · super locked until ${projection.superAccessAge}`}
+              projection.people[0].superAccessAge !== undefined &&
+              ` · super locked until ${projection.people[0].superAccessAge}`}
           </span>
         ) : (
           "✓"
@@ -119,7 +119,9 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         columns={columns}
         getRowKey={(row) => row.yearIndex}
         isHighlighted={(row) => row.yearIndex === fiYearIndex}
-        getBandText={(row) => bandTextForRow(row, hasSuper ? projection.superAccessAge : undefined)}
+        getBandText={(row) =>
+          bandTextForRow(row, hasSuper ? projection.people[0].superAccessAge : undefined)
+        }
         scrollToKey={requestedRow?.yearIndex}
       />
     </section>
@@ -150,6 +152,8 @@ function bandTextForRow(row: ProjectionRow, superAccessAge: number | undefined):
 /** The heading of each phase's band row in the table, for plans without super. */
 const phaseBandText: Record<ProjectionRow["phase"], string> = {
   working: "Working · contributing",
+  // Only couples reach this phase; the couple wording that names who is still working arrives in M7 PR B.
+  oneRetired: "One retired · the other still working",
   retired: "Retired · spending drawn from the portfolio, then cash",
 };
 

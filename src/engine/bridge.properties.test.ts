@@ -4,6 +4,7 @@ import { expect } from "vitest";
 import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { assessBridge } from "./bridge";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { onePersonInputs } from "./testing/onePersonInputs";
 
 // Property-based test for the bridge check (M6 step 3): a part's status is MET
 // exactly when none of its years has a shortfall, whatever the plan.
@@ -26,30 +27,33 @@ const planArbitrary = fc
   .map((settings): ProjectionInputs => {
     const retirementAge = settings.currentAge + settings.yearsToRetirement;
 
-    return {
-      currentAge: settings.currentAge,
-      endAge: retirementAge + settings.yearsAfterRetirement,
-      retirementAge,
-      expectedReturn: 0.05,
-      interestRate: 0.03,
-      inflationRate: settings.inflationRate,
-      annualContribution: 0,
-      contributionsStopAge: retirementAge,
-      portfolioOpening: settings.portfolio,
-      cashOpening: settings.cash,
-      livingAnnual: settings.spending,
-      retirementSpendingAnnual: settings.spending,
-      datedExpenses: [],
-      fiNumberToday: 1_000_000,
-      superAccount: {
-        opening: settings.superOpening,
-        returnRate: 0.06,
-        salarySacrifice: { annual: 0 },
-        nonConcessional: { annual: 0 },
-        ...(settings.accessAge === undefined ? {} : { accessAge: settings.accessAge }),
-        ruleSet: bundledRuleSet,
+    return onePersonInputs(
+      {
+        currentAge: settings.currentAge,
+        endAge: retirementAge + settings.yearsAfterRetirement,
+        retirementAge,
+        expectedReturn: 0.05,
+        interestRate: 0.03,
+        inflationRate: settings.inflationRate,
+        annualContribution: 0,
+        contributionsStopAge: retirementAge,
+        portfolioOpening: settings.portfolio,
+        cashOpening: settings.cash,
+        livingAnnual: settings.spending,
+        retirementSpendingAnnual: settings.spending,
+        datedExpenses: [],
+        fiNumberToday: 1_000_000,
+        superAccount: {
+          opening: settings.superOpening,
+          returnRate: 0.06,
+          salarySacrifice: { annual: 0 },
+          nonConcessional: { annual: 0 },
+          ...(settings.accessAge === undefined ? {} : { accessAge: settings.accessAge }),
+          ruleSet: bundledRuleSet,
+        },
       },
-    };
+      START_YEAR,
+    );
   });
 
 test.prop([planArbitrary], { numRuns: 300 })(
@@ -77,14 +81,16 @@ test.prop([planArbitrary], { numRuns: 300 })(
   (inputs) => {
     const rows = projectPortfolio(inputs, START_YEAR);
     const result = assessBridge(rows, inputs);
-    const accessAge = result.effectiveAccessAge as number;
+    const accessAge = result.effectiveAccess?.age as number;
 
     if (result.bridge !== undefined) {
-      expect(result.bridge.firstAge).toBe(inputs.retirementAge + 1);
+      expect(result.bridge.firstAge).toBe(inputs.people[0].retirementAge + 1);
       expect(result.bridge.lastAge).toBeLessThan(accessAge);
     }
     if (result.afterAccess !== undefined) {
-      expect(result.afterAccess.firstAge).toBe(Math.max(accessAge, inputs.currentAge + 1));
+      expect(result.afterAccess.firstAge).toBe(
+        Math.max(accessAge, inputs.people[0].currentAge + 1),
+      );
       expect(result.afterAccess.lastAge).toBe(inputs.endAge);
     }
   },

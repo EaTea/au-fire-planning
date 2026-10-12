@@ -3,40 +3,43 @@ import { describe, expect, it } from "vitest";
 import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { assessBridge, projectionHasSuper } from "./bridge";
 import { projectPortfolio, type ProjectionInputs } from "./projection";
+import { onePersonInputs, type OnePersonSettings } from "./testing/onePersonInputs";
 
 // Unit tests for the bridge check (M6 step 3), beyond the worked examples in
 // tests/worked-examples/m6-bridge.json: the absent parts, the explanation and
 // the arithmetic on a small inflating case.
 
 /** Aged 55, retiring at 56, plan until 66, $100,000 outside and in super, $20,000 a year, 0% everything. */
-function bridgeInputs(overrides: Partial<ProjectionInputs> = {}): ProjectionInputs {
-  return {
-    currentAge: 55,
-    endAge: 66,
-    retirementAge: 56,
-    expectedReturn: 0,
-    interestRate: 0,
-    inflationRate: 0,
-    annualContribution: 0,
-    contributionsStopAge: 56,
-    portfolioOpening: 100_000,
-    cashOpening: 0,
-    livingAnnual: 20_000,
-    retirementSpendingAnnual: 20_000,
-    datedExpenses: [],
-    fiNumberToday: 500_000,
-    superAccount: {
-      opening: 100_000,
-      returnRate: 0,
-      employerRate: 0,
-      earningsTaxRate: 0,
-      salarySacrifice: { annual: 0 },
-      nonConcessional: { annual: 0 },
-      accessAge: 60,
-      ruleSet: bundledRuleSet,
-    },
-    ...overrides,
-  };
+const bridgeSettings: OnePersonSettings = {
+  currentAge: 55,
+  endAge: 66,
+  retirementAge: 56,
+  expectedReturn: 0,
+  interestRate: 0,
+  inflationRate: 0,
+  annualContribution: 0,
+  contributionsStopAge: 56,
+  portfolioOpening: 100_000,
+  cashOpening: 0,
+  livingAnnual: 20_000,
+  retirementSpendingAnnual: 20_000,
+  datedExpenses: [],
+  fiNumberToday: 500_000,
+  superAccount: {
+    opening: 100_000,
+    returnRate: 0,
+    employerRate: 0,
+    earningsTaxRate: 0,
+    salarySacrifice: { annual: 0 },
+    nonConcessional: { annual: 0 },
+    accessAge: 60,
+    ruleSet: bundledRuleSet,
+  },
+};
+
+/** The bridge test household for one person, with any of the settings above changed. */
+function bridgeInputs(overrides: Partial<OnePersonSettings> = {}): ProjectionInputs {
+  return onePersonInputs({ ...bridgeSettings, ...overrides });
 }
 
 /** Projects and assesses in one go. */
@@ -48,7 +51,7 @@ describe("assessBridge", () => {
   it("has no bridge when retiring at or after the access age, and says so by omitting it", () => {
     const result = assess(bridgeInputs({ retirementAge: 61, endAge: 64 }));
 
-    expect(result.effectiveAccessAge).toBe(62);
+    expect(result.effectiveAccess?.age).toBe(62);
     expect(result.bridge).toBeUndefined();
     expect(result.afterAccess?.status).toBe("met");
   });
@@ -57,11 +60,11 @@ describe("assessBridge", () => {
     const result = assess(
       bridgeInputs({
         endAge: 62,
-        superAccount: { ...bridgeInputs().superAccount!, accessAge: 65 },
+        superAccount: { ...bridgeSettings.superAccount!, accessAge: 65 },
       }),
     );
 
-    expect(result.effectiveAccessAge).toBe(65);
+    expect(result.effectiveAccess?.age).toBe(65);
     expect(result.afterAccess).toBeUndefined();
     // Ages 57 to 62 need $120,000 against $100,000: the last year, 2033 (age 62), is short.
     expect(result.bridge).toMatchObject({
@@ -82,7 +85,7 @@ describe("assessBridge", () => {
       expectedReturn: 0.1,
       retirementSpendingAnnual: 10_000,
       livingAnnual: 10_000,
-      superAccount: { ...bridgeInputs().superAccount!, returnRate: 0.1, earningsTaxRate: 0.5 },
+      superAccount: { ...bridgeSettings.superAccount!, returnRate: 0.1, earningsTaxRate: 0.5 },
     });
     const result = assess(inputs);
 
@@ -128,6 +131,49 @@ describe("assessBridge", () => {
   });
 });
 
+describe("assessBridge with two people", () => {
+  /** An account with nothing in it and no rates, so only what a test puts in moves. */
+  const emptyAccount = { ...bridgeSettings.superAccount!, opening: 0 };
+
+  /** Alex (no super, access 60) and Sam ($100,000 super, access 62), both 55 and retiring at 56. */
+  function alexAndSam(): ProjectionInputs {
+    const single = bridgeInputs();
+    const [person] = single.people;
+
+    return {
+      ...single,
+      people: [
+        { ...person, id: "alex", label: "Alex", superAccount: emptyAccount },
+        {
+          ...person,
+          id: "sam",
+          label: "Sam",
+          superAccount: { ...bridgeSettings.superAccount!, accessAge: 62 },
+        },
+      ],
+    };
+  }
+
+  // An empty account never opens: Alex's access age at 60 must not end the bridge early.
+  it("ends the bridge when the super of the person who has some opens", () => {
+    const result = assess(alexAndSam());
+
+    expect(result.effectiveAccess).toEqual({ personId: "sam", personIndex: 1, age: 62 });
+    expect(result.bridge).toMatchObject({ firstYear: 2028, lastYear: 2032 });
+    expect(result.afterAccess).toMatchObject({ firstYear: 2033 });
+  });
+
+  it("has no bridge check when nobody has super, even with empty accounts", () => {
+    const [alex, sam] = alexAndSam().people;
+    const bothEmpty: ProjectionInputs = {
+      ...alexAndSam(),
+      people: [alex, { ...sam!, superAccount: emptyAccount }],
+    };
+
+    expect(assess(bothEmpty)).toEqual({});
+  });
+});
+
 describe("projectionHasSuper", () => {
   it("is true when super holds money in some year", () => {
     const inputs = bridgeInputs();
@@ -136,16 +182,13 @@ describe("projectionHasSuper", () => {
   });
 
   it("is false for an empty super account that never receives anything", () => {
-    const inputs = bridgeInputs();
-    const emptyAccount = { ...inputs.superAccount!, opening: 0 };
+    const inputs = bridgeInputs({ superAccount: { ...bridgeSettings.superAccount!, opening: 0 } });
 
-    expect(
-      projectionHasSuper(projectPortfolio({ ...inputs, superAccount: emptyAccount }, 2026)),
-    ).toBe(false);
+    expect(projectionHasSuper(projectPortfolio(inputs, 2026))).toBe(false);
   });
 
   it("is false when the plan has no super account at all", () => {
-    const withoutSuper = { ...bridgeInputs(), superAccount: undefined };
+    const withoutSuper = bridgeInputs({ superAccount: undefined });
 
     expect(projectionHasSuper(projectPortfolio(withoutSuper, 2026))).toBe(false);
   });

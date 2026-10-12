@@ -1,8 +1,9 @@
 // The earliest feasible retirement age (FIRE-3): the first age at which, if
 // you retired then, the money would last to the end age.
 //
-//   for each age from today up to the year before the end age:
-//     projectPortfolio (retirement age = tried age) ─► assessSolvency
+//   for each age of one person, from today up to the year before their end age:
+//     projectPortfolio (that person's retirement age = tried age,
+//                       everyone else keeps their target) ─► assessSolvency
 //        runs out ─► try the next age
 //        lasts    ─► that is the answer
 //
@@ -15,22 +16,15 @@
 // (src/engine/fiNumber.ts).
 
 import type { Explained, ExplanationLine } from "./explained";
-import { effectiveSuperAccessAge, projectPortfolio, type ProjectionInputs } from "./projection";
+import {
+  effectiveSuperAccessAge,
+  inputsWithRetirementAge,
+  personAtIndex,
+  projectPortfolio,
+  youngestAgeAtRow,
+  type ProjectionInputs,
+} from "./projection";
 import { assessSolvency, type Solvency } from "./solvency";
-
-/**
- * What the search needs: the projection inputs, plus whether the contribution
- * stop age follows the retirement age being tried. `inputs.retirementAge`
- * is ignored, because the search supplies each candidate age itself.
- */
-export interface EarliestRetirementInputs extends ProjectionInputs {
-  /**
-   * True when the user left the stop age unset (its source is "default"), so
-   * each tried retirement age also becomes the stop age. False keeps the stop
-   * age the user entered.
-   */
-  readonly contributionsStopAgeFollowsRetirementAge: boolean;
-}
 
 /** The answer to "when could I retire?", with the working behind it. */
 export type EarliestRetirement =
@@ -50,28 +44,41 @@ export type EarliestRetirement =
     };
 
 /**
- * Tries each retirement age from the current age up to the end age, in order,
- * and returns the first one whose projection has no shortfall year.
+ * Tries each retirement age of one person (the first by default) from their
+ * current age up to their end age, in order, and returns the first one whose
+ * projection has no shortfall year. Everyone else keeps their target
+ * retirement age. The portfolio's contributions follow the age being tried
+ * when the stop rule is `whileWorking`, and stay put when it is `throughYear`.
  *
  * Runs at most about 80 short projections, which is instant. If no age works
  * (for example a dated expense bigger than everything you will ever have), it
- * returns `notFeasible`. Never throws on user data.
+ * returns `notFeasible`. Never throws on user data, but a `personIndex`
+ * that isn't in the household is a programming error and throws a
+ * `RangeError`. Called by
+ * `summariseProjection` (src/engine/fiNumber.ts).
  */
 export function findEarliestRetirementAge(
-  inputs: EarliestRetirementInputs,
+  inputs: ProjectionInputs,
   startYear: number,
+  personIndex: number = 0,
 ): EarliestRetirement {
+  const person = personAtIndex(inputs, personIndex);
+  const currentAge = person.currentAge;
+
+  // The end age is measured on the youngest person; this person's own last age is the same row.
+  const endAge = currentAge + (inputs.endAge - youngestAgeAtRow(inputs, 0));
+
   let lastFailure: { readonly age: number; readonly solvency: Solvency } | undefined;
 
-  for (let candidateAge = inputs.currentAge; candidateAge < inputs.endAge; candidateAge++) {
-    const solvency = solvencyWhenRetiringAt(inputs, candidateAge, startYear);
+  for (let candidateAge = currentAge; candidateAge < endAge; candidateAge++) {
+    const solvency = solvencyWhenRetiringAt(inputs, personIndex, candidateAge, startYear);
 
     if (solvency.status === "runsOut") {
       lastFailure = { age: candidateAge, solvency };
       continue;
     }
 
-    const year = startYear + (candidateAge - inputs.currentAge);
+    const year = startYear + (candidateAge - currentAge);
     const lines: ExplanationLine[] = [];
 
     if (lastFailure !== undefined) {
@@ -79,7 +86,7 @@ export function findEarliestRetirementAge(
     }
 
     lines.push({
-      label: `Retiring at ${candidateAge}: lasts to age ${inputs.endAge}`,
+      label: `Retiring at ${candidateAge}: lasts to age ${endAge}`,
       value: solvency.explanation.value,
       unit: "dollars",
       source: "calculated",
@@ -115,28 +122,23 @@ export function findEarliestRetirementAge(
 }
 
 /**
- * Projects the plan as if retired at `retirementAge`, and assesses whether the
- * money lasts. The stop age follows the retirement age only when the user
- * didn't enter one.
+ * Projects the plan as if the person retired at `retirementAge`, and assesses
+ * whether the money lasts. Called by `findEarliestRetirementAge` for each
+ * candidate age.
  */
 function solvencyWhenRetiringAt(
-  inputs: EarliestRetirementInputs,
+  inputs: ProjectionInputs,
+  personIndex: number,
   retirementAge: number,
   startYear: number,
 ): Solvency {
-  const rows = projectPortfolio(
-    {
-      ...inputs,
-      retirementAge,
-      contributionsStopAge: inputs.contributionsStopAgeFollowsRetirementAge
-        ? retirementAge
-        : inputs.contributionsStopAge,
-    },
-    startYear,
-  );
+  const triedInputs = inputsWithRetirementAge(inputs, personIndex, retirementAge);
+  const rows = projectPortfolio(triedInputs, startYear);
 
   // The access age depends on when the person retires, so it is worked out for the age being tried.
-  return assessSolvency(rows, effectiveSuperAccessAge({ ...inputs, retirementAge }, startYear));
+  const triedPerson = personAtIndex(triedInputs, personIndex);
+
+  return assessSolvency(rows, effectiveSuperAccessAge(triedPerson, triedInputs, startYear));
 }
 
 /**

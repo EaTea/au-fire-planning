@@ -196,6 +196,22 @@ describe("ResultsScreen", () => {
       expect(screen.getByText("$2,375,209 at age 50 (2042)")).toBeInTheDocument();
     });
 
+    // For a couple the FI number is stated when the last of them retires, with the first person's age then.
+    it("states the FI number at the household retirement year for two people", () => {
+      renderResults({
+        ...exampleA,
+        household: {
+          people: [
+            exampleA.household.people[0]!,
+            { id: "person-2", label: "Sam", currentAge: 32, targetRetirementAge: 55 },
+          ],
+        },
+      });
+
+      // Sam retires last, in 2049, when the first person is 57.
+      expect(screen.getByText(/ at age 57 \(2049\)$/)).toBeInTheDocument();
+    });
+
     it("adds the inflation lines to the FI number breakdown", async () => {
       const user = userEvent.setup();
       renderResults(exampleA);
