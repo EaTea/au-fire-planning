@@ -126,9 +126,10 @@ export interface ResolvedProjectionInputs {
   readonly annualContribution: Sourced<number>;
   /**
    * The last age in which a contribution is made, measured on the first
-   * owner; defaults to that owner's target retirement age (source "default").
+   * owner. Left unset it is `undefined` with source "default", meaning the
+   * contributions continue while the portfolio's owners are working.
    */
-  readonly contributionsStopAge: Sourced<number>;
+  readonly contributionsStopAge: Sourced<number | undefined>;
   /** Who owns the portfolio, by person id. Until ownership is stored (M7 step 4) that is the first person. */
   readonly portfolioOwnerIds: readonly string[];
   /** The age the projection runs until, measured on the youngest person (default 95). */
@@ -278,13 +279,18 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
     });
   }
 
-  // Each person's last age is the plan-until age, moved by how much older than the youngest they are.
+  // Each person's last age is the plan-until age, moved by how much older than the youngest
+  // they are. When their age (or anyone's) isn't known yet there is no move: the retirement
+  // age is compared with the plan-until age itself.
   for (const person of planPeople) {
-    if (person.targetRetirementAge === undefined || person.currentAge === undefined) continue;
-    if (youngestAge === undefined) continue;
+    if (person.targetRetirementAge === undefined) continue;
 
-    const personEndAge = endAge.value + (person.currentAge - youngestAge);
-    if (person.targetRetirementAge >= personEndAge) {
+    const yearsOlderThanYoungest =
+      person.currentAge !== undefined && youngestAge !== undefined
+        ? person.currentAge - youngestAge
+        : 0;
+
+    if (person.targetRetirementAge >= endAge.value + yearsOlderThanYoungest) {
       missing.push({
         field: "targetRetirementAge",
         label: labelFor(person, "Target retirement age must be before your plan-until age"),
@@ -314,11 +320,10 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
         portfolio?.annualContribution,
         DEFAULT_ANNUAL_CONTRIBUTION,
       ),
-      // Depends on another input, so it can't be a constant in defaults.ts.
-      contributionsStopAge: sourceOrDefault(
-        portfolio?.contributionsStopAge,
-        firstPerson.targetRetirementAge.value,
-      ),
+      contributionsStopAge:
+        portfolio?.contributionsStopAge === undefined
+          ? { value: undefined, source: "default" }
+          : { value: portfolio.contributionsStopAge, source: "input" },
       portfolioOwnerIds: [firstPerson.id],
       endAge,
       interestRate: sourceOrDefault(plan.assumptions.interestRate, DEFAULT_INTEREST_RATE),

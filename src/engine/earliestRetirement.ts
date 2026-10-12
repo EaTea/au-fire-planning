@@ -19,6 +19,7 @@ import type { Explained, ExplanationLine } from "./explained";
 import {
   effectiveSuperAccessAge,
   inputsWithRetirementAge,
+  personAtIndex,
   projectPortfolio,
   youngestAgeAtRow,
   type ProjectionInputs,
@@ -51,7 +52,9 @@ export type EarliestRetirement =
  *
  * Runs at most about 80 short projections, which is instant. If no age works
  * (for example a dated expense bigger than everything you will ever have), it
- * returns `notFeasible`. Never throws on user data. Called by
+ * returns `notFeasible`. Never throws on user data, but a `personIndex`
+ * that isn't in the household is a programming error and throws a
+ * `RangeError`. Called by
  * `summariseProjection` (src/engine/fiNumber.ts).
  */
 export function findEarliestRetirementAge(
@@ -59,7 +62,7 @@ export function findEarliestRetirementAge(
   startYear: number,
   personIndex: number = 0,
 ): EarliestRetirement {
-  const person = inputs.people[personIndex] ?? inputs.people[0];
+  const person = personAtIndex(inputs, personIndex);
   const currentAge = person.currentAge;
 
   // The end age is measured on the youngest person; this person's own last age is the same row.
@@ -133,7 +136,7 @@ function solvencyWhenRetiringAt(
   const rows = projectPortfolio(triedInputs, startYear);
 
   // The access age depends on when the person retires, so it is worked out for the age being tried.
-  const triedPerson = triedInputs.people[personIndex] ?? triedInputs.people[0];
+  const triedPerson = personAtIndex(triedInputs, personIndex);
 
   return assessSolvency(rows, effectiveSuperAccessAge(triedPerson, triedInputs, startYear));
 }

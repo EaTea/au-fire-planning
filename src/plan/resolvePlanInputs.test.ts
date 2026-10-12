@@ -185,13 +185,32 @@ describe("resolvePlanInputs: projection inputs", () => {
     });
   });
 
+  // Regression: an unset current age must not hide the retirement-versus-plan-until message.
+  it("still compares the retirement age with the plan-until age when the current age is unset", () => {
+    const plan = {
+      ...planWithAges(undefined, 60),
+      household: { ...planWithAges(undefined, 60).household, projectionEndAge: 40 },
+    };
+
+    expect(projectionOf(plan)).toEqual({
+      status: "incomplete",
+      missing: [
+        { field: "currentAge", label: "Current age" },
+        {
+          field: "targetRetirementAge",
+          label: "Target retirement age must be before your plan-until age",
+        },
+      ],
+    });
+  });
+
   // Retiring this year is allowed.
   it("accepts a target retirement age equal to the current age", () => {
     expect(projectionOf(planWithAges(50, 50)).status).toBe("complete");
   });
 
   // Defaults: 2.5% inflation, 7% return, $0 contribution, stop age = retirement age.
-  it("fills in defaults, with the stop age defaulting to the retirement age", () => {
+  it("fills in defaults, with the stop age left unset (contributions follow the owners' work)", () => {
     const projection = projectionOf(planWithAges(34, 50));
 
     expect(projection.status).toBe("complete");
@@ -220,7 +239,7 @@ describe("resolvePlanInputs: projection inputs", () => {
       inflationRate: { value: 0.025, source: "default" },
       expectedReturn: { value: 0.07, source: "default" },
       annualContribution: { value: 0, source: "default" },
-      contributionsStopAge: { value: 50, source: "default" },
+      contributionsStopAge: { value: undefined, source: "default" },
       endAge: { value: 95, source: "default" },
       interestRate: { value: 0.04, source: "default" },
       datedExpenses: [],

@@ -132,7 +132,7 @@ export interface ProjectionPerson {
   readonly label: string;
   /** Age in whole years today. */
   readonly currentAge: number;
-  /** The last working age: contributions default to stopping here, and spending starts the year after. */
+  /** The last working age: salary and employer super stop after it, and retirement spending can start the year after. */
   readonly retirementAge: number;
   /** Gross salary (IN-7). Absent means no salary. It sets employer super contributions. */
   readonly salary?: ProjectionSalary;
@@ -383,6 +383,24 @@ export function inputsWithRetirementAge(
   };
 }
 
+/**
+ * The person at a position in `inputs.people`. Throws a `RangeError` for a
+ * position that isn't there: callers pass positions they got from the list
+ * itself, so a bad one is a programming error, not bad user data. Called by
+ * the earliest-retirement search.
+ */
+export function personAtIndex(inputs: ProjectionInputs, personIndex: number): ProjectionPerson {
+  const person = inputs.people[personIndex];
+
+  if (person === undefined) {
+    throw new RangeError(
+      `No person at position ${personIndex}; the household has ${inputs.people.length}`,
+    );
+  }
+
+  return person;
+}
+
 /** The age of the youngest person today; the rows run until this person reaches the end age. */
 function youngestCurrentAge(inputs: ProjectionInputs): number {
   return Math.min(...inputs.people.map((person) => person.currentAge));
@@ -391,7 +409,8 @@ function youngestCurrentAge(inputs: ProjectionInputs): number {
 /**
  * The age the youngest person has in row `yearIndex`. The end age is measured
  * on this person, so callers that want "a projection that stops at row n"
- * set `endAge` to this. Called by the Coast FIRE and coast split code.
+ * set `endAge` to this. Called by `projectPortfolio` (to know when to stop),
+ * the earliest-retirement search and the Coast FIRE and coast split code.
  */
 export function youngestAgeAtRow(inputs: ProjectionInputs, yearIndex: number): number {
   return youngestCurrentAge(inputs) + yearIndex;
@@ -400,7 +419,8 @@ export function youngestAgeAtRow(inputs: ProjectionInputs, yearIndex: number): n
 /**
  * The last row in which everybody is still working: the row before anyone is
  * retired. The bridge starts after it. With one person this is the
- * retirement row, `retirementAge − currentAge`. Called by the bridge check.
+ * retirement row, `retirementAge − currentAge`. Called by the bridge check
+ * and the outside-super coast test.
  */
 export function firstRetirementRowIndex(inputs: ProjectionInputs): number {
   return Math.min(...inputs.people.map((person) => person.retirementAge - person.currentAge));
@@ -497,7 +517,13 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
 
   let cash = inputs.cashOpening;
   let portfolio = inputs.portfolioOpening;
-  let previousPeople: NonEmptyList<PersonYear> = openingPeople;
+
+  // Each person with their super balance at the start of the next row; carried
+  // together so the loop never has to look a person up by position.
+  let runningPeople: NonEmptyList<RunningPerson> = mapNonEmpty(inputs.people, (person) => ({
+    person,
+    superBalance: person.superAccount?.opening ?? 0,
+  }));
 
   for (let yearIndex = 1; youngestAgeAtRow(inputs, yearIndex) <= inputs.endAge; yearIndex++) {
     const calendarYear = startYear + yearIndex;
@@ -516,15 +542,16 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
 
     // Each person's super grows and receives contributions on its own; the
     // drawing for the year is worked out afterwards, across all of them.
-    const superYears = mapNonEmpty(inputs.people, (person, personIndex) =>
-      projectSuperYear(
+    const candidates = mapNonEmpty(runningPeople, ({ person, superBalance }) => {
+      const superYear = projectSuperYear(person, inputs, yearIndex, calendarYear, superBalance);
+
+      return {
         person,
-        inputs,
-        yearIndex,
-        calendarYear,
-        previousPeople[personIndex]?.superClosing ?? 0,
-      ),
-    );
+        superYear,
+        available: superYear.available,
+        accessible: isSuperAccessibleInYear(person, inputs, yearIndex, calendarYear),
+      };
+    });
 
     const cashAvailable = cashOpening + cashInterest;
     const portfolioAvailable = portfolioOpening + portfolioGrowth + contribution;
@@ -543,27 +570,17 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
     // buffer until everything else is spent; whatever is left over is the
     // shortfall.
     const fromPortfolio = Math.min(spending, portfolioAvailable);
-    const accessibleFlags = mapNonEmpty(inputs.people, (person) =>
-      isSuperAccessibleInYear(person, inputs, yearIndex, calendarYear),
-    );
-    const fromSuperByPerson = drawSuperProRata(
-      spending - fromPortfolio,
-      superYears.map((superYear) => superYear.available),
-      accessibleFlags,
-    );
-    const fromSuper = fromSuperByPerson.reduce((total, amount) => total + amount, 0);
+    const drawings = drawSuperProRata(spending - fromPortfolio, candidates);
+    const fromSuper = drawings.reduce((total, drawing) => total + drawing.drawn, 0);
     const fromCash = Math.min(spending - fromPortfolio - fromSuper, cashAvailable);
     const shortfall = spending - fromPortfolio - fromSuper - fromCash;
 
     cash = cashAvailable - fromCash;
     portfolio = portfolioAvailable - fromPortfolio;
 
-    const people = mapNonEmpty(inputs.people, (person, personIndex): PersonYear => {
-      // `superYears` was built from the same list, so this index is always there.
-      const superYear = superYears[personIndex] as SuperYear;
-      const drawn = fromSuperByPerson[personIndex] ?? 0;
-
-      return {
+    const people = mapNonEmpty(
+      drawings,
+      ({ person, superYear, accessible, drawn }): PersonYear => ({
         personId: person.id,
         age: person.currentAge + yearIndex,
         phase: personPhase(person, yearIndex),
@@ -577,9 +594,9 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
         superEarningsTax: superYear.earningsTax,
         fromSuper: drawn,
         superClosing: superYear.available - drawn,
-        superAccessible: accessibleFlags[personIndex] ?? false,
-      };
-    });
+        superAccessible: accessible,
+      }),
+    );
     const superBalance = sumOverPeople(people, (personYear) => personYear.superClosing);
 
     rows.push({
@@ -615,7 +632,10 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       superClosing: superBalance,
     });
 
-    previousPeople = people;
+    runningPeople = mapNonEmpty(drawings, ({ person, superYear, drawn }) => ({
+      person,
+      superBalance: superYear.available - drawn,
+    }));
   }
 
   return rows;
@@ -663,30 +683,96 @@ function sumOverPeople(
   return people.reduce((total, personYear) => total + pick(personYear), 0);
 }
 
+/** One person at the start of a row: who they are and what their super holds. */
+interface RunningPerson {
+  readonly person: ProjectionPerson;
+  readonly superBalance: number;
+}
+
 /**
  * Splits the amount still to fund between the people whose super can be
  * drawn, in proportion to each one's available balance (M7 decision 2).
  * The total drawn is the smaller of the amount needed and what the accessible
  * people hold; people whose super is locked pay nothing. With one accessible
- * person that person pays the whole draw. Called by `projectPortfolio` after
- * the portfolio has been drawn.
+ * person that person pays the whole draw. Each item comes back with the
+ * amount it `drawn`. Called by `projectPortfolio` after the portfolio has been
+ * drawn.
+ *
+ * Adding rounded shares can land a hair away from the total, which would
+ * show up as a false shortfall (or a slightly negative balance), so:
+ *
+ *   draw everything  ─► each person draws their whole balance, so the
+ *                       shares add up to the total exactly
+ *   draw part of it  ─► each person draws their proportion, except the
+ *                       payer with the SMALLEST balance, who draws the
+ *                       exact remainder (amount − everyone else's shares)
+ *
+ * Why the smallest: their proportion is at most half the amount, so the
+ * others' shares add up to at least half of it, and subtracting two numbers
+ * within a factor of two of each other is exact in floating point (Sterbenz's
+ * lemma). The remainder then makes the shares add back to the amount
+ * exactly. That holds whichever order two shares are added in. A household has
+ * at most two people; with more, the total is right to within a rounding
+ * error. If rounding pushes the remainder over that payer's balance, the
+ * overshoot moves to the first payer with room.
+ *
+ * Every share stays within that person's own balance.
  */
-function drawSuperProRata(
+export function drawSuperProRata<Candidate extends { available: number; accessible: boolean }>(
   amountNeeded: number,
-  availableByPerson: readonly number[],
-  accessibleByPerson: readonly boolean[],
-): number[] {
-  const drawableByPerson = availableByPerson.map((available, personIndex) =>
-    accessibleByPerson[personIndex] === true ? available : 0,
+  candidates: NonEmptyList<Candidate>,
+): NonEmptyList<Candidate & { readonly drawn: number }> {
+  const drawables = candidates.map((candidate) => (candidate.accessible ? candidate.available : 0));
+  const totalDrawable = drawables.reduce((total, drawable) => total + drawable, 0);
+
+  // Nothing to draw from, or nothing needed.
+  if (totalDrawable <= 0 || amountNeeded <= 0) {
+    return mapNonEmpty(candidates, (candidate) => ({ ...candidate, drawn: 0 }));
+  }
+
+  // Drawing everything: each person's whole balance, with no division to round.
+  if (amountNeeded >= totalDrawable) {
+    return mapNonEmpty(candidates, (candidate, personIndex) => ({
+      ...candidate,
+      drawn: drawables[personIndex] ?? 0,
+    }));
+  }
+
+  // The remainder payer: the accessible person with the smallest balance
+  // (the later one on a tie). See the doc comment for why.
+  const remainderPayerIndex = drawables.reduce(
+    (chosenIndex, drawable, personIndex) =>
+      drawable > 0 && (chosenIndex < 0 || drawable <= (drawables[chosenIndex] ?? 0))
+        ? personIndex
+        : chosenIndex,
+    -1,
   );
-  const totalDrawable = drawableByPerson.reduce((total, drawable) => total + drawable, 0);
 
-  if (totalDrawable <= 0) return drawableByPerson.map(() => 0);
+  // First pass: proportions, with the remainder payer taking the exact remainder.
+  const shares = drawables.map((drawable) => amountNeeded * (drawable / totalDrawable));
+  const othersTotal = shares.reduce(
+    (total, share, personIndex) => (personIndex === remainderPayerIndex ? total : total + share),
+    0,
+  );
+  shares[remainderPayerIndex] = amountNeeded - othersTotal;
 
-  const totalDrawn = Math.min(amountNeeded, totalDrawable);
+  // Second pass: a remainder that overshoots its balance by a rounding error
+  // moves to the first payer with room (someone has room, since not
+  // everything is being drawn).
+  const remainderPayerDrawable = drawables[remainderPayerIndex] ?? 0;
+  const overshoot = (shares[remainderPayerIndex] ?? 0) - remainderPayerDrawable;
+  if (overshoot > 0) {
+    shares[remainderPayerIndex] = remainderPayerDrawable;
+    const roomIndex = shares.findIndex(
+      (share, personIndex) => (drawables[personIndex] ?? 0) - share >= overshoot,
+    );
+    if (roomIndex >= 0) shares[roomIndex] = (shares[roomIndex] ?? 0) + overshoot;
+  }
 
-  // Share first, then multiply: a lone person's share is exactly 1, so they pay exactly `totalDrawn`.
-  return drawableByPerson.map((drawable) => totalDrawn * (drawable / totalDrawable));
+  return mapNonEmpty(candidates, (candidate, personIndex) => ({
+    ...candidate,
+    drawn: Math.min(Math.max(shares[personIndex] ?? 0, 0), drawables[personIndex] ?? 0),
+  }));
 }
 
 /**

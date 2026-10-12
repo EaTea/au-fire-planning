@@ -23,6 +23,7 @@ import {
   effectiveSuperAccessAge,
   findFiReached,
   householdRetirementRowIndex,
+  mapNonEmpty,
   projectPortfolio,
   type ContributionsStop,
   type FiMilestone,
@@ -66,7 +67,7 @@ export type ProjectionSummary =
       readonly rows: readonly ProjectionRow[];
       /** `undefined` if FI isn't reached by the end of the projection. */
       readonly fiReached?: FiMilestone;
-      /** The FI number in nominal dollars at the target retirement age (FIRE-1). */
+      /** The FI number in nominal dollars at the household retirement row, the last year anybody works (FIRE-1). With one person that is the target retirement age. */
       readonly fiNumberAtRetirement: Explained;
       /** Each person's retirement, access age and earliest retirement, in the plan's order (always at least one). */
       readonly people: readonly [PersonSummary, ...PersonSummary[]];
@@ -316,7 +317,7 @@ export function summarisePlan(plan: Plan, startYear: number, ruleSet: RuleSet): 
  * in `resolvePlanInputs`, because a stop age is turned into a calendar year
  * with the start year, which resolution doesn't have:
  *
- *   stop age left unset ─► whileWorking (the portfolio's owners)  follows retirement
+ *   stop age left unset (undefined) ─► whileWorking (the portfolio's owners)  follows retirement
  *   stop age entered    ─► throughYear (start year + stop age − first owner's current age)
  */
 function summariseProjection(
@@ -337,14 +338,11 @@ function summariseProjection(
   const firstOwner =
     resolvedPeople.find((person) => person.id === ownerIds[0]) ?? resolvedPeople[0];
 
+  const stopAge = projectionInputs.contributionsStopAge.value;
   const contributionsStop: ContributionsStop =
-    projectionInputs.contributionsStopAge.source === "default"
+    stopAge === undefined
       ? { kind: "whileWorking", personIds: ownerIds }
-      : {
-          kind: "throughYear",
-          year:
-            startYear + (projectionInputs.contributionsStopAge.value - firstOwner.currentAge.value),
-        };
+      : { kind: "throughYear", year: startYear + (stopAge - firstOwner.currentAge.value) };
 
   const [firstPerson, ...otherPeople] = resolvedPeople;
 
@@ -375,19 +373,21 @@ function summariseProjection(
 
   // One summary for each person, in the plan's order. A stop age the user left
   // unset is `whileWorking`, so the search follows each retirement age it tries.
-  const personSummaries = projectionSettings.people.map((person, personIndex): PersonSummary => {
-    const superAccessAge = effectiveSuperAccessAge(person, projectionSettings, startYear);
+  const personSummaries = mapNonEmpty(
+    projectionSettings.people,
+    (person, personIndex): PersonSummary => {
+      const superAccessAge = effectiveSuperAccessAge(person, projectionSettings, startYear);
 
-    return {
-      id: person.id,
-      label: person.label,
-      retirementAge: person.retirementAge,
-      retirementYear: startYear + (person.retirementAge - person.currentAge),
-      ...(superAccessAge === undefined ? {} : { superAccessAge }),
-      earliestRetirement: findEarliestRetirementAge(projectionSettings, startYear, personIndex),
-    };
-  });
-  const [firstPersonSummary, ...otherPersonSummaries] = personSummaries;
+      return {
+        id: person.id,
+        label: person.label,
+        retirementAge: person.retirementAge,
+        retirementYear: startYear + (person.retirementAge - person.currentAge),
+        ...(superAccessAge === undefined ? {} : { superAccessAge }),
+        earliestRetirement: findEarliestRetirementAge(projectionSettings, startYear, personIndex),
+      };
+    },
+  );
 
   const bridge = assessBridge(rows, projectionSettings);
   const coastSplit = calculateCoastSplit(rows, projectionSettings, bridge);
@@ -404,12 +404,11 @@ function summariseProjection(
       projectionInputs.inflationRate.value,
       yearsUntilRetirement,
     ),
-    // `personSummaries` has one entry per person, and there is always at least one.
-    people: [firstPersonSummary as PersonSummary, ...otherPersonSummaries],
+    people: personSummaries,
     householdRetirementYear: startYear + yearsUntilRetirement,
     endAge: projectionInputs.endAge.value,
     // Until the couple wording (M7 PR B) the locked-super note quotes the first person's access age.
-    solvency: assessSolvency(rows, personSummaries[0]?.superAccessAge),
+    solvency: assessSolvency(rows, personSummaries[0].superAccessAge),
     bridge,
     coast: { ...calculateCoastFire(rows, projectionSettings), split: coastSplit },
   };
@@ -481,7 +480,8 @@ function projectionContributionFrom(
 }
 
 /**
- * The FI number in nominal dollars at the target retirement age: today's FI
+ * The FI number in nominal dollars at the household retirement row (the last
+ * year anybody works; the target retirement age for one person): today's FI
  * number grown by inflation for the years until then (FIRE-1).
  *
  * Called by `summariseProjection`; the Results screen shows it with its

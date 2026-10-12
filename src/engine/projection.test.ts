@@ -552,56 +552,30 @@ describe("projectPortfolio: a household of several people", () => {
   };
 
   // The row's household figures must be exactly what the people add up to.
-  it("makes every household super and salary field the sum over people", () => {
-    const sumOf = (row: ProjectionRow, pick: (personYear: ProjectionRow["people"][0]) => number) =>
-      row.people.reduce((total, personYear) => total + pick(personYear), 0);
+  it("makes every household super and salary field exactly the sum over people", () => {
+    const summedFields = [
+      "salary",
+      "employerContribution",
+      "salarySacrifice",
+      "nonConcessional",
+      "contributionsTax",
+      "superOpening",
+      "superEarnings",
+      "superEarningsTax",
+      "fromSuper",
+      "superClosing",
+    ] as const;
 
     for (const row of projectPortfolio(alexAndSam, 2026)) {
-      expect(row.salary).toBeCloseTo(
-        sumOf(row, (p) => p.salary),
-        6,
-      );
-      expect(row.employerContribution).toBeCloseTo(
-        sumOf(row, (p) => p.employerContribution),
-        6,
-      );
-      expect(row.salarySacrifice).toBeCloseTo(
-        sumOf(row, (p) => p.salarySacrifice),
-        6,
-      );
-      expect(row.nonConcessional).toBeCloseTo(
-        sumOf(row, (p) => p.nonConcessional),
-        6,
-      );
-      expect(row.contributionsTax).toBeCloseTo(
-        sumOf(row, (p) => p.contributionsTax),
-        6,
-      );
-      expect(row.superOpening).toBeCloseTo(
-        sumOf(row, (p) => p.superOpening),
-        6,
-      );
-      expect(row.superEarnings).toBeCloseTo(
-        sumOf(row, (p) => p.superEarnings),
-        6,
-      );
-      expect(row.superEarningsTax).toBeCloseTo(
-        sumOf(row, (p) => p.superEarningsTax),
-        6,
-      );
-      expect(row.fromSuper).toBeCloseTo(
-        sumOf(row, (p) => p.fromSuper),
-        6,
-      );
-      expect(row.superClosing).toBeCloseTo(
-        sumOf(row, (p) => p.superClosing),
-        6,
-      );
+      for (const field of summedFields) {
+        // Added in person order from 0, the way the projection adds them, so the match is exact.
+        const sum = row.people.reduce((total, personYear) => total + personYear[field], 0);
+
+        expect(row[field]).toBe(sum);
+      }
+
       expect(row.superAccessible).toBe(row.people.some((p) => p.superAccessible));
-      expect(row.investableClosing).toBeCloseTo(
-        row.cashClosing + row.portfolioClosing + row.superClosing,
-        6,
-      );
+      expect(row.investableClosing).toBe(row.cashClosing + row.portfolioClosing + row.superClosing);
     }
   });
 
@@ -700,6 +674,44 @@ describe("projectPortfolio: a household of several people", () => {
       270_000, 90_000,
     ]);
     expect(firstYear?.shortfall).toBe(0);
+  });
+
+  // Regression: adding two rounded shares came out an ulp short of the draw, which counted as a shortfall.
+  it("never shows a shortfall, or a negative balance, when the super holds enough", () => {
+    const inputs: ProjectionInputs = {
+      ...alexAndSam,
+      people: [
+        {
+          id: "alex",
+          label: "Alex",
+          currentAge: 66,
+          retirementAge: 60,
+          superAccount: { ...plainSuper, opening: 349_451.38 },
+        },
+        {
+          id: "sam",
+          label: "Sam",
+          currentAge: 67,
+          retirementAge: 60,
+          superAccount: { ...plainSuper, opening: 953_202.72 },
+        },
+      ],
+      endAge: 70,
+      expectedReturn: 0,
+      interestRate: 0,
+      inflationRate: 0,
+      portfolioOpening: 0,
+      cashOpening: 0,
+      retirementSpendingAnnual: 31_472.72,
+      contributionsStop: { kind: "whileWorking", personIds: [] },
+    };
+
+    for (const row of projectPortfolio(inputs, 2026)) {
+      expect(row.shortfall).toBe(0);
+      for (const personYear of row.people) {
+        expect(personYear.superClosing).toBeGreaterThanOrEqual(0);
+      }
+    }
   });
 
   // A locked partner pays nothing, while the other's accessible super is drawn in full if need be.

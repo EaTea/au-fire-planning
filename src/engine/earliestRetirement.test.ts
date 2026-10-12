@@ -58,6 +58,11 @@ describe("findEarliestRetirementAge", () => {
     });
   });
 
+  // A position outside the household is a programming error, not bad user data.
+  it("throws for a person that isn't in the household", () => {
+    expect(() => findEarliestRetirementAge(exampleBInputs, 2026, 1)).toThrow(RangeError);
+  });
+
   // A plan that is solvent today has nothing to fail first, so the explanation has no failure line.
   it("retires now when the plan is already solvent", () => {
     const result = findEarliestRetirementAge(

@@ -1960,8 +1960,9 @@ example changes.
   for word as before; with several each is prefixed ("Sam: Current age").
   The plan-until age is checked against the youngest person, and each
   retirement age against that person's own last age (plan-until age plus how
-  much older than the youngest they are). Order of messages for one person
-  is unchanged.
+  much older than the youngest they are). When a person's current age is
+  unknown, their retirement age is compared with the plan-until age itself,
+  as before. Order of messages for one person is unchanged.
 - The stop-age mapping stays in `summariseProjection`, not in
   `resolvePlanInputs`: turning a stop age into a calendar year needs the
   start year, which resolution doesn't have, and adding it would change every
@@ -1980,6 +1981,16 @@ example changes.
   moved (no expected value changed), plus new tests for two people in
   resolution (order, owner, labels, per-person end-age check) and in the
   summary (one entry per person, household retirement year).
+- After the challenger review of PR A: `drawSuperProRata` gives the last
+  payer the exact remainder (no false shortfall from rounding);
+  `BridgeAssessment.effectiveAccess` is `{ personId, personIndex, age }` and
+  only people who have super (a balance or a contribution in some row) are
+  considered; the FI number and Coast FIRE tiles state the household
+  retirement year with the first person's age in it;
+  `contributionsStopAge` resolves to `Sourced<number | undefined>`
+  (`undefined` with source "default" means while the owners work);
+  `findEarliestRetirementAge` throws a `RangeError` for a person that isn't
+  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0).
 - Checks: `npm run check` (779 unit tests) and `npm run test:e2e` (38) pass.
 
 1. **Resolve every person.** `resolvePlanInputs` resolves every person
