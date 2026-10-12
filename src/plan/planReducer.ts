@@ -11,6 +11,7 @@ import type {
   Person,
   Plan,
   Portfolio,
+  PortfolioOwnership,
   RetirementSpending,
   Salary,
   SalaryGrowth,
@@ -78,6 +79,15 @@ export type PlanAction =
     }
   | { readonly type: "duplicateDatedExpense"; readonly id: string; readonly newId: string }
   | { readonly type: "removeDatedExpense"; readonly id: string }
+  | { readonly type: "addPartner"; readonly id: string }
+  | { readonly type: "removePartner" }
+  | { readonly type: "setPersonName"; readonly personId: string; readonly name?: string }
+  | { readonly type: "setInterimSpending"; readonly annual?: number }
+  | {
+      readonly type: "setPortfolioOwnership";
+      readonly portfolioId: string;
+      readonly ownership?: PortfolioOwnership;
+    }
   | { readonly type: "replacePlan"; readonly plan: Plan };
 
 /**
@@ -222,9 +232,100 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
         (plan.expenses.datedExpenses ?? []).filter((expense) => expense.id !== action.id),
       );
 
+    case "addPartner":
+      return addPartner(plan, action.id);
+
+    case "removePartner":
+      return removePartner(plan);
+
+    case "setPersonName": {
+      // Spaces around a name are dropped, and a name with nothing left is cleared.
+      const trimmed = action.name?.trim();
+
+      return updatePerson(plan, action.personId, {
+        name: trimmed === undefined || trimmed === "" ? undefined : trimmed,
+      });
+    }
+
+    case "setInterimSpending":
+      return { ...plan, expenses: { ...plan.expenses, interimAnnual: action.annual } };
+
+    case "setPortfolioOwnership":
+      if (action.ownership !== undefined && !isValidOwnership(plan, action.ownership)) {
+        return plan;
+      }
+
+      return updatePortfolio(plan, action.portfolioId, { ownership: action.ownership });
+
     case "replacePlan":
       return action.plan;
   }
+}
+
+/** The most people a household can have (M7: you and one partner). */
+const MAXIMUM_PEOPLE = 2;
+
+/**
+ * Adds "Person 2" with nothing set. Ignored when the household already has
+ * two people, so a repeated click can't create a third. Used by the "A couple"
+ * choice on the Household screen.
+ */
+function addPartner(plan: Plan, id: string): Plan {
+  if (plan.household.people.length >= MAXIMUM_PEOPLE) return plan;
+
+  const partner: Person = { id, label: `Person ${plan.household.people.length + 1}` };
+
+  return {
+    ...plan,
+    household: { ...plan.household, people: [...plan.household.people, partner] },
+  };
+}
+
+/**
+ * Removes Person 2 and everything entered for them (the "Just me" choice).
+ * Any portfolio they owned, alone or in a joint split, goes back to Person 1
+ * as sole owner; portfolios with no stored owner keep following the default.
+ * Ignored when there is no second person.
+ */
+function removePartner(plan: Plan): Plan {
+  const [firstPerson, removedPerson] = plan.household.people;
+  if (firstPerson === undefined || removedPerson === undefined) return plan;
+
+  /** True when the ownership names the person being removed. */
+  const namesRemovedPerson = (ownership: PortfolioOwnership): boolean =>
+    ownership.kind === "sole"
+      ? ownership.personId === removedPerson.id
+      : ownership.shares.some((share) => share.personId === removedPerson.id);
+
+  return {
+    ...plan,
+    household: { ...plan.household, people: [firstPerson] },
+    portfolios: plan.portfolios.map((portfolio) =>
+      portfolio.ownership !== undefined && namesRemovedPerson(portfolio.ownership)
+        ? { ...portfolio, ownership: { kind: "sole", personId: firstPerson.id } }
+        : portfolio,
+    ),
+  };
+}
+
+/**
+ * Whether an ownership can be stored: it names only people in the plan, and a
+ * joint split has at least two shares that are not negative and add to 100%.
+ * Invalid ownership is ignored by the reducer rather than saved, because the
+ * stored document rejects it. Used by the `setPortfolioOwnership` action.
+ */
+function isValidOwnership(plan: Plan, ownership: PortfolioOwnership): boolean {
+  const personIds = new Set(plan.household.people.map((person) => person.id));
+
+  if (ownership.kind === "sole") return personIds.has(ownership.personId);
+
+  const total = ownership.shares.reduce((sum, share) => sum + share.fraction, 0);
+
+  return (
+    ownership.shares.length >= 2 &&
+    ownership.shares.every((share) => personIds.has(share.personId) && share.fraction >= 0) &&
+    Math.abs(total - 1) < 1e-9
+  );
 }
 
 /** Returns the plan with its dated expenses list replaced. Used by the dated-expense actions. */

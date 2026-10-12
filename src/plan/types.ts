@@ -60,11 +60,16 @@ export interface SuperAccount {
   readonly earningsTaxRate?: number;
 }
 
-/** One person in the household. M1 has exactly one; couples arrive in M7. */
+/** One person in the household: just you, or you and a partner (M7). */
 export interface Person {
   readonly id: string;
   /** Display label, e.g. "Person 1". */
   readonly label: string;
+  /**
+   * What the person likes to be called, e.g. "Alex". `undefined` means
+   * unnamed: screens then say "Person 1" / "Person 2" (see `displayName`).
+   */
+  readonly name?: string;
   /** Age in whole years today. `undefined` means "not set" (no default). */
   readonly currentAge?: number;
   /** Age in whole years at which they plan to retire. `undefined` means "not set" (no default). */
@@ -81,6 +86,18 @@ export interface Person {
   readonly superAccessAge?: number;
 }
 
+/**
+ * Who owns a portfolio (IN-14, part): one person, or several jointly. Until
+ * M8/M9 the only effect is when contributions stop; tax by ownership comes
+ * later. The shares of a joint portfolio add to 1 (100%).
+ */
+export type PortfolioOwnership =
+  | { readonly kind: "sole"; readonly personId: string }
+  | {
+      readonly kind: "joint";
+      readonly shares: readonly { readonly personId: string; readonly fraction: number }[];
+    };
+
 /** One share portfolio. M1 has exactly one; several arrive in later milestones. */
 export interface Portfolio {
   readonly id: string;
@@ -93,6 +110,11 @@ export interface Portfolio {
   readonly annualContribution?: number;
   /** Last age (whole years) in which a contribution is made. `undefined` means the target retirement age. */
   readonly contributionsStopAge?: number;
+  /**
+   * Who owns it. `undefined` means the default: Person 1 for one person,
+   * joint 50/50 for a couple.
+   */
+  readonly ownership?: PortfolioOwnership;
 }
 
 /** How retirement spending is expressed: a dollar amount or a share of today's spending. */
@@ -134,6 +156,12 @@ export interface Plan {
     /** Dollars per year, after tax. No default: without it nothing can be calculated. */
     readonly livingAnnual?: number;
     readonly retirementSpending?: RetirementSpending;
+    /**
+     * Dollars per year in today's dollars drawn from savings while one of a
+     * couple has retired and the other has not (EXP-2). `undefined` means
+     * default ($0: the working partner's pay covers spending).
+     */
+    readonly interimAnnual?: number;
     /** Dated and one-off expenses (EXP-6). `undefined` means none. */
     readonly datedExpenses?: readonly DatedExpense[];
   };

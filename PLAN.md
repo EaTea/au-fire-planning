@@ -2042,9 +2042,35 @@ there are two-person engine tests for D and D2.
 
 #### Step 4 · Couples in the plan, reducer and wire format (PR B)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** behavior change, from here on.
+
+**As built:**
+- `Person.name?`, `Plan.expenses.interimAnnual?` and `Portfolio.ownership?`
+  (`PortfolioOwnership`: `sole { personId }` or `joint { shares: [{ personId,
+  fraction }] }`). In memory the shares are fractions; on the wire they are
+  `percent`, converted by `ownershipToWire` / `ownershipFromWire`.
+- Wire: `people[].name`, `expenses.interimAnnualDollars` and
+  `portfolios[].ownership`, all optional, so the document stays at version 1.
+  The schema rejects a joint split with fewer than two shares or shares that
+  don't add to 100 (within 1e-9), rather than repairing it. Plans saved before
+  M7 load with none of the new fields. Fixture:
+  `tests/fixtures/plan-documents/v1-couple.json`. The mapping property test
+  now generates names, a partner, the interim amount and ownership.
+- Reducer: `addPartner { id }` (label "Person 2", ignored at two people),
+  `removePartner` (drops Person 2; sole-Person-2 and joint ownership go to
+  sole Person 1, other ownership is untouched; ignored with one person),
+  `setPersonName` (trimmed; empty clears), `setInterimSpending`,
+  `setPortfolioOwnership`.
+- Decision not in the plan: `setPortfolioOwnership` **ignores invalid
+  ownership** (a person not in the plan, a joint split with fewer than two
+  shares, a negative share, or shares not adding to 100%), because the stored
+  document would reject it and a save would then fail. The Household screen
+  (step 6) must show the error and not dispatch until the split is valid.
+- `displayName(person, index)` is in `src/plan/displayName.ts`; an empty or
+  spaces-only name counts as unnamed.
+- Resolution does not read the new fields yet; that is step 5.
 
 1. **Plan types:**
    - `Person.name?`;
