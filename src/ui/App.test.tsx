@@ -1,8 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { InMemoryPlanStore } from "../persistence/planStore";
+import { createNewPlan } from "../plan/createNewPlan";
+import { isBlankPlan } from "../plan/isBlankPlan";
 import { App } from "./App";
 
 /**
@@ -165,5 +167,79 @@ describe("App", () => {
     await user.click(screen.getByRole("link", { name: "Next: Scenarios →" }));
 
     expect(screen.getByRole("heading", { level: 1, name: "Scenarios" })).toBeInTheDocument();
+  });
+
+  // Start over (NFR-8): the logo asks first, then clears the plan and goes to step 1.
+  it("starts over from the logo after confirmation", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/income-expenses";
+    await renderApp();
+    await user.type(screen.getByLabelText("Per year, after tax"), "64000{Enter}");
+
+    await user.click(screen.getByRole("button", { name: "AU FIRE Planner, start over" }));
+    expect(screen.getByRole("dialog", { name: "Start over?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Household" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Next: Income & expenses →" }));
+    expect(screen.getByLabelText("Per year, after tax")).toHaveValue("");
+  });
+
+  // Keep my plan leaves both the plan and the page alone.
+  it("keeps the plan when Start over is cancelled", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/income-expenses";
+    await renderApp();
+    await user.type(screen.getByLabelText("Per year, after tax"), "64000{Enter}");
+
+    await user.click(screen.getByRole("button", { name: "AU FIRE Planner, start over" }));
+    await user.click(screen.getByRole("button", { name: "Keep my plan" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Income & expenses" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Per year, after tax")).toHaveValue("$64,000");
+  });
+
+  // With nothing entered there is nothing to lose, so the logo just goes to step 1.
+  it("goes straight to Household from the logo when the plan is blank", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/results";
+    await renderApp();
+
+    await user.click(screen.getByRole("button", { name: "AU FIRE Planner, start over" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Household" })).toBeInTheDocument();
+  });
+
+  // The blank plan is autosaved over the saved one, so a reload stays blank.
+  it("saves the blank plan over the saved one after starting over", async () => {
+    const user = userEvent.setup();
+    const store = await storeWithAcceptedDisclaimer();
+    const savedPlan = createNewPlan(() => crypto.randomUUID());
+    await store.savePlan({ ...savedPlan, expenses: { livingAnnual: 64_000 } });
+    await renderApp(store);
+
+    await user.click(screen.getByRole("button", { name: "AU FIRE Planner, start over" }));
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+
+    await waitFor(
+      async () => {
+        const loaded = await store.loadActivePlan();
+        expect(loaded.status === "loaded" && isBlankPlan(loaded.plan)).toBe(true);
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  // On the welcome page there is no plan to clear yet, so the logo isn't a button.
+  it("shows the logo as plain text on the welcome page", async () => {
+    await renderApp(new InMemoryPlanStore());
+
+    expect(screen.getByText("AU FIRE Planner").tagName).toBe("SPAN");
+    expect(screen.queryByRole("button", { name: /start over/ })).not.toBeInTheDocument();
   });
 });

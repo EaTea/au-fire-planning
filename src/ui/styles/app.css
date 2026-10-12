@@ -35,6 +35,23 @@ body {
   white-space: nowrap;
 }
 
+/*
+ * The logo is also the "Start over" button (AppShell). A <button> brings the
+ * browser's grey background and its own font, so both are reset to match the
+ * plain logo; hover adds the gold border so it reads as clickable.
+ */
+.logo-button {
+  background: transparent;
+  color: var(--colour-header-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logo-button:hover {
+  border-color: var(--colour-accent);
+}
+
 .step-nav {
   display: flex;
   flex-wrap: wrap;
