@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 
+import { displayName } from "../../plan/displayName";
 import type { Person } from "../../plan/types";
 
 /** What PerPersonFields needs. */
@@ -18,7 +19,8 @@ interface PerPersonFieldsProps {
 /**
  * Renders a set of fields once for each person in the household. With one
  * person it adds no name, so the page reads as it always has; couples (M7)
- * get a name on each label with no change to the screens that use this. The
+ * get a name on each label (their name if they have one, else "Person N")
+ * with no change to the screens that use this. The
  * caller's render function receives the person, so each field edits that
  * person's data (for example by dispatching with `person.id`).
  */
@@ -27,9 +29,11 @@ export function PerPersonFields({ people, children }: PerPersonFieldsProps) {
 
   return (
     <>
-      {people.map((person) => (
+      {people.map((person, personIndex) => (
         <Fragment key={person.id}>
-          {children(person, (label) => (hasSeveralPeople ? `${person.label}: ${label}` : label))}
+          {children(person, (label) =>
+            hasSeveralPeople ? `${displayName(person, personIndex)}: ${label}` : label,
+          )}
         </Fragment>
       ))}
     </>

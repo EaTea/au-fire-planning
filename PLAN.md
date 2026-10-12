@@ -2173,7 +2173,37 @@ there are two-person engine tests for D and D2.
 
 #### Step 6 · Household screen (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- New `HouseholdSection` (the "Household" card): a `SegmentedToggle`
+  "Just me / A couple" with a hint. "A couple" dispatches `addPartner` with an
+  id from `usePlanIdGenerator()` (new; `PlanProvider` takes an optional
+  `generateId`, default `crypto.randomUUID`, and `renderSection` passes one in
+  tests). "Just me" dispatches `removePartner`; the hint then says it removes
+  Person 2 and their data, that a shared portfolio goes back to Person 1, and
+  that there is no undo yet.
+- `PersonAgesSection` now covers both cases. One person: the same single
+  "About you" card as before (labels word for word), plus a "Name (optional)"
+  field with the hint "Used for labels only." A couple: a card for each person
+  (titled by name or "Person N") in a `.person-cards` grid (two columns when
+  there is room, one on a narrow screen), then a "Planning horizon" card with
+  "Plan until age" and the note "The plan runs until {younger} reaches this age:
+  {N} years, to {year}." (year from `usePlanStartYear`; left out until someone
+  has an age). A couple's age labels are prefixed with the display name
+  ("Alex: Current age"); the name field uses the fixed "Person 1: Name
+  (optional)" so its label doesn't change as the name is typed. Names are
+  saved trimmed through `setPersonName`. The couple's hints say "Only age is
+  stored..." and "...if they will have retired by then".
+- `PerPersonFields` now prefixes with `displayName(person, index)` (the name,
+  or "Person N") instead of the plan's `label`; the three existing tests that
+  named people through `label` now set `name` too.
+- The cards sit in a `.household-stack` grid with a gap, which also puts a gap
+  between the toggle card and "About you" for one person.
+- Screenshots (desktop and 375px, no horizontal scroll) were checked by eye
+  against mockup 01; the planning-horizon card shows the note under the field
+  rather than beside it, and the mockup's "Find my earliest feasible age" and
+  "What is preservation age?" extras are not built (follow-ups).
 
 1. **`HouseholdScreen`:**
    - a "Household" card with a `SegmentedToggle`, "Just me / A couple",

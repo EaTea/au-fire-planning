@@ -22,9 +22,17 @@ function PlanDump() {
 }
 
 /** Renders `section` (with the clock fixed in 2026) with the given starting plan; returns `readPlan` for assertions on the plan. */
-export function renderSection(section: ReactElement, initialPlan: Plan = blankPlan) {
+export function renderSection(
+  section: ReactElement,
+  initialPlan: Plan = blankPlan,
+  generateId?: () => string,
+) {
   const rendered = render(
-    <PlanProvider initialPlan={initialPlan} startYear={2026}>
+    <PlanProvider
+      initialPlan={initialPlan}
+      startYear={2026}
+      {...(generateId === undefined ? {} : { generateId })}
+    >
       {section}
       <PlanDump />
     </PlanProvider>,

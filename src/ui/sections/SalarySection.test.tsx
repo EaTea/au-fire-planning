@@ -84,8 +84,8 @@ describe("SalarySection", () => {
       ...blankPlan,
       household: {
         people: [
-          { id: "a", label: "Alex" },
-          { id: "s", label: "Sam" },
+          { id: "a", label: "Person 1", name: "Alex" },
+          { id: "s", label: "Person 2", name: "Sam" },
         ],
       },
     });

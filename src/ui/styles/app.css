@@ -626,6 +626,42 @@ button:focus-visible {
 
 /* ---------- Charts (TimeSeriesChart) and the chart card ---------- */
 
+/* ---------- Household screen: the toggle row and the person cards ---------- */
+
+/* The toggle card, the person card(s) and the planning horizon card, with room between them. */
+.household-stack {
+  display: grid;
+  grid-template-columns: minmax(
+    0,
+    1fr
+  ); /* lets wide children shrink instead of forcing a sideways scroll */
+  gap: var(--space-large);
+}
+
+.household-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-small) var(--space-medium);
+}
+
+.household-toggle-row .toggle {
+  margin-bottom: 0;
+}
+
+/* Two person cards side by side when there is room, stacked on a narrow screen; the minimum never exceeds the width. */
+.person-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-large);
+}
+
+.horizon-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--colour-text-muted);
+}
+
 /* A card header with a control beside the title; the title loses its own bottom margin. */
 .card-header {
   display: flex;
