@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M5, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. M6 (super access and the bridge period) is implemented; the plan and implementation PRs are stacked and await the owner's verification.
+**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. The M7 (couples) step-by-step plan is in review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M5 and the side plans done. M6 implemented, in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M6 and the side plans done. M7 plan in review |
 
 ## 1. Requirement ordering
 
@@ -1050,21 +1050,40 @@ Agreed in review:
 ### How each milestone is delivered
 
 Agreed with the repository owner. Every milestone goes through the same
-four stages:
+five stages:
 
 1. **Plan.** The lead agent writes a step-by-step plan for the milestone in
    this section of `PLAN.md` and opens a PR containing **only that plan**.
 2. **Approve.** The owner reviews the plan PR. Implementation does not start
    until the owner **explicitly approves** it. Feedback is worked into the
-   plan until then.
+   plan until then. (At the owner's request, M6 and M7 open the
+   implementation stacked on the plan PR, so both are reviewed together.)
 3. **Implement.** A lower-cost implementer subagent (e.g. Sonnet or Haiku)
    is given **only this file** and instructions to implement the approved
    milestone, one step at a time. When anything is unclear, it stops and asks
    instead of guessing. The lead answers, and any change of approach is
    written into the plan explicitly, so the plan stays the source of truth.
-4. **Verify.** The lead reviews each step's work, runs the checks, and
-   commits it, one commit per step with a message explaining why. When the
-   milestone is complete, the lead opens a PR for the owner to verify.
+   The lead reviews each step's work, runs the checks, and commits it, one
+   commit per step with a message explaining why.
+4. **Challenge.** When a PR's steps are all committed, and before the PR
+   is opened, a **new reviewer subagent on a higher-reasoning model** (e.g.
+   Opus, thinking hard) reviews the whole PR as a reviewer and challenger:
+   - **What it gets:** this file, the PR's diff and the worked examples.
+   - **What it looks for:**
+     - bugs, and figures that don't match the worked examples;
+     - edge cases the tests miss;
+     - breaches of CLAUDE.md;
+     - anything that contradicts the plan.
+   - **It challenges** the plan's own decisions where they look wrong.
+   - **It doesn't change code.** It reports findings, most severe first.
+
+   The lead deals with every finding:
+   - **Fix it,** in its own commit explaining why, with the checks re-run.
+   - **Or record why not.**
+   - **Bring design challenges to the owner.**
+
+   The PR description summarises the review and what was done about it.
+5. **Verify.** The lead opens the PR for the owner to verify.
 
 ### Rules for the implementer
 
@@ -1452,558 +1471,628 @@ Conventions settled while building M5, which later milestones rely on:
 - **Property tests:** run a new or changed property file on its own
   several times (different seeds) before trusting a pass.
 
-### M6 · Super access and the bridge period: step-by-step plan
+### M6 · Super access and the bridge period: done
 
-**Status:** implemented, awaiting the owner's verification. At the owner's request, the plan PR and the
-implementation PR are opened together, stacked: the implementation PR's
-base is the plan branch. The plan is still reviewed first, and the
-implementation follows any change to it.
+Delivered in PR #34, plan in PR #33. The full step-by-step plan is in git
+history.
 
-**Kind:** behavior change.
+Conventions settled while building M6, which later milestones rely on:
 
-**Goal:** most people retiring early can't touch their super for years. M6
-makes the age super becomes accessible an input, applies the preservation
-rules, and checks the **bridge**: can outside-super money (the portfolio
-and cash) fund the years from retirement until super opens, and can super
-plus what's left fund the rest? It also splits Coast FIRE into super and
-outside super, and adds the bridge chart.
+- **The condition of release** (SUPER-1, `isSuperDrawable` in
+  `projection.ts`): super can be drawn at age a when a ≥ 65, or when a ≥
+  the access age, a ≥ the preservation age (60) and a > the retirement
+  age. Both ages are rules (`preservationAgeYears`,
+  `unconditionalReleaseAgeYears`). The owner still has to verify them
+  against the ATO.
+- **The effective access age** (`effectiveSuperAccessAge`) is the first
+  age super can be drawn while retired: the access age if you retire
+  before it, otherwise the year after retirement, capped at 65. It drives
+  the bridge, the milestones and the "super locked until {age}" wording.
+  Rows carry `superAccessible`.
+- **The bridge check** (`assessBridge`, `src/engine/bridge.ts`) has two
+  parts: the bridge (retired years before access, funded by outside
+  super) and after access (to the end of the plan).
+  - **Status:** MET or SHORT comes from the projection's shortfalls, so
+    it is exact.
+  - **Need:** a guide. The bridge need is discounted at the portfolio's
+    return. The after-access need is discounted at super's after-tax
+    return.
+- **The Coast FIRE split** (`calculateCoastSplit`) asks two stricter
+  questions than the combined Coast FIRE, which stays the overall answer:
+  - outside super alone funds the bridge;
+  - super alone, with employer contributions only, funds the years after
+    access.
+- **SUPER-8:** every withdrawal is at 60 or over, so it is tax-free. The
+  after-access breakdown ends with a "Withdrawals are tax-free from age
+  60" rule line.
+- **Shared UI pieces:**
+  - **`StatusMeter`:** a bar of projected against a marked need, with the
+    status in words.
+  - **`StackedAreaChart`:** the bridge chart. The bridge band is drawn
+    over the fills as a tint.
+  - **New colour roles:** `--colour-chart-outside` and
+    `--colour-chart-super`.
+  - **`ExplainPanel`:** keeps the last calculated line bold when a rule
+    line follows it.
+- **Chart bands:** Recharts 3 draws a reference area as a
+  `path.recharts-reference-area-rect`, not a `rect`. CSS for bands targets
+  that class.
+
+### M7 · Couples: step-by-step plan
+
+**Status:** plan, awaiting the owner's approval. As with M6, the owner
+asked for the plan PR and the implementation to be opened stacked on each
+other. The plan is still reviewed first, and the implementation follows
+any change to it.
+
+**Goal:** a plan can be for one person or a couple. Each partner has
+their own age, retirement age, salary, super and super access age. Every
+rule built so far (salary, employer super, contributions, preservation,
+the bridge) applies to each person separately, and the household's money
+is projected together.
 
 **Requirements in scope:**
-- IN-5 the super access age, per person (default 65, as low as the
-  preservation age, 60);
-- SUPER-1 preservation (accessible on retiring at or after the
-  preservation age, or at 65 regardless);
-- SUPER-8 tax-free withdrawals from 60;
-- FIRE-4 the bridge and post-preservation check;
-- FIRE-7 chart (b), the bridge period;
-- COAST-3 Coast FIRE for super and outside super separately;
-- COAST-6 (c), shown as two status meters;
-- OUT-4, part: when super becomes accessible, on the milestones.
+- **IN-1:** one person or a couple.
+- **IN-6:** super contributions and access rules per person. Tax arrives
+  per person in M8 and caps in M11.
+- **IN-3:** a target retirement age per person. Partners may retire at
+  different ages.
+- **IN-4:** for a couple, the plan runs until the younger partner reaches
+  the plan-until age.
+- **EXP-2:** the rest of it, an interim amount while only one partner has
+  retired.
+- **IN-14, part:** a portfolio's owner, either partner or both with a
+  percentage split.
+- **FIRE-3:** the earliest retirement age per person.
+- **FIRE-4, for couples:** each partner's super opens at their own access
+  age.
 
 **Out of scope:**
-- couples, each with their own access age (M7). M6 stores the age per
-  person, but shows one person;
-- tax on withdrawals before 60 (none can happen, see below) and all
-  income tax (M8);
-- retirement phase and minimum drawdowns (M10);
-- transition to retirement (SUPER-10, M23).
+- **Personal income tax and take-home pay (M8).** Until then, working
+  years still assume pay covers living expenses, so nothing is drawn from
+  savings.
+- **Tax on a portfolio by ownership (M8, M9).** M7 stores and shows the
+  owner, and uses it only to decide when contributions stop.
+- **More than one portfolio (M9).**
+- **Coast FIRE for each partner's super separately.** The COAST-3 card
+  keeps one combined super figure. See the follow-ups.
+- **Per-person columns in Year by year,** and the "Find my earliest
+  feasible age instead" checkbox from mockup 01 (follow-ups).
 
-**Two stacked PRs:** this plan PR, and one implementation PR (steps 1 to
-9) built on it.
+**Two implementation PRs, stacked on this plan PR.** Principle 5 in
+part 1 and CLAUDE.md both keep refactors apart from behaviour changes, so
+M7's implementation is split:
+- **PR A, internal refactor** (steps 1 to 3): the engine projects a
+  household made of a list of people. With one person it gives exactly
+  the same results as today, and every existing test and worked example
+  is unchanged. Its base is this plan PR.
+- **PR B, behaviour change** (steps 4 to 10): couples. Its base is PR A.
+
+Each PR goes through the challenger review (see "How each milestone is
+delivered") before it's opened.
 
 **Definition of done:**
+- **Household:** a "Just me / A couple" toggle. A couple has two person
+  cards, each with an optional name, current age, target retirement age
+  and "Super accessible at".
+- **Income & expenses:** salary is entered per person. For a couple
+  there's also "Drawn from savings while one of you is retired".
+- **Assets:** super is entered per person. For a couple, the portfolio
+  has an owner (either person, or joint with a split).
+- **Results** covers the household:
+  - Every age shown names both partners, e.g. "Alex 52 · Sam 50".
+  - "Earliest retirement" shows each person.
+  - The milestones show each person's retirement and super access.
+  - Year by year has an "Ages" column and a "One retired" band.
+- **The examples:** worked examples D, D2 and E below match to the cent.
+  Every single-person example from M2 to M6 is unchanged.
+- **Checks:** `npm run check` and `npm run test:e2e` pass, and CI is
+  green.
 
-- Household has "Super accessible at" (default 65, from 60 to 65).
-- Super is drawn only once it's accessible, using the preservation rules
+#### Design decisions for M7
+
+**The household timeline** (IN-4, IN-3):
+- **Rows** run from today until the **younger** partner reaches the
+  plan-until age. Each row has each person's age.
+- **Retirement:** each person works up to and including their own
+  retirement age, as now.
+- **The household phase** of a row is:
+
+  ```
+  working        everyone is working
+  oneRetired     at least one person has retired, but not everyone
+  retired        everyone has retired
+  ```
+
+- **Two named points** replace the single retirement age downstream:
+  - **the first retirement row:** the last row before anyone is retired.
+    The bridge starts after it;
+  - **the household retirement row:** the last row anyone works. The FI
+    number "at retirement", Coast FIRE's target and "when you've both
+    retired" refer to it.
+
+  With one person, both are today's retirement row.
+
+**What is drawn from savings each year** (EXP-2):
+- **Working** years draw dated expenses only, as now.
+- **Retired** years draw retirement spending, as now.
+- **oneRetired** years draw the **interim amount**: "Drawn from savings
+  while one of you is retired", in today's dollars, grown by inflation.
+  **Default $0**: the working partner's pay is assumed to cover spending,
+  the same assumption as working years until M8. **Owner decision 1**
   below.
-- Results has a **"Can you bridge to super?"** card with two status
-  meters, each with need, projected and MET or SHORT:
-  - the bridge (outside super, from retirement until super opens);
-  - after access (super plus what's left outside, to the end of the plan).
-- Results has chart (b): outside super and super, stacked, with the bridge
-  period shaded.
-- The Coast FIRE section shows super and outside super separately, each
-  with its own status.
-- The milestones list "Super accessible".
-- Year by year shows a "Bridge" band, and a shortfall in it says super is
-  locked until the access age.
-- With the worked examples below, the figures match to the cent.
-- `npm run check` and `npm run test:e2e` pass, and CI is green.
+- **Dated expenses** are added in every phase.
 
-#### Design decisions for M6
+**Super per person** (IN-6, SUPER-1, IN-5): each person's super runs
+exactly as M5 and M6 built it, with that person's age, retirement age,
+salary and access age. The household totals in each row are the sums.
 
-**Preservation and access** (SUPER-1, IN-5):
-- **Two new rules** in `src/rules/data/fy2025-26.json`:
-  - **preservation age 60.** It's 60 for everyone born after 30 June 1964,
-    and anyone born earlier is already over 60;
-  - **unconditional release at 65.**
+**Drawing order:** the portfolio first, then super, then cash, as now.
+Only super that is accessible can be drawn. When both partners' super is
+accessible, each pays in proportion to its available balance that year.
+**Owner decision 2.** With one person this is exactly today's rule.
 
-  Each has an ATO source link. Like M5's values, the owner checks them
-  before the implementation PR merges, because the ATO site blocks
-  automated clients.
-- **Input:** "Super accessible at" per person (whole years), with a
-  default of 65, a minimum of the preservation age (60) and a maximum of
-  the unconditional release age (65).
-- **When super can be drawn** (the condition of release):
+**Portfolio ownership** (IN-14, part):
+- **Owner:** a portfolio is owned by Person 1, by Person 2, or jointly
+  with a percentage split. The split must add to 100%.
+- **Default:** sole ownership by Person 1 for one person, joint 50/50 for
+  a couple.
+- **Its only effect in M7 is when contributions stop:**
+  - **Unset stop age:** contributions continue while any owner is still
+    working. A joint portfolio stops when you've both retired.
+  - **Set stop age:** it's measured on the first owner's age (Person 1
+    for a joint portfolio), and the label names that person ("Alex's
+    age").
+  - **Engine form:** `{ kind: "whileWorking", personIds }` or `{ kind:
+    "throughYear", year }`.
 
-  ```
-  drawable at age a  ⇔  a ≥ 65
-                      or (a ≥ access age  and  a ≥ 60  and  a > retirement age)
-  ```
+  With one person, both are exactly today's rule. Tax by ownership comes
+  in M8/M9.
 
-  So the condition is met on retiring at or after the preservation age,
-  or at 65 regardless. If the access age is set to 60 but you work until
-  62, super opens in the first retired year (63), not at 60.
-- **The effective access age** is the first age super can be drawn while
-  retired:
-  - the access age, if you retire before it;
-  - otherwise the year after retirement, capped at 65.
-
-  It drives the bridge, the milestones and the wording.
-- **`DEFAULT_SUPER_ACCESS_AGE` goes away.** Everything reads the resolved,
-  per-person age and the rule above.
-
-**Tax-free withdrawals from 60** (SUPER-8): the access age can't go below
-60, so every withdrawal M6 allows is tax-free. There's nothing to
-calculate. The breakdowns say "Withdrawals are tax-free from 60" so the
-reason is visible, and M8 relies on it.
-
-**The bridge check** (FIRE-4), `assessBridge(rows, inputs)` in
-`src/engine/bridge.ts`:
+**The bridge for a couple** (FIRE-4):
 
 ```
- working ──────► retirement ─── bridge ───► super accessible ─── after access ───► end
-                    row R      (outside super           row A        (super + what's
-                                funds it alone)                       left outside)
+ both working ──► first retires ── bridge ──► first super opens ── after access ──► end
+                   (row F)                     (row A: min over the
+                                                partners' effective
+                                                access years)
 ```
 
-- **The bridge** is the retired years before the effective access age.
-  - **need** = the spending in those years, discounted to the retirement
-    row at the portfolio's return (the portfolio pays first);
-  - **projected** = portfolio + cash at the end of the retirement year;
-  - **status** is **MET** if no bridge year has a shortfall, otherwise
-    **SHORT**, listing the short years.
-- **After access** is from the effective access age to the end of the
-  plan.
-  - **need** = that spending, discounted to the row before access at super's
-    after-tax return (return × (1 − earnings tax));
-  - **projected** = super + portfolio + cash at the end of the year before
-    access;
-  - **status** is MET or SHORT, the same way.
-- **The status comes from the projection's shortfalls, so it's exact.**
-  The need figures are a guide, so the bar can be compared with the
-  projected amount, and each breakdown says how it was discounted.
-- **No bridge** (retiring at or after the access age): the card says
-  "No bridge needed: super is accessible when you retire" and shows only
-  the after-access meter.
-- **Super never accessible within the plan** (the plan ends before
-  access): only the bridge meter shows.
+- **The bridge** runs from the first retired row to the year before
+  **either** partner's super first opens (effective access, per person,
+  as in M6). **Owner decision 3.**
+- **Bridge need:** spending less any portfolio contributions still paid
+  in those years, discounted at the portfolio's return to row F − 1.
+  Contributions continue while a partner works, so without netting them
+  the need would overstate the gap. For one person with the default stop
+  age, no contributions are paid in the bridge, so M6's figures are
+  unchanged.
+- **After access:**
+  - **need:** discounted at the partners' after-tax super returns,
+    weighted by their super balances at the row before access;
+  - **projected:** both partners' super, plus portfolio and cash.
+- **The status stays exact,** from shortfalls.
+- **"Super locked" wording for a couple** names each person whose super
+  has a balance but can't be drawn yet, e.g. "Alex's super locked until
+  65 (2036)".
 
-**Coast FIRE for super and outside super** (COAST-3, COAST-6 (c)).
-These are two separate, stricter tests alongside M4/M5's combined Coast
-FIRE, which stays the overall answer:
-- **Outside super funds the bridge:**
-  - the portfolio needed today so that, with no more contributions,
-    portfolio + cash reach the bridge need at retirement;
-  - it reuses the Coast FIRE solver with the bridge need in place of the
-    FI number, and no super;
-  - "reached" is the first year the portfolio is at least that amount.
-- **Super funds the years after access, on its own:**
-  - the super needed today so that, with employer contributions only, it
-    reaches the after-access need by the row before access;
-  - super grows linearly with its balance, so this is `(need −
-    employer-only growth) ÷ (1 + after-tax return)^years`;
-  - "reached" is the first year super is at least that amount.
-- **Each status reads "Coasting since {year}", "Coasting from {year}" or
-  "Not before retirement",** with "Needs $X today · has $Y" as in mockup
-  05.
-- **Why stricter:** super alone may not cover the after-access years, even
-  when the whole plan works, because outside money is left over after the
-  bridge. Worked example B1 shows this. The card says "on its own", and
-  the combined Coast FIRE tile still answers whether you can stop
-  contributing overall.
+**FI number and Coast FIRE:**
+- **The FI number** stays one household figure. "At retirement" means the
+  household retirement row: "$3,686,887 in 2046, when you've both
+  retired".
+- **Coast FIRE** coasts to the household retirement row.
+  - **What stops:** both partners' voluntary contributions; both
+    employers keep paying while each works.
+  - **Paid along the coast path:** interim amounts before that row, like
+    dated expenses.
+  - **"Reached"** stays exact, decided by re-running the projection.
+- **The super-and-outside split card** keeps one combined super figure.
 
-**Chart (b)** (FIRE-7): "Bridge period: outside super, then super". A
-new `StackedAreaChart` component (Part 2's component map), built like
-`TimeSeriesChart`:
-- **What it shows:** outside super (portfolio + cash) and super, stacked
-  by year, from today to the end of the plan, with the bridge years
-  shaded and labelled "Bridge".
-- **Behaviour:** it follows the page toggle, has a hover tooltip, and a
-  click jumps to the year's row.
-- **Accessibility:** a visually hidden data table.
-- **Colour:** fills come from new roles, `--colour-chart-outside` and
-  `--colour-chart-super`, at 3:1 against the page. The shaded band reuses
-  `--colour-chart-band`.
+**Earliest retirement** (FIRE-3): one search per person. Each person's
+retirement age is moved while the partner's stays at their target. Each
+answer is the first age at which the money lasts to the end. If
+contributions stop when owners retire, the stop follows the age being
+tried, as now.
 
-**Results layout,** following the one-page order:
-- **Section order:** tiles, Milestones, chart (a), "Can you bridge to
-  super?" with chart (b), the Coast FIRE chart with the new "Super and
-  outside super" meters below it, then Year by year. Each new section adds
-  an "On this page" link.
-- **`StatusMeter`** (Part 2's component map) is new:
-  - a labelled bar of projected against a marked need, and a status word;
-  - generic over the status words (MET, SHORT, COASTING, NOT YET);
-  - the status is in text, never colour alone.
+**Names:** each person has an optional `name` ("Alex"). Labels use the
+name, or fall back to "Person 1" / "Person 2". `PerPersonFields` already
+adds the name to field labels when there are two people.
+
+**Adding and removing a partner:**
+- **"A couple"** adds Person 2 with nothing set. Their ages become
+  required inputs ("Person 2: current age").
+- **"Just me"** removes Person 2 and their data. A joint portfolio goes
+  back to Person 1. The hint under the toggle says this, since there's no
+  undo until M16.
+
+**Wire format:** every new field is optional, so the document stays at
+version 1 and plans saved before M7 load unchanged:
+- `people[].name`;
+- `expenses.interimAnnualDollars`;
+- `portfolios[].ownership`: `{ kind: "sole", personId }` or `{ kind:
+  "joint", shares: [{ personId, percent }] }`.
 
 **Year by year:**
-- **Bands:** a "Bridge · retired, super locked until {age}" band row
-  starts the bridge years, and "Super accessible" starts the rest.
-- **Shortfalls:** a shortfall while super is locked says "super locked
-  until {effective access age}", not a fixed 65.
+- **Ages:** one "Ages" column reading "52 · 50" (column header "Alex ·
+  Sam").
+- **Money columns** stay household totals.
+- **Bands:**
+  - "One retired · Sam working" starts the oneRetired years;
+  - the M6 bands follow: "Bridge · super locked", then "Super accessible".
 
-**Milestones:** "Super accessible" at the effective access age's year
-(OUT-4).
+**Results wording:** wherever a single "age N" appears, a couple shows
+"Alex N · Sam M":
+- in the tiles;
+- in the milestones;
+- in "Money runs out";
+- in the breakdown lines.
 
-**Wire:** `people[].superAccessAgeYears`, optional. Plans saved before M6
-load unchanged, defaulting to 65.
+The engine's explanation lines take the people's display names from the
+projection inputs, so this is done once.
+
+#### Owner decisions to confirm in review
+
+1. **The interim amount defaults to $0,** meaning the working partner's
+   pay covers spending while one of you is retired.
+   - **Why:** it matches how working years are treated until M8 brings
+     take-home pay.
+   - **The alternative:** default it to the full retirement spending.
+     That's more cautious, but double-counts the working partner's pay.
+   - **In M8:** this becomes a spending level that take-home pay helps
+     fund.
+2. **Super is drawn in proportion to each accessible balance.**
+   - **The alternative:** the older partner's first. It's simpler, but
+     arbitrary.
+   - **In M10:** minimum drawdowns will refine this.
+3. **The couple's bridge ends when the first partner's super opens.**
+   - **Why:** "bridge" keeps meaning "outside super only". Years when one
+     partner's super is still locked show up as exact after-access
+     shortfalls, with that partner named.
+   - **The alternative:** end the bridge when the last partner's super
+     opens.
+4. **Two implementation PRs,** a refactor and then the behaviour change,
+   rather than the single follow-on PR asked for. Principle 5 and CLAUDE.md
+   keep refactors separate.
 
 #### Worked examples
 
-These were checked with an independent script, not the app's code. Each
-becomes a fixture in `tests/worked-examples/m6-bridge.json`. The start
-year is 2026, with 0% inflation unless stated.
+These were checked with an independent script, not the app's code. They
+become fixtures in `tests/worked-examples/m7-couples.json`. The start
+year is 2026. D and D2 use 0% for every rate, so they can be checked by
+hand.
 
-**B1: bridge met, access at 60.**
-- **Inputs:** age 55, retire at 56, plan until 66. Portfolio $100,000 at
-  0%. Super $100,000 at 0%. $20,000 spending. Super accessible at 60.
-- **Effective access age:** 60. The bridge is 2028–2030 (ages 57–59).
-  - **need** $60,000;
-  - **projected** at retirement $100,000;
+**Regression:** M6's example A run as a one-person household gives
+exactly M6's figures, for example a bridge need of $978,216.63 against
+$2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
+
+**D: a couple, bridge met.**
+- **Inputs:**
+  - **Alex:** 55, retires at 56, super $150,000, access at the default 65.
+  - **Sam:** 53, retires at 58, super $100,000, access at 60.
+  - **Household:** plan until 66, so the plan runs until Sam is 66, in
+    2039 (Alex is 68).
+  - **Money:** portfolio $200,000, joint, no contributions. No cash.
+  - **Spending:** retirement $40,000; interim $20,000.
+- **Phases:** working 2026–2027, oneRetired 2028–2031 (Alex retired,
+  Sam working), retired 2032–2039.
+- **Effective access:** Alex 65 (2036), Sam 60 (2033). The first super
+  opens in 2033.
+- **The bridge** is 2028–2032:
+  - **need** $120,000 (4 × $20,000 + $40,000);
+  - **projected** $200,000;
   - **MET**.
-- **After access** (2031–2037):
-  - **need** $140,000;
-  - **projected** $140,000 ($40,000 left outside + $100,000 super);
+- **After access** is 2033–2039:
+  - **need** $280,000;
+  - **projected** $330,000 ($80,000 portfolio + $150,000 + $100,000
+    super);
   - **MET**.
-- **Rows:** the portfolio pays 2028–2032 ($80,000, $60,000, $40,000,
-  $20,000, $0). Super pays 2033–2037 ($80,000 … $0).
-- **Coast split:**
-  - outside super needs $60,000 today, has $100,000, and has been coasting
-    since 2026;
-  - super on its own needs $140,000 today and has $100,000, so it is
-    **not reached**, though the plan is funded. This is the "stricter"
-    case.
+- **The portfolio** pays until 2034.
+- **Sam's super** pays 2035 ($40,000, leaving $60,000).
+- **2036, pro rata:** Alex's super is now open too, so $40,000 comes
+  from Alex $150,000 and Sam $60,000 in proportion. That leaves Alex
+  $121,428.57 and Sam $48,571.43.
+- **The end:** in 2039 Alex has $35,714.29 and Sam has $14,285.71. The
+  money lasts.
+- **Earliest retirement:**
+  - **Alex:** 55 (2026), with Sam retiring at 58;
+  - **Sam:** 56 (2029), with Alex retiring at 56.
+- **Interim amount at the default $0:** the bridge need is $40,000, and
+  after access is projected at $410,000.
 
-**B2: bridge short, default access at 65.** B1 with super accessible at
-the default 65.
-- **The bridge** is 2028–2035 (ages 57–64): **need** $160,000, **projected**
-  $100,000, **SHORT** in 2033, 2034 and 2035 ($20,000 each, super
-  $100,000 locked).
-- **After access** (2036–2037): need $40,000, projected $100,000, MET.
-  Super pays 2036 and 2037.
-- **Coast split:**
-  - outside super: needs $160,000, has $100,000, **not reached**;
-  - super: needs $40,000, has $100,000, coasting since 2026.
+**D2: bridge short, with both partners' super locked.** D with Sam's
+access at the default 65.
+- **Effective access:** Alex 2036, Sam 2038. The first super opens in
+  2036.
+- **The bridge** is 2028–2035:
+  - **need** $240,000;
+  - **projected** $200,000;
+  - **SHORT** in 2035, by $40,000. Both partners' super is locked, so
+    the wording names both: "Alex's super locked until 65, Sam's until
+    65".
+- **After access** is 2036–2039:
+  - **need** $160,000;
+  - **projected** $250,000;
+  - **MET**.
+- **Earliest retirement:**
+  - **Alex:** 58 (2029), with Sam retiring at 58;
+  - **Sam:** 60 (2033), with Alex retiring at 56.
 
-**B3: retiring after the access age.** B1 with retirement at 61 and the
-plan until 64.
-- **Effective access age:** 62, the first retired year, not 60. No bridge
-  is needed.
-- **After access** (2033–2035): need $60,000, projected $200,000, MET.
-  The portfolio pays first, so super isn't drawn.
+**E: realistic.**
+- **Inputs:**
+  - **Alex:** as in M6's example A. 34, retires at 50, salary $145,000
+    growing at inflation + 1%, super $185,000, salary sacrifice $10,000
+    a year 2027–2042, access 65.
+  - **Sam:** 32, retires at 52, salary $110,000 with no growth, super
+    $120,000, access 60.
+  - **Money:** portfolio $100,000 joint, contributions $20,000 a year
+    with the default stop (2046, when you've both retired). Cash $20,000.
+  - **Spending:** retirement $90,000; interim $50,000.
+  - **Rates:** inflation 2.5%, return 7%, interest 4%, super return 7%,
+    plan until 95.
+- **Rows:** run to 2089, when Sam is 95 and Alex 97. That's 64 rows.
+- **Phases:** oneRetired 2043–2046, retired from 2047.
+- **The FI number** at the household retirement (2046) is $3,686,886.99
+  nominal. FI isn't reached.
+- **The bridge** is 2043–2053, until Sam's super opens in 2054:
+  - **need** $864,875.22, which is net of $67,744.23 of contributions
+    paid 2043–2046;
+  - **projected** $890,437.07;
+  - **MET**.
+- **After access** is 2054–2089:
+  - **need** $3,626,576.69;
+  - **projected** $3,439,371.73;
+  - **SHORT** 2086–2089.
+- **Money runs out** in 2086 (Alex 94, Sam 92).
+- **Earliest retirement:** Alex 52 (2044), Sam 54 (2048).
 
-**A: headline.** M5's example A, with the default access age of 65.
-- **The bridge** is 2043–2056 (ages 51–64): **need** $978,216.63 at 2042,
-  **projected** $2,999,659.13, **MET**.
-- **After access** (2057–2087): **need** $2,559,159.99, **projected**
-  $7,821,131.69, **MET**.
-- **With access at 60:** the bridge is 2043–2051, need $694,023.03.
-- **Coast split:**
-  - outside super: needs $338,666.95 today, has $740,000, coasting since
-    2026;
-  - super: needs $256,832.52 today, has $185,000, coasting from **2039,
-    at age 47**.
+#### Step 1 · Rows carry each person (PR A)
 
-**C: outside coasts first.** M5's example C, with access at 65.
-- **The bridge:** need $978,216.63, projected $1,759,750.36, MET.
-- **Coast split:**
-  - outside super: needs $338,666.95 today, has $320,000, coasting from
-    **2027, at age 35**;
-  - super: needs $302,392.90 today, has $100,000, **not before
-    retirement**. The combined Coast FIRE is still reached in 2037, from
-    M5.
+- [ ] Done
 
-#### Pinned versions
+**Kind:** internal refactor. No behaviour change.
 
-No new dependencies. The stacked area chart uses Recharts, already
-pinned.
+1. **Per-person rows.** `ProjectionRow` gains `people: PersonYear[]`,
+   each holding:
+   - `personId`, `age` and `phase`;
+   - `salary`;
+   - the super flows (`employerContribution`, `salarySacrifice`,
+     `nonConcessional`, `contributionsTax`, `superOpening`,
+     `superEarnings`, `superEarningsTax`, `fromSuper`, `superClosing`);
+   - `superAccessible`.
 
-#### Step 1 · Rules: preservation age and unconditional release
+   The household fields stay, and become the sums.
+2. **Inputs.** `ProjectionInputs` takes `people: ProjectionPerson[]` in
+   place of the top-level `currentAge`, `retirementAge`, `salary` and
+   `superAccount`. Each person has `id`, `label`, `currentAge`,
+   `retirementAge`, `salary?` and `superAccount?`. The loop runs super
+   per person.
+3. **Drawing.** Accessible super is drawn pro rata, as in decision 2.
+4. **The row's age and phase.**
+   - Remove `row.age`. Readers use `row.people[i].age`.
+   - The row's `phase` becomes the household phase type (`working`,
+     `oneRetired`, `retired`). With one person, `oneRetired` can't occur.
+5. **Contributions stop.** The portfolio's contributions stop becomes
+   `{ kind: "whileWorking", personIds } | { kind: "throughYear", year }`.
+6. **Helpers** in `projection.ts`:
+   - `firstRetirementRowIndex(inputs)`;
+   - `householdRetirementRowIndex(inputs)`;
+   - `effectiveSuperAccessAge(person, inputs, startYear)`, per person.
+7. **Every engine module reads through these,** so nothing assumes one
+   person: solvency, earliest retirement, Coast FIRE, the bridge, the
+   coast split and `summarisePlan`. `effectiveSuperAccessAge` callers pass
+   the person.
+8. **Tests:**
+   - Existing tests change only where types force it (building inputs
+     through a test helper `onePersonInputs(...)`).
+   - Every expected value stays the same.
+   - Add a test that the household fields equal the sum of `people`.
 
-- [x] Done
+**Check:** `npm run check` and `npm run test:e2e` pass, and no worked
+example changes.
 
-**As built:**
-- Both values are fields of `superannuation` in the file and `SuperannuationRules`
-  (so `RuleSnapshot` and `YearRules` carry them), as whole-year ages (0 to 120 in
-  the schema) named `preservationAgeYears` and `unconditionalReleaseAgeYears`.
-  They are not indexed after the latest file.
-- `fy2025-26.json` is "unverified", with a note saying the original values were
-  checked on 2026-10-03 and only these two are new. The source links are the ATO
-  pages given for this step; the ATO site blocks automated clients, so the owner
-  verifies them before merge.
+#### Step 2 · Resolve and summarise every person (PR A)
 
-1. Add `preservationAgeYears: 60` and `unconditionalReleaseAgeYears: 65`
-   to the FY2025–26 file and its schema, each with an ATO source link. Set
-   the file's `verification` back to "unverified", with a note naming the
-   two new values, until the owner checks them.
-2. `RuleSnapshot` and `YearRules` gain both values.
-3. Tests: parsing, and the values reaching `rulesForYear`.
+- [ ] Done
 
-**Check:** `npm run check` passes.
+**Kind:** internal refactor.
 
-#### Step 2 · Engine: the access age and the condition of release
+1. **Resolve every person.** `resolvePlanInputs` resolves every person
+   into `ResolvedPerson[]`, each with:
+   - ages, salary, salary growth, super account and access age;
+   - each `Sourced` value as now.
 
-- [x] Done
+   The missing-input checks run per person. With one person, the labels
+   stay word for word ("Current age").
+2. **Contributions stop.** It resolves to the engine form in decision
+   "Portfolio ownership". With no ownership stored, the portfolio is
+   owned by Person 1, which gives today's rule.
+3. **The summary.** `ProjectionSummary` gains `people: PersonSummary[]`,
+   each with `id`, `label`, `retirementAge`, `retirementYear`,
+   `superAccessAge?` and `earliestRetirement`.
+   - The single `retirementAge`, `retirementYear`, `superAccessAge` and
+     `earliestRetirement` fields go.
+   - Add `householdRetirementYear`.
+4. **The UI** reads `people[0]` where it read the single fields, so
+   nothing visible changes.
 
-**As built:**
-- The default of 65 is not a constant any more: `resolvePlanInputs` gives
-  `superAccessAge: Sourced<number | undefined>` (unset is `undefined` with source
-  "rule", like the employer rate), `ProjectionSuper.accessAge` carries it, and the
-  projection clamps it between the preservation age and the release age using the
-  year's rules. `Person.superAccessAge` is added to the plan type only; the
-  reducer, wire and UI are steps 5 and 6.
-- `effectiveSuperAccessAge(inputs, startYear)` takes the start year too, because
-  it reads the rules. It returns `undefined` when the plan has no super.
-  `ProjectionSummary` (complete) gains `superAccessAge?` with that value, so
-  Year by year can word the locked shortfall. Rows with no super account are
-  `superAccessible: false`.
-- `assessSolvency(rows, superAccessAge?)` takes the effective age for its
-  "Super (not accessible until N)" note. `isShortfallWithSuperLocked` now uses
-  the row's `superAccessible`. The earliest-retirement search passes the age for
-  each retirement age it tries.
-- `m6-bridge.json` holds B1 to B3 (rows, shortfalls, effective access age). The
-  worked-example test gained the input `superAccessAge` and the expected
-  `superAccessAge` and `superRows[].superAccessible`.
+**Check:** `npm run check` and `npm run test:e2e` pass, with the same
+screenshots and figures.
 
-1. `Person.superAccessAge?`, resolved to the default of 65 and clamped
-   between the preservation age and 65, taken from the rules.
-2. `projectPortfolio` uses the "drawable" rule above in place of
-   `DEFAULT_SUPER_ACCESS_AGE`, which is removed.
-   `effectiveSuperAccessAge(inputs)` is exported. Rows gain
-   `superAccessible: boolean`.
-3. `isShortfallWithSuperLocked` and the solvency note use the effective
-   access age.
-4. Tests:
-   - each branch of the rule;
-   - examples B1, B2 and B3 (rows, shortfalls);
-   - every M5 fixture passes unchanged, because the default of 65 matches
-     M5's rule.
+#### Step 3 · Challenger review of PR A, then open it
 
-**Check:** `npm run check` passes.
+- [ ] Done
 
-#### Step 3 · Engine: the bridge check
+1. **Review:** the reviewer subagent checks PR A's diff (see "How each
+   milestone is delivered"). It looks especially for any place still
+   assuming one person, and any behaviour change.
+2. **Fix and open:** fix the findings, then open PR A, stacked on the
+   plan PR.
 
-- [x] Done
+#### Step 4 · Couples in the plan, reducer and wire format (PR B)
 
-**As built:**
-- `assessBridge(rows, inputs)` returns `{ effectiveAccessAge?, bridge?, afterAccess? }`.
-  Each part has first/last year and age, `need` and `projected` (both `Explained`),
-  `status` ("met" | "short") and `shortYears`. Everything is empty without super.
-  The start year is read from `rows[0]`.
-- "No bridge" is `bridge` being absent, and "access after the plan ends" is
-  `afterAccess` being absent. After access never starts before row 1, with row 0
-  as its base when access is already open.
-- The need's explanation names the discount rate and ends with the line
-  "Withdrawals are tax-free from 60" (the value is the preservation age, source
-  "rule", unit years).
-- All plan figures match to the cent (B1 to B3, A at 65 and 60, and C). They are
-  in `m6-bridge.json`, which gained the scenarios A, A at 60 and C.
+- [ ] Done
 
-1. `src/engine/bridge.ts`, with `assessBridge(rows, inputs)` returning the
-   bridge and after-access parts as described: years, need, projected,
-   status, short years, and an explanation that names the discount rate
-   and says "Withdrawals are tax-free from 60".
-2. Add `bridge` to `ProjectionSummary`.
-3. Tests:
-   - B1, B2, B3 and A (with access at 65 and at 60), to the cent;
-   - no bridge;
-   - access after the end of the plan;
-   - a property test: the status is MET exactly when no year in that part
-     has a shortfall.
+**Kind:** behavior change, from here on.
 
-**Check:** `npm run check` passes.
-
-#### Step 4 · Engine: Coast FIRE for super and outside super
-
-- [x] Done
-
-**As built:**
-- New `coastSplit.ts` (`calculateCoastSplit(rows, inputs, bridge)`), added to the
-  summary as `coast.split` with `outside?` and `super?`. Each part has
-  `needToday` (`Explained`), `hasToday` and `reached?`.
-- `portfolioNeededFromRow` in `coastFire.ts` is exported and takes the target at
-  retirement as a parameter (the FI number by default).
-- **Outside super counts cash on both sides.** The plan's figures ($338,666.95
-  needed and $740,000 had in example A) are portfolio needed + cash against
-  portfolio + cash, so `needToday` and `hasToday` include cash. Reached is the
-  first row where the portfolio is at least the portfolio needed.
-- **Super's linear form** reads G(k) and E(k) from `projectPortfolio` runs (no
-  spending, nothing outside super, voluntary contributions stopped after row k),
-  with $1 in super and with none, so no super rule is copied. Reached is checked
-  from today to the retirement row (or the row before access if that is earlier).
-- Absent parts: `outside` when there is no bridge, `super` when there is no super
-  or no years after access.
-- All plan figures match (B1, B2, A, C; B3 has no outside part).
-
-1. `coastSplit` in `coastFire.ts` (or a new `coastSplit.ts`), returning
-   `outside` and `super`. Each has today's need, today's balance, the
-   reached year or none, and an explanation. The outside test reuses the
-   solver with the bridge need as its target. The super test uses the
-   linear form, with employer-only growth from `projectPortfolio`.
-2. Add `coastSplit` to `ProjectionSummary`'s coast.
-3. Tests:
-   - B1, B2, A and C, to the cent;
-   - "no bridge" means outside super has nothing to coast to;
-   - property tests: a larger balance never makes either later, and super
-     with a 0% return and no employer contributions needs exactly the
-     after-access need.
+1. **Plan types:**
+   - `Person.name?`;
+   - `Plan.expenses.interimAnnual?`;
+   - `Portfolio.ownership?`.
+2. **Actions:**
+   - `addPartner { id }`: adds "Person 2". Ignored if there are already
+     two people.
+   - `removePartner`: removes Person 2, and a joint or Person 2 ownership
+     goes back to Person 1.
+   - `setPersonName`;
+   - `setInterimSpending`;
+   - `setPortfolioOwnership`.
+3. **Wire:** the fields in "Wire format" above, with mapping tests and a
+   fixture, `tests/fixtures/plan-documents/v1-couple.json`. A saved
+   single-person plan still loads unchanged.
+4. **`displayName(person, index)`:** returns the name, or "Person N".
 
 **Check:** `npm run check` passes.
 
-#### Step 5 · State and wire: the access age
+#### Step 5 · The engine for couples (PR B)
 
-- [x] Done
+- [ ] Done
 
-**As built:** `superAccessAge?` on `Person`, set by `setSuperAccessAge`
-(`undefined` clears it) and stored as `people[].superAccessAgeYears` (whole
-years, 0 to 120). The fixture `v1-access-age.json` is B1's plan; older fixtures
-still load. The round-trip generator sets it on the person.
+1. **Resolving a couple:**
+   - Person 2's ages become required ("Sam: current age").
+   - The plan-until checks apply to each person: the age must be after
+     each current age, and each retirement age must be before it.
+2. **The projection:**
+   - rows run until the younger partner reaches the plan-until age;
+   - interim spending in `oneRetired` years;
+   - the default contributions stop is from ownership.
+3. **The bridge for couples,** as designed:
+   - starts at the first retirement row;
+   - ends at the first partner's access;
+   - the need is net of contributions;
+   - the after-access discount rate is weighted by balance;
+   - the locked-super wording names each person.
+4. **Earliest retirement:** one search per person.
+5. **Coast FIRE** targets the household retirement row.
+6. **Explanation lines** name both people's ages.
+7. **Tests:**
+   - worked examples D, D2 and E as fixtures, with tests to the cent;
+   - all M2–M6 fixtures unchanged.
+8. **Property tests:**
+   - a couple whose second person has no money, no salary and the same
+     ages and retirement as the first gives the first person's
+     single-person projection;
+   - swapping the order of the people doesn't change any household total;
+   - money is conserved each year: opening + growth + contributions −
+     drawn = closing.
 
-1. Reducer: `setSuperAccessAge { personId, age? }`.
-2. Wire: `people[].superAccessAgeYears`, with the fixture
-   `v1-access-age.json`. Older fixtures still load.
-3. Tests: the action, the round trip (with the property generator
-   extended) and the schema limits (whole years, 0 to 120, as for ages).
+   Run the new property files several times.
 
 **Check:** `npm run check` passes.
 
-#### Step 6 · Household: "Super accessible at"
+#### Step 6 · Household screen (PR B)
 
-- [x] Done
+- [ ] Done
 
-**As built:** the field is in `PersonAgesSection` after "Target retirement
-age". Its default (65) and limits (60 to 65) are read with `rulesForYear` for the
-start year, as `SuperSection` does for its legislated defaults. The contrast
-sweep's `fillEveryInput` gives "Super accessible at" 62, since its label has no
-"age" in it and the generic 5 would be out of range.
+1. **`HouseholdScreen`:**
+   - a "Household" card with a `SegmentedToggle`, "Just me / A couple",
+     and the hint about removing Person 2;
+   - one card per person, side by side on wide screens: "Name
+     (optional)", "Current age", "Target retirement age" and "Super
+     accessible at";
+   - "Planning horizon" with "Plan until age". For a couple it adds the
+     note "The plan runs until {younger} reaches this age: {N} years, to
+     {year}."
+2. **Component tests** for each card, and for adding and removing a
+   partner.
 
-1. In the "About you" card, add `AgeField` "Super accessible at", with the
-   default "65" dashed. Its limits come from the rules (60 to 65).
-2. **Hint:** "Usually 65. You can choose 60 to 64 if you'll have retired
-   by then; super opens when you retire, or at 65 regardless."
-3. Tests: entering, clearing, limits, and the contrast sweep.
+**Check:** `npm run check` passes. Check by eye against mockup 01.
 
-**Check:** `npm run check` and `npm run test:e2e` pass.
+#### Step 7 · Income, expenses and assets (PR B)
 
-#### Step 7 · Results: the bridge check, milestones and Year by year
+- [ ] Done
 
-- [x] Done
+1. **Income & expenses:**
+   - salary per person already uses `PerPersonFields`; check that the
+     labels use names;
+   - add "Drawn from savings while one of you is retired" (couple only),
+     with a hint explaining the $0 default.
+2. **Assets:**
+   - super per person already uses `PerPersonFields`; check the names;
+   - the portfolio gains `OwnershipField` (Part 2's component map) for
+     couples: "Alex", "Sam" or "Joint", with Alex's percentage when
+     joint;
+   - "Contributions stop at age" names the person it's measured on, and
+     its default text says "when you've both retired" or "when Alex
+     retires".
+3. **Tests:** component tests; `OwnershipField` rejects a split that
+   isn't 0–100%.
 
-**As built:**
-- `StatusMeter` takes a label, a kind ("met", "short", "coasting", "notYet") with
-  its status word, and the projected and need amounts as `{ amount, text }` (the
-  caller formats `text`; `amount` sizes the bar and places the need marker). It
-  also takes an optional `needNote` ("in 2042"), `detail` and `explanation`. It
-  uses existing role variables only (gold, error pink, green-white fills at 3:1
-  on the page, and the white need marker), so `tokens.test.ts` has no new pairs.
-- **"No super" is derived, not stored.** The engine always carries a super
-  account (an empty one when nothing is entered), so `projectionHasSuper(rows)`
-  in `bridge.ts` (super holds money in some year) decides whether the card, the
-  milestone and the bridge bands appear. A plan with no super keeps the single
-  "Retired" band.
-- `BridgeSection` (`src/ui/sections/`) has the id `bridge`. Headings use the
-  part's own years, like the breakdowns: "Bridge: outside super, 2028 – 2035" and
-  "After super is accessible, 2036 – 2037" (a single year is written alone). Each figure is
-  stated in the year before its part starts ("Need $X in 2042"), formatted with
-  that row's inflation index, and the breakdown's dollar lines follow the toggle
-  too. "Withdrawals are tax-free from age 60" is the last line of the
-  after-access breakdown only (the engine adds it to that part's projected
-  working; `ExplainPanel` keeps the result bold when a "rule" line follows it). Short years read "short in 2033 – 2035" (`formatYearRuns` in `format.ts`,
-  now shared with the Year by year banner).
-- **Year by year bands, top to bottom:** "Working · contributing"; then, for a
-  plan with super, "Bridge · retired, super locked until {age}" for the retired
-  years before access and "Super accessible" from then on. These replace the
-  single "Retired" band for plans with super (two band rows in a row for the
-  first retired year would be clunky); with no bridge, "Super accessible" opens
-  the retired years.
-- Milestones add "Super accessible" (year and age) at the effective access age,
-  or an undated "not reached" item when the plan ends first.
-- The "Not yet modelled" banner still says super is only drawn from 65; its
-  wording is left for the wrap-up step.
-- E2E: `bridgeResults.spec.ts` (B1, B2 and A) and a contrast test with B2 and both
-  breakdowns open. B1, B2, A and the bands are also unit-tested in
-  `ResultsBridge.test.tsx`.
+**Check:** `npm run check` passes.
 
-1. `StatusMeter` in `src/ui/components/`, with tests (each status, the
-   need marker, text that doesn't rely on colour).
-2. A "Can you bridge to super?" section on Results, with the two meters
-   and their breakdowns, and an "On this page" link.
-3. Milestones: "Super accessible" at the effective access age.
-4. Year by year: the Bridge and "Super accessible" bands, and the locked
-   shortfall wording, all using the effective access age.
-5. Tests: B1, B2 and A on Results, and the bands and wording in Year by
-   year. Add the section to the contrast sweep.
+#### Step 8 · Results for a couple (PR B)
 
-**Check:** `npm run check` and `npm run test:e2e` pass.
+- [ ] Done
 
-#### Step 8 · Chart (b) and the Coast FIRE split meters
+1. **A shared formatter** `formatAges(ages, people)`: "Age 52" for one
+   person, "Alex 52 · Sam 50" for a couple. Use it everywhere an age is
+   shown.
+2. **Tiles:**
+   - the FI number "in 2046, when you've both retired";
+   - "Earliest retirement: Alex 52 (2044) · Sam 54 (2048)";
+   - Coast FIRE "Not before you've both retired (2046)".
+3. **Milestones:** each person's retirement and super access, plus FI,
+   Coast and money lasting, with both ages.
+4. **Year by year:**
+   - the "Ages" column;
+   - the "One retired · {name} working" band;
+   - per-person locked-super wording.
+5. **Bridge section:** couple wording, and the after-access breakdown
+   lists each partner's super.
+6. **Tests:**
+   - `ResultsCouple.test.tsx` with D2 (SHORT 2035, names in the wording)
+     and E (the tile, earliest per person);
+   - one-person screens unchanged.
 
-- [x] Done
+**Check:** `npm run check` passes. Check by eye with D2 and E.
 
-**As built:**
-- `StackedAreaChart` is a sibling of `TimeSeriesChart`, reusing its point, series
-  and band types, tooltip and axis formatting (now exported). The builder is
-  `buildBridgeChartSeries(projection, dollarsMode)` in `src/ui/charts/bridgeChart.ts`:
-  outside super (portfolio + cash) under super, with one "Bridge" band over the
-  bridge years and none when there is no bridge. The chart sits at the foot of the
-  "Can you bridge to super?" card under an "h4", follows the dollars toggle, and a
-  click goes to `?year=`.
-- Colour roles `--colour-chart-outside` (gold) and `--colour-chart-super` (the
-  green-grey), both with 3:1 pairs in `tokens.test.ts`.
-- **The band is drawn over the areas** (`zIndex` 110 against the areas' 100), as
-  a translucent tint; behind them the opaque fills hid it. So its label stays
-  readable, the value axis has at least 15% headroom above the tallest stack, in
-  round steps (`axisTopWithHeadroom`), which keeps the label on the bare page.
-- **Fixed a latent CSS bug on the way:** Recharts 3 draws a band as a `<path>`
-  (`.recharts-reference-area-rect`), not a `<rect>`, so `.chart-band rect` never
-  matched and chart (a)'s shortfall band was Recharts' default grey. The rule now
-  targets the class, and the new E2E checks the band's colour and opacity.
-- `CoastSplitSection` (id `coast-split`, "Super and outside super"), after the
-  Coast FIRE chart, with an "On this page" link, shown only for a plan with super
-  and at least one part. Two `StatusMeter`s ("Outside super funds the bridge on
-  its own", "Super funds the years after access on its own"), each reading
-  "Needs $X today · has $Y" (`StatusMeter` gained `figureWords`), the status
-  "Coasting since {year}", "Coasting from {year}" (with "reached at age N") or
-  "Not before retirement", and the engine's `needToday` working. The figures are
-  always row-0 dollars, like the Coast FIRE tile, so they ignore the dollars toggle.
-- Tests: `buildBridgeChartSeries` (B1, B2, B3, cash, dollars modes),
-  `StackedAreaChart`, the split card on Results (B1, B2, A, C to the dollar, B3
-  with one meter, no super), and `bridgeChart.spec.ts` (fill colours, band,
-  tooltip, click-through, split card), plus a contrast-sweep test.
+#### Step 9 · E2E, contrast, README and wrap-up (PR B)
 
-1. `StackedAreaChart` in `src/ui/components/`, with the new colour roles
-   and their 3:1 pairs, and its builder `buildBridgeChartSeries` with unit
-   tests.
-2. The bridge chart goes inside the "Can you bridge to super?" section.
-3. A "Super and outside super" card under the Coast FIRE chart, with two
-   `StatusMeter`s and breakdowns.
-4. E2E: each fill's rendered colour, the shaded bridge band, the hover
-   tooltip, and click-through, as `fireChart.spec.ts` does. Add to the
-   contrast sweep.
+- [ ] Done
 
-**Check:** `npm run check` and `npm run test:e2e` pass. Check both by eye.
-
-#### Step 9 · E2E, README and wrap-up (end of the implementation PR)
-
-- [x] Done
-
-**As built:** `tests/e2e/bridge.spec.ts` is one flow with the clock fixed in 2026:
-B2 entered through the screens (SHORT 2033–2035, after access MET, the Bridge
-band and "super locked until 65"), then "Super accessible at" set to 60 (B1,
-both MET, band says 60), then a reload, after waiting for the autosave to store
-`superAccessAgeYears`, keeps the age and the result. Run 10 times with
-`--repeat-each 10`. The Results "Not yet modelled" banner no longer says super
-is drawn only from 65. README "What it does" now covers the access age, the
-bridge check and chart, and the Coast FIRE split.
-
-1. `tests/e2e/bridge.spec.ts`, with the clock fixed in 2026:
-   - **B2 entered through the screens:**
-     - the bridge reads SHORT, with 2033–2035;
-     - after access reads MET;
-     - Year by year shows the Bridge band and "super locked until 65";
-   - **set "Super accessible at" to 60:** it becomes B1, and both parts
-     read MET;
-   - **reload:** the age is kept.
+1. **`tests/e2e/couple.spec.ts`,** with the clock fixed in 2026:
+   - choose "A couple" and enter D2 through the screens;
+   - Results shows the bridge SHORT in 2035, with both names;
+   - set Sam's access to 60 (that's D): both parts MET;
+   - reload: Person 2 is kept;
+   - choose "Just me": Person 2 is gone, and Results is the one-person
+     plan.
 
    Run it 10 times.
-2. README "What it does"; PLAN.md status, Next steps, and "As built"
-   notes.
+2. **Contrast sweep:** add the couple Household screen and Results with
+   D2.
+3. **Finish up:** README "What it does"; PLAN.md status, Next steps and
+   "As built" notes.
 
-**Check:** `npm run check` and `npm run test:e2e` pass. **Open the
-implementation PR**, stacked on this plan PR.
+**Check:** `npm run check` and `npm run test:e2e` pass.
+
+#### Step 10 · Challenger review of PR B, then open it
+
+- [ ] Done
+
+1. **Review:** the reviewer subagent checks PR B's diff against this plan
+   and the worked examples.
+2. **Fix and open:** fix the findings, then open PR B, stacked on PR A.
 
 #### Follow-ups
 
+- **Per-person columns in Year by year** (each person's salary and
+  super), and the "Find my earliest feasible age instead" checkbox
+  (mockup 01).
+- **Coast FIRE for each partner's super separately** (COAST-3 "per
+  person"). It needs a per-person target, so it waits for an owner
+  decision.
+- **M8: revisit the interim amount** once take-home pay exists (owner
+  decision 1).
 - **Remember the today's/nominal choice** between visits (from M2).
 - **Advanced growth options per asset** (from M4's review; needs a backlog
   requirement).
@@ -2060,8 +2149,16 @@ implementation PR**, stacked on this plan PR.
 - [x] Implement M5 PR B, super (steps 5 to 10), then open it for
       verification.
 - [x] Owner verifies and merges M5 PR B.
-- [ ] Approve the M6 step-by-step plan (plan PR).
+- [x] Approve the M6 step-by-step plan (plan PR).
 - [x] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
-      plan PR, then the owner verifies and merges both.
-- [ ] Owner verifies and merges the M6 PRs (the owner verifies the two new
-      rule values: preservation age 60 and unconditional release at 65).
+      plan PR.
+- [x] Owner verifies and merges the M6 PRs.
+- [ ] Owner verifies the two M6 rule values (preservation age 60 and
+      unconditional release at 65) against the ATO.
+- [ ] Approve the M7 step-by-step plan (plan PR), including the four owner
+      decisions.
+- [ ] Implement M7 PR A, the household refactor (steps 1 to 3): challenger
+      review, then open it stacked on the plan PR.
+- [ ] Implement M7 PR B, couples (steps 4 to 10): challenger review, then
+      open it stacked on PR A.
+- [ ] Owner verifies and merges the M7 PRs.
