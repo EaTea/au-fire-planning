@@ -1,6 +1,7 @@
 // Coast FIRE (COAST-1, COAST-2): how much you need saved today so that, with
-// no further contributions, you would still reach your FI number by your
-// target retirement age; and the first year your actual savings get there.
+// no further contributions, you would still reach your FI number by the
+// household retirement row (your target retirement age when on your own);
+// and the first year your actual savings get there.
 //
 // What has to be solved. Coasting means you stop the contributions you
 // choose to make: the portfolio's, salary sacrifice and non-concessional.
