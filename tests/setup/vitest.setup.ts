@@ -22,3 +22,14 @@ class ResizeObserverStub {
   disconnect(): void {}
 }
 globalThis.ResizeObserver ??= ResizeObserverStub;
+
+// jsdom has <dialog> and its `open` property, but not showModal() or close().
+// These stand-ins only open and close it; focus trapping, Escape and the
+// backdrop are the browser's job and are covered by the E2E tests instead.
+HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+  this.open = true;
+};
+HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+  this.open = false;
+  this.dispatchEvent(new Event("close"));
+};
