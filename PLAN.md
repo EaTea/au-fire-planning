@@ -2017,7 +2017,22 @@ screenshots and figures.
 
 #### Step 3 · Challenger review of PR A, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer ran the old and new `summarisePlan` side by
+side on 9,000 random one-person plans. They were identical, except for:
+- **a missing-input message** that had disappeared (fixed, with a
+  regression test);
+- **a signed zero:** a "−$0" that can no longer occur.
+
+It also found that pro rata drawing could leave a 1e-12 false shortfall
+for a couple. That's fixed: the smallest balance pays the exact
+remainder, and a property test checks it. The plan refinements are in the
+M7 design: empty super never opens, the youngest-person plan-until rule,
+interim spending left out of the coast super run, and locked super
+flagged in the after-access breakdown. Other fixes: an empty account no
+longer ends the bridge, the tiles use the household retirement year, and
+there are two-person engine tests for D and D2.
 
 1. **Review:** the reviewer subagent checks PR A's diff (see "How each
    milestone is delivered"). It looks especially for any place still
