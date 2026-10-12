@@ -372,9 +372,10 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
  * ownership is that person and a joint portfolio is everyone in the split. With
  * nothing stored the default applies: Person 1 for one person, both for a
  * couple. An id that isn't in the plan (the stored plan can name a person
- * removed since) counts as Person 1. Called by `resolveProjectionInputs`.
+ * removed since) counts as Person 1. Called by `resolveProjectionInputs`, and
+ * by the portfolio card to word the contributions stop age.
  */
-function resolveOwnerIds(
+export function resolveOwnerIds(
   ownership: PortfolioOwnership | undefined,
   people: readonly Person[],
 ): readonly string[] {

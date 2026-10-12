@@ -206,3 +206,89 @@ describe("PortfolioSection", () => {
     });
   });
 });
+
+// Couples (M7 step 7): who owns the portfolio, and whose age the contributions stop at.
+describe("PortfolioSection for a couple", () => {
+  const couple: Plan = {
+    ...blankPlan,
+    household: {
+      people: [
+        { id: "person-1", label: "Person 1", name: "Alex", targetRetirementAge: 50 },
+        { id: "person-2", label: "Person 2", name: "Sam", targetRetirementAge: 55 },
+      ],
+    },
+  };
+
+  it("shows no ownership field for one person, and the stop age as it always was", () => {
+    renderSection(<PortfolioSection />);
+
+    expect(screen.queryByRole("button", { name: "Joint" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Contributions stop at age")).toBeInTheDocument();
+  });
+
+  it("shows the owner toggle at joint by default, and stores the choice", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<PortfolioSection />, couple);
+
+    expect(screen.getByRole("button", { name: "Joint" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Sam" }));
+    expect(readPlan().portfolios[0]?.ownership).toEqual({ kind: "sole", personId: "person-2" });
+
+    await user.click(screen.getByRole("button", { name: "Joint" }));
+    await user.type(screen.getByLabelText("Alex's share"), "70{Enter}");
+    expect(readPlan().portfolios[0]?.ownership).toEqual({
+      kind: "joint",
+      shares: [
+        { personId: "person-1", fraction: 0.7 },
+        { personId: "person-2", fraction: 0.3 },
+      ],
+    });
+  });
+
+  it("does not store a share outside 0 to 100%", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<PortfolioSection />, couple);
+
+    await user.type(screen.getByLabelText("Alex's share"), "150{Enter}");
+
+    expect(readPlan().portfolios[0]?.ownership).toBeUndefined();
+    expect(screen.getByText("Enter a value of at most 100%.")).toBeInTheDocument();
+  });
+
+  it("names Alex's age on the stop age and says it defaults to when you've both retired", () => {
+    renderSection(<PortfolioSection />, couple);
+
+    const field = screen.getByLabelText("Contributions stop at Alex's age");
+
+    expect(field).toHaveValue("when you've both retired");
+    expect(field.closest(".input")).toHaveClass("default");
+  });
+
+  it("measures the stop age on, and defaults to the retirement of, a sole owner", () => {
+    renderSection(<PortfolioSection />, {
+      ...couple,
+      portfolios: [
+        {
+          id: "portfolio-1",
+          name: "Share portfolio",
+          ownership: { kind: "sole", personId: "person-2" },
+        },
+      ],
+    });
+
+    expect(screen.getByLabelText("Contributions stop at Sam's age")).toHaveValue(
+      "when Sam retires",
+    );
+    expect(screen.queryByLabelText("Contributions stop at Alex's age")).not.toBeInTheDocument();
+  });
+
+  it("stores a typed stop age", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<PortfolioSection />, couple);
+
+    await user.type(screen.getByLabelText("Contributions stop at Alex's age"), "45{Enter}");
+
+    expect(readPlan().portfolios[0]?.contributionsStopAge).toBe(45);
+  });
+});

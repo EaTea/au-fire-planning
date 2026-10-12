@@ -2221,7 +2221,32 @@ there are two-person engine tests for D and D2.
 
 #### Step 7 · Income, expenses and assets (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `InterimSpendingSection` (own card, "Spending while one of you has
+  retired", after "Spending in retirement", couple only) holds "Drawn from
+  savings while one of you is retired" with the $0 default and a hint saying
+  the partner still working is assumed to cover spending until tax and
+  take-home pay arrive.
+- New shared `OwnershipField` (`src/ui/components/OwnershipField.tsx`): a
+  `SegmentedToggle` with each person's display name and "Joint"; Joint shows
+  a `PercentField` "{Person 1}'s share" (0 to 100%, an out-of-range value
+  shows the field's inline error and is never reported) and the other share
+  as calculated text ("Sam 40%"; the second share is `1 − first`, rounded so
+  the two add to exactly 1). Unset shows joint 50/50 as a default; clearing
+  the share goes back to unset. It renders nothing for one person.
+- `PortfolioSection` shows it for a couple. "Contributions stop at age" becomes
+  "Contributions stop at {first owner}'s age" for a couple (the first owner is
+  Person 1 for joint) and its default reads "when you've both retired" (joint)
+  or "when {name} retires" (sole), via a new `defaultText` on `AgeField` and
+  the now exported `resolveOwnerIds`. The default text only shows once that
+  owner's target retirement age is set (the field has no default before then,
+  as before). One-person wording is unchanged.
+- Salary and super already used `PerPersonFields`, which has used display
+  names since step 6; labels are "Alex: Gross salary per year" and so on for a
+  couple, and plain for one person (existing tests cover both).
+- Screenshots: couple Income & expenses and Assets, checked by eye.
 
 1. **Income & expenses:**
    - salary per person already uses `PerPersonFields`; check that the

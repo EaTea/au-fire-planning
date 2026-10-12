@@ -656,6 +656,10 @@ button:focus-visible {
   gap: var(--space-large);
 }
 
+.ownership-other-share {
+  margin: -6px 0 var(--space-medium);
+}
+
 .horizon-note {
   margin: 0;
   font-size: 13px;
