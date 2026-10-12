@@ -1938,9 +1938,40 @@ example changes.
 
 #### Step 2 · Resolve and summarise every person (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** internal refactor.
+
+**As built:**
+- `ResolvedProjectionInputs.people` is a non-empty list of `ResolvedPerson`
+  (id, label, both ages, salary and growth, super account, access age, each
+  `Sourced`). The household-wide values stay beside it, plus
+  `portfolioOwnerIds` (the first person until ownership is stored in step 4).
+- Missing-input checks run per person. With one person the labels are word
+  for word as before; with several each is prefixed ("Sam: Current age").
+  The plan-until age is checked against the youngest person, and each
+  retirement age against that person's own last age (plan-until age plus how
+  much older than the youngest they are). Order of messages for one person
+  is unchanged.
+- The stop-age mapping stays in `summariseProjection`, not in
+  `resolvePlanInputs`: turning a stop age into a calendar year needs the
+  start year, which resolution doesn't have, and adding it would change every
+  caller. Resolution supplies the owners (`portfolioOwnerIds`) and the stop
+  age; `summariseProjection` makes `whileWorking` / `throughYear` from them,
+  measuring an entered stop age on the first owner.
+- `ProjectionSummary.people: PersonSummary[]` (id, label, `retirementAge`,
+  `retirementYear`, `superAccessAge?`, `earliestRetirement`) replaces the four
+  single fields, and `householdRetirementYear` is new. `findEarliestRetirementAge`
+  runs once per person. `assessSolvency` and the UI read `people[0]`; the fire
+  chart's retirement marker and the Coast FIRE "in {year} dollars" line use
+  `householdRetirementYear` (the same year with one person).
+- The investable amount's super line is the sum of the people's balances
+  (one person keeps their own figure and source).
+- Tests: the resolve and summary tests read `people[0]` where the fields
+  moved (no expected value changed), plus new tests for two people in
+  resolution (order, owner, labels, per-person end-age check) and in the
+  summary (one entry per person, household retirement year).
+- Checks: `npm run check` (779 unit tests) and `npm run test:e2e` (38) pass.
 
 1. **Resolve every person.** `resolvePlanInputs` resolves every person
    into `ResolvedPerson[]`, each with:

@@ -27,7 +27,7 @@ function buildSuperAccessibleItem(
   projection: CompleteProjection,
   startYear: number,
 ): MilestoneItem {
-  const accessAge = projection.superAccessAge as number;
+  const accessAge = projection.people[0].superAccessAge as number;
   const accessRow = projection.rows.find((row) => row.people[0].age === accessAge);
 
   if (accessRow === undefined) {
@@ -50,7 +50,7 @@ function buildSuperAccessibleItem(
  * projection row's year is "today". Called by MilestonesSection.
  */
 export function buildMilestoneItems(projection: CompleteProjection): MilestoneItem[] {
-  const startYear = projection.rows[0]?.calendarYear ?? projection.retirementYear;
+  const startYear = projection.rows[0]?.calendarYear ?? projection.householdRetirementYear;
   const { coast, fiReached, solvency } = projection;
 
   const coastItem: MilestoneItem =
@@ -74,10 +74,10 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
         };
 
   const retirementItem: MilestoneItem = {
-    year: projection.retirementYear,
+    year: projection.people[0].retirementYear,
     label: "Retirement (your target)",
-    detail: `Age ${projection.retirementAge}`,
-    status: statusForYear(projection.retirementYear, startYear),
+    detail: `Age ${projection.people[0].retirementAge}`,
+    status: statusForYear(projection.people[0].retirementYear, startYear),
   };
 
   const lastRow = projection.rows[projection.rows.length - 1];
@@ -97,7 +97,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
   const items = [coastItem, fiItem, retirementItem, moneyItem];
 
   // "Super accessible" only when the plan has super.
-  if (projection.superAccessAge !== undefined && projectionHasSuper(projection.rows)) {
+  if (projection.people[0].superAccessAge !== undefined && projectionHasSuper(projection.rows)) {
     items.push(buildSuperAccessibleItem(projection, startYear));
   }
 

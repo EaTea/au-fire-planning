@@ -166,7 +166,8 @@ function FiNumberTile({ summary }: { readonly summary: CompleteSummary }) {
     );
   }
 
-  const atRetirementLine = `${formatDollars(projection.fiNumberAtRetirement.value)} at age ${projection.retirementAge} (${projection.retirementYear})`;
+  const firstPerson = projection.people[0];
+  const atRetirementLine = `${formatDollars(projection.fiNumberAtRetirement.value)} at age ${firstPerson.retirementAge} (${firstPerson.retirementYear})`;
 
   return (
     <MetricTile
@@ -221,7 +222,8 @@ type CompleteProjection = Extract<CompleteSummary["projection"], { status: "comp
  * years don't follow the dollars toggle.
  */
 function EarliestRetirementTile({ projection }: { readonly projection: CompleteProjection }) {
-  const { earliestRetirement } = projection;
+  // Until the couple wording (M7 PR B), the tile shows the first person's search.
+  const earliestRetirement = projection.people[0].earliestRetirement;
 
   if (earliestRetirement.status === "notFeasible") {
     const lastAgeTried = projection.endAge - 1;
@@ -240,7 +242,7 @@ function EarliestRetirementTile({ projection }: { readonly projection: CompleteP
     <MetricTile
       label="Earliest retirement"
       value={`Age ${earliestRetirement.age}`}
-      subLine={`${earliestRetirement.year} · your target is ${projection.retirementAge} (${projection.retirementYear})`}
+      subLine={`${earliestRetirement.year} · your target is ${projection.people[0].retirementAge} (${projection.people[0].retirementYear})`}
       explanation={earliestRetirement.explanation}
     />
   );
@@ -316,8 +318,8 @@ function RunsOutBanner({ projection }: { readonly projection: CompleteProjection
 function CoastFireTile({ projection }: { readonly projection: CompleteProjection }) {
   const { coast } = projection;
 
-  const inRetirementYearLine = `${formatDollars(coast.numberInRetirementYearDollars)} in ${projection.retirementYear} dollars`;
-  const statusLine = describeCoastFireStatus(coast.reached, projection.retirementAge);
+  const inRetirementYearLine = `${formatDollars(coast.numberInRetirementYearDollars)} in ${projection.householdRetirementYear} dollars`;
+  const statusLine = describeCoastFireStatus(coast.reached, projection.people[0].retirementAge);
 
   return (
     <MetricTile

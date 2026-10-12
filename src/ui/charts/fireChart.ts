@@ -75,12 +75,12 @@ export function buildFireChartSeries(
  * same year they share one marker so the labels don't overprint.
  */
 function buildMarkers(projection: CompleteProjection): TimeSeriesMarker[] {
-  const retirementMarker = { year: projection.retirementYear, label: "Retirement" };
+  const retirementMarker = { year: projection.householdRetirementYear, label: "Retirement" };
   const fiYear = projection.fiReached?.calendarYear;
 
   if (fiYear === undefined) return [retirementMarker];
 
-  if (fiYear === projection.retirementYear) {
+  if (fiYear === projection.householdRetirementYear) {
     return [{ year: fiYear, label: "FI reached · retirement" }];
   }
 

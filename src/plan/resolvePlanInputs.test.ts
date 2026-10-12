@@ -135,6 +135,56 @@ describe("resolvePlanInputs: projection inputs", () => {
     });
   });
 
+  /** Example A's plan with a second person, Sam, added after Person 1. */
+  function planWithTwoPeople(sam: { currentAge?: number; targetRetirementAge?: number }): Plan {
+    const plan = planWithAges(34, 50);
+    const [person] = plan.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    return {
+      ...plan,
+      household: {
+        people: [person, { id: "person-2", label: "Sam", ...sam, superAccessAge: 60 }],
+      },
+    };
+  }
+
+  // Every person is resolved, in order, and the portfolio is owned by the first.
+  it("resolves every person, in the plan's order", () => {
+    const projection = projectionOf(planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 }));
+    if (projection.status !== "complete") throw new Error("expected complete");
+
+    expect(projection.inputs.people.map((person) => person.id)).toEqual(["id-1", "person-2"]);
+    expect(projection.inputs.people[1]?.currentAge).toEqual({ value: 32, source: "input" });
+    expect(projection.inputs.people[1]?.superAccessAge).toEqual({ value: 60, source: "input" });
+    expect(projection.inputs.portfolioOwnerIds).toEqual(["id-1"]);
+  });
+
+  // With several people a message names whose input is missing; the one-person labels never change.
+  it("names the person in a missing-input message when there are two", () => {
+    expect(projectionOf(planWithTwoPeople({}))).toEqual({
+      status: "incomplete",
+      missing: [
+        { field: "currentAge", label: "Sam: Current age" },
+        { field: "targetRetirementAge", label: "Sam: Target retirement age" },
+      ],
+    });
+  });
+
+  // The plan-until age is the youngest person's, so the older person's last age is that many years later.
+  it("checks each retirement age against that person's own last age", () => {
+    // Plan until 95 on the youngest (Sam, 32): Person 1 (34) is 97 in the last row.
+    expect(projectionOf(planWithTwoPeople({ currentAge: 32, targetRetirementAge: 95 }))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "targetRetirementAge",
+          label: "Sam: Target retirement age must be before your plan-until age",
+        },
+      ],
+    });
+  });
+
   // Retiring this year is allowed.
   it("accepts a target retirement age equal to the current age", () => {
     expect(projectionOf(planWithAges(50, 50)).status).toBe("complete");
@@ -147,8 +197,26 @@ describe("resolvePlanInputs: projection inputs", () => {
     expect(projection.status).toBe("complete");
     if (projection.status !== "complete") return;
     expect(projection.inputs).toEqual({
-      currentAge: { value: 34, source: "input" },
-      targetRetirementAge: { value: 50, source: "input" },
+      people: [
+        {
+          id: "id-1",
+          label: "Person 1",
+          currentAge: { value: 34, source: "input" },
+          targetRetirementAge: { value: 50, source: "input" },
+          salaryAnnual: { value: 0, source: "default" },
+          salaryGrowth: { value: { kind: "none" }, source: "default" },
+          superAccount: {
+            balance: { value: 0, source: "default" },
+            returnRate: { value: 0.07, source: "default" },
+            employerRate: { value: undefined, source: "rule" },
+            salarySacrifice: { annual: { value: 0, source: "default" } },
+            nonConcessional: { annual: { value: 0, source: "default" } },
+            earningsTaxRate: { value: undefined, source: "rule" },
+          },
+          superAccessAge: { value: undefined, source: "rule" },
+        },
+      ],
+      portfolioOwnerIds: ["id-1"],
       inflationRate: { value: 0.025, source: "default" },
       expectedReturn: { value: 0.07, source: "default" },
       annualContribution: { value: 0, source: "default" },
@@ -156,17 +224,6 @@ describe("resolvePlanInputs: projection inputs", () => {
       endAge: { value: 95, source: "default" },
       interestRate: { value: 0.04, source: "default" },
       datedExpenses: [],
-      salaryAnnual: { value: 0, source: "default" },
-      salaryGrowth: { value: { kind: "none" }, source: "default" },
-      superAccount: {
-        balance: { value: 0, source: "default" },
-        returnRate: { value: 0.07, source: "default" },
-        employerRate: { value: undefined, source: "rule" },
-        salarySacrifice: { annual: { value: 0, source: "default" } },
-        nonConcessional: { annual: { value: 0, source: "default" } },
-        earningsTaxRate: { value: undefined, source: "rule" },
-      },
-      superAccessAge: { value: undefined, source: "rule" },
     });
   });
 
@@ -330,7 +387,7 @@ describe("resolvePlanInputs: salary", () => {
       throw new Error("expected a complete plan");
     }
 
-    return resolved.inputs.projection.inputs;
+    return resolved.inputs.projection.inputs.people[0];
   }
 
   it("defaults to no salary, with no growth", () => {
@@ -370,7 +427,7 @@ describe("resolvePlanInputs: super account", () => {
       throw new Error("expected a complete plan");
     }
 
-    return resolvedPlan.inputs.projection.inputs.superAccount;
+    return resolvedPlan.inputs.projection.inputs.people[0].superAccount;
   }
 
   it("defaults: $0, 7% net of fees, and the employer and earnings tax rates left to the law", () => {
@@ -430,7 +487,7 @@ describe("resolvePlanInputs: super access age", () => {
       throw new Error("expected a complete plan");
     }
 
-    return resolvedPlan.inputs.projection.inputs.superAccessAge;
+    return resolvedPlan.inputs.projection.inputs.people[0].superAccessAge;
   }
 
   it("leaves an unset age to the law (the rules' unconditional release age)", () => {

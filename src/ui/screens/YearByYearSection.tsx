@@ -92,8 +92,8 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
           <span className="projection-shortfall">
             Shortfall −{formatMoney(row.shortfall, row.inflationIndex)}
             {isShortfallWithSuperLocked(row) &&
-              projection.superAccessAge !== undefined &&
-              ` · super locked until ${projection.superAccessAge}`}
+              projection.people[0].superAccessAge !== undefined &&
+              ` · super locked until ${projection.people[0].superAccessAge}`}
           </span>
         ) : (
           "✓"
@@ -119,7 +119,9 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         columns={columns}
         getRowKey={(row) => row.yearIndex}
         isHighlighted={(row) => row.yearIndex === fiYearIndex}
-        getBandText={(row) => bandTextForRow(row, hasSuper ? projection.superAccessAge : undefined)}
+        getBandText={(row) =>
+          bandTextForRow(row, hasSuper ? projection.people[0].superAccessAge : undefined)
+        }
         scrollToKey={requestedRow?.yearIndex}
       />
     </section>
