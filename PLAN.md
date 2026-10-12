@@ -1660,7 +1660,10 @@ accessible, each pays in proportion to its available balance that year.
 
 - **The bridge** runs from the first retired row to the year before
   **either** partner's super first opens (effective access, per person,
-  as in M6). **Owner decision 3.**
+  as in M6). **Owner decision 3.** Only partners who have super count.
+  An empty account (no balance and no contributions) never "opens", so it
+  can't end the bridge early. If no one has super, there is no bridge
+  check, as in M6.
 - **Bridge need:** spending less any portfolio contributions still paid
   in those years, discounted at the portfolio's return to row F − 1.
   Contributions continue while a partner works, so without netting them
@@ -1670,7 +1673,11 @@ accessible, each pays in proportion to its available balance that year.
 - **After access:**
   - **need:** discounted at the partners' after-tax super returns,
     weighted by their super balances at the row before access;
-  - **projected:** both partners' super, plus portfolio and cash.
+  - **projected:** both partners' super, plus portfolio and cash. When a
+    partner's super is still locked at the start of after access, the
+    breakdown shows that balance on its own line, marked "locked until
+    {age} ({year})". The meter then can't look healthier than the early
+    after-access years really are.
 - **The status stays exact,** from shortfalls.
 - **"Super locked" wording for a couple** names each person whose super
   has a balance but can't be drawn yet, e.g. "Alex's super locked until
@@ -1684,7 +1691,9 @@ accessible, each pays in proportion to its available balance that year.
   - **What stops:** both partners' voluntary contributions; both
     employers keep paying while each works.
   - **Paid along the coast path:** interim amounts before that row, like
-    dated expenses.
+    dated expenses. The super-only coast run (`superAtRetirementWhenCoastingFrom`)
+    zeroes interim spending as well as dated expenses, so an older
+    partner's super isn't drawn on the coast path.
   - **"Reached"** stays exact, decided by re-running the projection.
 - **The super-and-outside split card** keeps one combined super figure.
 
@@ -2036,8 +2045,13 @@ screenshots and figures.
 
 1. **Resolving a couple:**
    - Person 2's ages become required ("Sam: current age").
-   - The plan-until checks apply to each person: the age must be after
-     each current age, and each retirement age must be before it.
+   - The plan-until checks, as PR A built them: the plan-until age must
+     be after the **youngest** person's current age, and each person's
+     retirement age must be before **their own** last age in the plan.
+     That is the plan-until age plus how much older they are than the
+     youngest.
+   - Messages for a couple read naturally, e.g. "Sam: Target retirement
+     age must be at or after Sam's current age".
 2. **The projection:**
    - rows run until the younger partner reaches the plan-until age;
    - interim spending in `oneRetired` years;
@@ -2049,7 +2063,8 @@ screenshots and figures.
    - the after-access discount rate is weighted by balance;
    - the locked-super wording names each person.
 4. **Earliest retirement:** one search per person.
-5. **Coast FIRE** targets the household retirement row.
+5. **Coast FIRE** targets the household retirement row. Its super-only
+   run zeroes interim spending too (see the design).
 6. **Explanation lines** name both people's ages.
 7. **Tests:**
    - worked examples D, D2 and E as fixtures, with tests to the cent;
