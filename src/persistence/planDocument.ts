@@ -87,6 +87,7 @@ export const planDocumentV1Schema = z.object({
         label: z.string().optional(),
         currentAgeYears: ageYearsSchema.optional(),
         targetRetirementAgeYears: ageYearsSchema.optional(),
+        superAccessAgeYears: ageYearsSchema.optional(),
         salary: z
           .object({
             annualDollars: z.number().nonnegative().optional(),

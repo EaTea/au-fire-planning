@@ -231,6 +231,9 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
         if (person.targetRetirementAge !== undefined) {
           wirePerson.targetRetirementAgeYears = person.targetRetirementAge;
         }
+        if (person.superAccessAge !== undefined) {
+          wirePerson.superAccessAgeYears = person.superAccessAge;
+        }
         // The salary section is written only once something in it is set.
         if (person.salary?.annual !== undefined || person.salary?.growth !== undefined) {
           wirePerson.salary = {
@@ -289,6 +292,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
     ...(wirePerson.currentAgeYears !== undefined ? { currentAge: wirePerson.currentAgeYears } : {}),
     ...(wirePerson.targetRetirementAgeYears !== undefined
       ? { targetRetirementAge: wirePerson.targetRetirementAgeYears }
+      : {}),
+    ...(wirePerson.superAccessAgeYears !== undefined
+      ? { superAccessAge: wirePerson.superAccessAgeYears }
       : {}),
     ...(wirePerson.salary !== undefined
       ? {

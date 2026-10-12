@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [
+      {
+        "id": "person-1",
+        "label": "Person 1",
+        "currentAgeYears": 55,
+        "targetRetirementAgeYears": 56,
+        "superAccessAgeYears": 60,
+        "superAccount": {
+          "balanceDollars": 100000,
+          "returnPercent": 0
+        }
+      }
+    ],
+    "projectionEndAgeYears": 66
+  },
+  "expenses": {
+    "livingAnnualDollars": 20000
+  },
+  "assumptions": {
+    "inflationPercent": 0
+  },
+  "portfolios": [
+    {
+      "id": "portfolio-1",
+      "name": "Share portfolio",
+      "valueDollars": 100000,
+      "expectedReturnPercent": 0
+    }
+  ]
+}

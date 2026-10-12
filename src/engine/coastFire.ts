@@ -181,7 +181,7 @@ export function calculateCoastFire(
  * voluntary super end years are only ever pulled earlier, never later.
  * Called by `calculateCoastFire`; the rules themselves stay in `projectPortfolio`.
  */
-function inputsWithVoluntaryContributionsStoppedAfter(
+export function inputsWithVoluntaryContributionsStoppedAfter(
   inputs: ProjectionInputs,
   yearIndex: number,
   startYear: number,
@@ -239,7 +239,7 @@ function superAtRetirementWhenCoastingFrom(
 }
 
 /** What coasting from one row needs, with the pieces that go into its explanation. */
-interface PortfolioNeed {
+export interface PortfolioNeed {
   /** The portfolio needed at that row, at least 0 (nominal, that row's dollars). */
   readonly portfolioNeeded: number;
   /** The FI number at the retirement row. */
@@ -282,12 +282,17 @@ const BISECTION_STEPS = 200;
  * spending starts the year after), so they are read straight off the
  * projection rows instead of being recomputed. `superLeftAtRetirement` is
  * superLeft(k), from `superAtRetirementWhenCoastingFrom`.
+ *
+ * `targetAtRetirement` is the amount the coast path must reach at the
+ * retirement row: the FI number for Coast FIRE itself, or the bridge need for
+ * the outside-super test in coastSplit.ts (which also passes 0 for super).
  */
-function portfolioNeededFromRow(
+export function portfolioNeededFromRow(
   workingRows: readonly ProjectionRow[],
   fromIndex: number,
   inputs: ProjectionInputs,
   superLeftAtRetirement: number,
+  targetAtRetirement: number = workingRows[workingRows.length - 1]?.fiNumber ?? 0,
 ): PortfolioNeed {
   const retirementRowIndex = workingRows.length - 1;
   const fromRow = workingRows[fromIndex];
@@ -310,7 +315,7 @@ function portfolioNeededFromRow(
     .map((row) => ({ rowIndex: row.yearIndex, datedSpending: row.spending }));
   const hasDatedExpenses = datedSpendingByRow.some((row) => row.datedSpending > 0);
 
-  const fiNumber = retirementRow.fiNumber;
+  const fiNumber = targetAtRetirement;
   const portfolioGrowthFactor = Math.pow(1 + inputs.expectedReturn, retirementRowIndex - fromIndex);
   const cashGrownUntouched =
     fromRow.cashClosing * Math.pow(1 + inputs.interestRate, retirementRowIndex - fromIndex);

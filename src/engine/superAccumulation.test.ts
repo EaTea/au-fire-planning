@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { bundledRuleSet } from "../rules/bundledRuleSet";
-import { projectPortfolio, type ProjectionInputs, type ProjectionSuper } from "./projection";
+import {
+  effectiveSuperAccessAge,
+  projectPortfolio,
+  type ProjectionInputs,
+  type ProjectionSuper,
+} from "./projection";
 
 // Unit tests for super accumulation and access (M5 step 5), one rule at a
 // time. The whole-plan figures are in tests/worked-examples/m5-super.json.
@@ -267,5 +272,118 @@ describe("drawing on super", () => {
     );
 
     expect(rows[0]?.investableClosing).toBe(503_000);
+  });
+});
+
+// M6 step 2: the condition of release, branch by branch. Aged 55 with $100,000
+// of super and nothing outside it, spending $20,000 a year from retirement.
+// The B1 to B3 worked examples are in tests/worked-examples/m6-bridge.json.
+describe("the condition of release", () => {
+  /** Aged 55 with only super, retiring at `retirementAge` with the given access age. */
+  function onlySuper(retirementAge: number, accessAge?: number): ProjectionInputs {
+    return inputsWith({
+      currentAge: 55,
+      endAge: 70,
+      retirementAge,
+      retirementSpendingAnnual: 20_000,
+      superAccount: {
+        ...emptySuper,
+        opening: 100_000,
+        ...(accessAge === undefined ? {} : { accessAge }),
+      },
+    });
+  }
+
+  /** The ages at which the rows say super is accessible. */
+  function accessibleAges(inputs: ProjectionInputs): number[] {
+    return projectPortfolio(inputs, 2026)
+      .filter((row) => row.superAccessible)
+      .map((row) => row.age);
+  }
+
+  it("opens at the access age when retiring before it", () => {
+    expect(accessibleAges(onlySuper(56, 60))[0]).toBe(60);
+  });
+
+  it("opens in the first retired year when retiring after the access age but before 65", () => {
+    expect(accessibleAges(onlySuper(61, 60))[0]).toBe(62);
+  });
+
+  it("opens in the first retired year when retiring at the access age", () => {
+    expect(accessibleAges(onlySuper(60, 60))[0]).toBe(61);
+  });
+
+  it("opens at 65 regardless of retirement and the access age", () => {
+    // Still working at 65, and the access age is 65 anyway: accessible from 65 on.
+    expect(accessibleAges(onlySuper(68, 63))[0]).toBe(65);
+    expect(accessibleAges(onlySuper(56))[0]).toBe(65);
+  });
+
+  it("never opens before the preservation age, even with a lower access age asked for", () => {
+    expect(accessibleAges(onlySuper(56, 55))[0]).toBe(60);
+  });
+
+  it("clamps an access age above 65 to 65", () => {
+    expect(accessibleAges(onlySuper(56, 70))[0]).toBe(65);
+  });
+
+  it("is never accessible when there is no super account", () => {
+    const rows = projectPortfolio(inputsWith({ currentAge: 55, endAge: 70 }), 2026);
+
+    expect(rows.some((row) => row.superAccessible)).toBe(false);
+  });
+
+  it("draws super only in accessible years", () => {
+    const rows = projectPortfolio(onlySuper(56, 60), 2026);
+
+    for (const row of rows) {
+      if (!row.superAccessible) expect(row.fromSuper).toBe(0);
+    }
+    expect(rows.find((row) => row.age === 60)?.fromSuper).toBe(20_000);
+  });
+});
+
+describe("effectiveSuperAccessAge", () => {
+  const withSuper = (retirementAge: number, accessAge?: number) =>
+    inputsWith({
+      currentAge: 55,
+      endAge: 70,
+      retirementAge,
+      superAccount: { ...emptySuper, ...(accessAge === undefined ? {} : { accessAge }) },
+    });
+
+  it("is the access age when retiring before it", () => {
+    expect(effectiveSuperAccessAge(withSuper(56, 60), 2026)).toBe(60);
+    expect(effectiveSuperAccessAge(withSuper(56), 2026)).toBe(65);
+  });
+
+  it("is the year after retirement when retiring at or after the access age", () => {
+    expect(effectiveSuperAccessAge(withSuper(61, 60), 2026)).toBe(62);
+    expect(effectiveSuperAccessAge(withSuper(60, 60), 2026)).toBe(61);
+  });
+
+  it("is capped at 65 and clamped to the preservation age", () => {
+    expect(effectiveSuperAccessAge(withSuper(70, 60), 2026)).toBe(65);
+    expect(effectiveSuperAccessAge(withSuper(56, 50), 2026)).toBe(60);
+  });
+
+  it("agrees with the first row where super is accessible after retiring", () => {
+    for (const [retirementAge, accessAge] of [
+      [56, 60],
+      [61, 60],
+      [60, 62],
+      [56, undefined],
+    ] as const) {
+      const inputs = withSuper(retirementAge, accessAge);
+      const firstRetiredAccessibleAge = projectPortfolio(inputs, 2026).find(
+        (row) => row.superAccessible && row.phase === "retired",
+      )?.age;
+
+      expect(effectiveSuperAccessAge(inputs, 2026)).toBe(firstRetiredAccessibleAge);
+    }
+  });
+
+  it("is undefined when there is no super account", () => {
+    expect(effectiveSuperAccessAge(inputsWith({}), 2026)).toBeUndefined();
   });
 });

@@ -96,7 +96,7 @@ interface TimeSeriesChartProps {
 }
 
 /** Height of the chart when it fills its container, in pixels. */
-const DEFAULT_CHART_HEIGHT = 340;
+export const DEFAULT_CHART_HEIGHT = 340;
 
 const compactDollarFormatter = new Intl.NumberFormat("en-AU", {
   style: "currency",
@@ -105,8 +105,8 @@ const compactDollarFormatter = new Intl.NumberFormat("en-AU", {
   maximumFractionDigits: 1,
 });
 
-/** Short money for the value axis, e.g. 2150000 becomes "$2.2M". */
-function formatAxisDollars(value: number): string {
+/** Short money for the value axis, e.g. 2150000 becomes "$2.2M". Also used by StackedAreaChart. */
+export function formatAxisDollars(value: number): string {
   return compactDollarFormatter.format(value);
 }
 
@@ -295,8 +295,9 @@ interface ChartTooltipProps {
  * The box shown while hovering a year: the year and age, then each series'
  * value. Passed to Recharts' Tooltip as its content, so it styles with the
  * app's CSS rather than Recharts' defaults. Renders nothing when no year is hovered.
+ * Also used by StackedAreaChart, whose series have the same shape.
  */
-function ChartTooltip({ tooltipProps, series, formatValue }: ChartTooltipProps) {
+export function ChartTooltip({ tooltipProps, series, formatValue }: ChartTooltipProps) {
   const hoveredPoint = tooltipProps.payload?.[0]?.payload as TimeSeriesPoint | undefined;
   if (tooltipProps.active !== true || hoveredPoint === undefined) return null;
 

@@ -28,12 +28,18 @@ function formatLineValue(line: ExplanationLine): string {
  * Shows the working behind a calculated figure (NFR-1) as the mockups'
  * breakdown table: one row per engine line, with its operator, label and
  * value. Values the user didn't set are marked "(default)". The last line is
- * the result, so it is shown in bold. It renders the engine's own lines
+ * the result, so it is shown in bold (a trailing note about the law, a "rule"
+ * line after the result, is left plain). It renders the engine's own lines
  * unchanged, so the breakdown is always the calculation actually done.
  * Opened from MetricTile's "How is this calculated?" button.
  */
 export function ExplainPanel({ explained }: ExplainPanelProps) {
-  const lastLineIndex = explained.lines.length - 1;
+  // The result is the last line, unless a note about the law (a "rule" line, e.g. "tax-free from age 60") follows it.
+  const lastCalculatedIndex = explained.lines.map((line) => line.source).lastIndexOf("calculated");
+  const lastLineIndex =
+    lastCalculatedIndex >= 0 && explained.lines[explained.lines.length - 1]?.source === "rule"
+      ? lastCalculatedIndex
+      : explained.lines.length - 1;
 
   return (
     <table className="explain-panel">

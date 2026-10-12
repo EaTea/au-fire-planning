@@ -109,7 +109,7 @@ describe("assessSolvency", () => {
     };
 
     it("notes the locked super in a shortfall year before 65", () => {
-      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026));
+      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026), 65);
 
       expect(result).toMatchObject({
         status: "runsOut",
@@ -124,6 +124,15 @@ describe("assessSolvency", () => {
         ["Shortfall", 20000],
         ["Super (not accessible until 65)", 500000],
       ]);
+    });
+
+    it("quotes the effective access age it is given, not a fixed 65", () => {
+      const result = assessSolvency(projectPortfolio(lockedSuperInputs, 2026), 62);
+      if (result.status !== "runsOut") throw new Error("expected a shortfall");
+
+      expect(result.explanation.lines.map((line) => line.label)).toContain(
+        "Super (not accessible until 62)",
+      );
     });
 
     it("counts super drawn from 65 as available when the money then runs short", () => {

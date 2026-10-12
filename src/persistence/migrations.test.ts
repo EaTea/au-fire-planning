@@ -141,6 +141,36 @@ describe("parsePlanDocument", () => {
     expect(parsePlanDocument(document).ok).toBe(false);
   });
 
+  // The super access age (M6) was added without a new schema version: older documents omit it.
+  it("parses a document with a super access age, and older documents without one", () => {
+    const result = parsePlanDocument(readFixture("v1-access-age.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(planFromWire(result.document).household.people[0]).toMatchObject({
+      currentAge: 55,
+      targetRetirementAge: 56,
+      superAccessAge: 60,
+    });
+
+    const older = parsePlanDocument(readFixture("v1-super.json"));
+    expect(older.ok).toBe(true);
+    if (!older.ok) return;
+    expect(planFromWire(older.document).household.people[0]?.superAccessAge).toBeUndefined();
+  });
+
+  it.each([60.5, -1, 121])("rejects a super access age of %s", (age) => {
+    const document = readFixture("v1-access-age.json") as {
+      household: { people: { superAccessAgeYears?: number }[] };
+    };
+    const [person] = document.household.people;
+    if (person === undefined) throw new Error("fixture has no person");
+    person.superAccessAgeYears = age;
+
+    expect(parsePlanDocument(document).ok).toBe(false);
+  });
+
   // A growth kind this version doesn't know is rejected rather than guessed at.
   it("rejects an unknown salary growth kind", () => {
     const document = readFixture("v1-salary.json") as {
