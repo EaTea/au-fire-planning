@@ -5,7 +5,13 @@ import { assessBridge } from "./bridge";
 import { calculateCoastFire } from "./coastFire";
 import { calculateCoastSplit } from "./coastSplit";
 import { findEarliestRetirementAge } from "./earliestRetirement";
-import { projectPortfolio, type ProjectionInputs, type ProjectionSuper } from "./projection";
+import {
+  findFiReached,
+  formatAges,
+  projectPortfolio,
+  type ProjectionInputs,
+  type ProjectionSuper,
+} from "./projection";
 import { assessSolvency } from "./solvency";
 
 // Two-person engine tests. Worked examples D and D2 of PLAN.md (M7), with
@@ -176,7 +182,7 @@ describe("a couple that runs short while one partner's super is locked", () => {
       ["Spending to fund in 2035", 100_000],
       ["Cash and portfolio available", 0],
       ["Shortfall", 100_000],
-      ["Super (not accessible until 65)", 150_000],
+      ["Alex's super (not accessible until 65)", 150_000],
     ]);
   });
 });
@@ -203,7 +209,7 @@ describe("Coast FIRE for a couple", () => {
     return calculateCoastFire(projectPortfolio(inputs, START_YEAR), inputs);
   }
 
-  // Sam works until 2031, so that is the household retirement row, with the first person aged 60.
+  // Sam works until 2031, so that is the household retirement row, and the label names both people's ages.
   it("coasts to the household retirement row, when the last of them stops working", () => {
     const coast = coastFor(coastInputs(0));
 
@@ -211,7 +217,7 @@ describe("Coast FIRE for a couple", () => {
       2026, 2027, 2028, 2029, 2030, 2031,
     ]);
     expect(coast.number.value).toBe(1_000);
-    expect(coast.number.lines[0]?.label).toBe("FI number at age 60 (2031)");
+    expect(coast.number.lines[0]?.label).toBe("FI number at Alex 60 · Sam 58 (2031)");
     expect(coast.reached).toBeUndefined();
   });
 
@@ -240,5 +246,173 @@ describe("Coast FIRE split for a couple", () => {
     expect(split.super?.needToday.value).toBe(280_000);
     expect(split.super?.hasToday).toBe(250_000);
     expect(split.super?.reached).toBeUndefined();
+  });
+});
+
+describe("the interim amount", () => {
+  // Alex retires in 2027, Sam in 2031: 2028 to 2031 draw the interim amount, indexed like all spending.
+  it("is drawn in the years only one has retired, grown by inflation, and by nothing else", () => {
+    const inputs: ProjectionInputs = {
+      ...exampleD(),
+      inflationRate: 0.025,
+      interimSpendingAnnual: 20_000,
+    };
+    const rows = projectPortfolio(inputs, START_YEAR);
+
+    expect(rows.map((row) => row.phase).slice(0, 8)).toEqual([
+      "working",
+      "working",
+      "oneRetired",
+      "oneRetired",
+      "oneRetired",
+      "oneRetired",
+      "retired",
+      "retired",
+    ]);
+    expect(rows[1]?.spending).toBe(0);
+    expect(rows[2]?.spending).toBeCloseTo(20_000 * 1.025 ** 2, 6);
+    expect(rows[5]?.spending).toBeCloseTo(20_000 * 1.025 ** 5, 6);
+    expect(rows[6]?.spending).toBeCloseTo(40_000 * 1.025 ** 6, 6);
+  });
+
+  it("adds to dated expenses in the same years, and defaults to nothing", () => {
+    const withExpense: ProjectionInputs = {
+      ...exampleD(),
+      datedExpenses: [{ annual: 1_000, fromYear: 2028, toYear: 2028 }],
+    };
+
+    expect(projectPortfolio(withExpense, START_YEAR)[2]?.spending).toBe(1_000);
+    expect(
+      projectPortfolio({ ...withExpense, interimSpendingAnnual: 20_000 }, START_YEAR)[2]?.spending,
+    ).toBe(21_000);
+  });
+});
+
+describe("the bridge for a couple", () => {
+  // Contributions go on while Sam works (to 2031), so they pay part of the 2028 to 2031 spending.
+  it("nets portfolio contributions still paid in the bridge years off the need", () => {
+    const inputs: ProjectionInputs = {
+      ...exampleD(),
+      interimSpendingAnnual: 20_000,
+      annualContribution: 10_000,
+    };
+    const bridge = bridgeFor(inputs).bridge;
+
+    // Spending 4 × $20,000 + $40,000 = $120,000, less 4 × $10,000 contributed (2028 to 2031).
+    expect(bridge?.need.value).toBe(80_000);
+    expect(bridge?.need.lines.map((line) => line.label)).toEqual([
+      "Spending in 2028 – 2032",
+      "Less discounting to 2027 at 0% (the portfolio's return)",
+      "Less portfolio contributions paid in those years, discounted to 2027",
+      "Need for the bridge at 2027",
+    ]);
+    expect(bridge?.need.lines[2]?.value).toBe(40_000);
+  });
+
+  it("leaves the need as before, with no extra line, when no contributions are paid in those years", () => {
+    const bridge = bridgeFor(exampleD()).bridge;
+
+    expect(bridge?.need.lines).toHaveLength(3);
+  });
+
+  // Alex's $150,000 is locked until 2036 when after access begins in 2033.
+  it("shows a partner's still-locked super on its own line", () => {
+    const afterAccess = bridgeFor(exampleD()).afterAccess;
+    const labelsAndValues = afterAccess?.projected.lines.map((line) => [line.label, line.value]);
+
+    expect(labelsAndValues).toEqual([
+      ["Alex's super at end of 2032, locked until 65 (2036)", 150_000],
+      ["Sam's super at end of 2032", 100_000],
+      ["Portfolio at end of 2032", 160_000],
+      ["Cash at end of 2032", 0],
+      ["Projected after super is accessible", 410_000],
+      ["Withdrawals are tax-free from age", 60],
+    ]);
+  });
+
+  // Alex's 10% on $300,000 and Sam's 4% on $100,000 are weighted 3:1 by their balances at 2032.
+  it("discounts the need after access at the partners' returns, weighted by balance", () => {
+    const [alex, sam] = exampleD().people;
+    const inputs: ProjectionInputs = {
+      ...exampleD(),
+      people: [
+        { ...alex, superAccount: { ...alex.superAccount!, opening: 300_000, returnRate: 0.1 } },
+        { ...sam!, superAccount: { ...sam!.superAccount!, opening: 100_000, returnRate: 0.04 } },
+      ],
+    };
+    const rows = projectPortfolio(inputs, START_YEAR);
+    const base = rows[6];
+    const alexBalance = base!.people[0].superClosing;
+    const samBalance = base!.people[1]!.superClosing;
+    const expectedRate = (alexBalance * 0.1 + samBalance * 0.04) / (alexBalance + samBalance);
+
+    const needLabel = assessBridge(rows, inputs).afterAccess?.need.lines[1]?.label;
+    const percent = `${Number((expectedRate * 100).toPrecision(12))}%`;
+
+    expect(needLabel).toContain(`at ${percent} (super's return after earnings tax)`);
+  });
+});
+
+describe("ages in explanation lines", () => {
+  it("reads 'age N' for one person and names everyone for a couple", () => {
+    expect(formatAges([{ label: "Person 1", age: 52 }])).toBe("age 52");
+    expect(
+      formatAges([
+        { label: "Alex", age: 52 },
+        { label: "Sam", age: 50 },
+      ]),
+    ).toBe("Alex 52 · Sam 50");
+  });
+
+  it("names both people in the FI-reached line of a couple", () => {
+    const rows = projectPortfolio({ ...exampleD(), fiNumberToday: 100_000 }, START_YEAR);
+    const labels = findFiReached(rows)?.explanation.lines.map((line) => line.label);
+
+    expect(labels?.[0]).toBe("Balance at end of 2026 (Alex 55 · Sam 53)");
+  });
+
+  it("names the person whose age is moved, and both ages when it fails", () => {
+    const result = findEarliestRetirementAge(
+      exampleD({ retirementSpendingAnnual: 100_000 }),
+      START_YEAR,
+      1,
+    );
+    if (result.status !== "feasible") throw new Error("expected a feasible age");
+
+    const labels = result.explanation.lines.map((line) => line.label);
+
+    expect(labels[0]).toMatch(/^Sam retiring at \d+: runs short in \d{4} \(Alex \d+ · Sam \d+\)$/);
+    expect(labels.at(-1)).toBe("Earliest feasible retirement age");
+  });
+});
+
+describe("Coast FIRE's super run with an interim amount", () => {
+  // The older partner's super is open (past 65). Interim spending must not draw on it on the coast path.
+  it("leaves out interim spending, so the older partner's super isn't drawn on the way", () => {
+    const [alex, sam] = exampleD().people;
+    const inputs: ProjectionInputs = {
+      ...exampleD(),
+      people: [
+        { ...alex, currentAge: 66, retirementAge: 66 },
+        { ...sam!, currentAge: 60, retirementAge: 63 },
+      ],
+      endAge: 70,
+      portfolioOpening: 0,
+      cashOpening: 0,
+      interimSpendingAnnual: 30_000,
+      fiNumberToday: 1_000,
+    };
+    const rows = projectPortfolio(inputs, START_YEAR);
+    const withInterim = calculateCoastFire(rows, inputs);
+    const withoutInterim = calculateCoastFire(
+      projectPortfolio({ ...inputs, interimSpendingAnnual: 0 }, START_YEAR),
+      { ...inputs, interimSpendingAnnual: 0 },
+    );
+
+    // The coast path's super at retirement is the same whatever the interim amount is.
+    const superNeed = (coast: typeof withInterim) =>
+      coast.number.lines.find((line) => line.label.startsWith("Your super, growing"))?.value;
+
+    expect(superNeed(withInterim)).toBe(superNeed(withoutInterim));
   });
 });

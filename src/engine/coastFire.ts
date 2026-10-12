@@ -62,6 +62,7 @@
 
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  describeAges,
   householdRetirementRowIndex,
   lastPortfolioContributionYear,
   mapNonEmpty,
@@ -252,6 +253,8 @@ function superAtRetirementWhenCoastingFrom(
     {
       ...inputsWithVoluntaryContributionsStoppedAfter(inputs, fromIndex, startYear),
       datedExpenses: [],
+      // Interim spending is left out too, so a partner's super isn't drawn on the coast path.
+      interimSpendingAnnual: 0,
       endAge: youngestAgeAtRow(inputs, retirementRowIndex),
     },
     startYear,
@@ -463,7 +466,7 @@ function explainCoastNumber(
   const cashLabel = `Your cash, growing at ${interestPercent} to ${retirementRow.calendarYear}`;
   const lines: ExplanationLine[] = [
     {
-      label: `FI number at age ${retirementRow.people[0].age} (${retirementRow.calendarYear})`,
+      label: `FI number at ${describeAges(retirementRow)} (${retirementRow.calendarYear})`,
       value: need.fiNumberAtRetirement,
       unit: "dollars",
       source: "calculated",
@@ -635,7 +638,7 @@ function findCoastReached(
 
     const lines: ExplanationLine[] = [
       {
-        label: `Investable at end of ${point.calendarYear} (age ${point.age})`,
+        label: `Investable at end of ${point.calendarYear} (${describeAges(workingRows[point.yearIndex] ?? retirementRow)})`,
         value: point.investable,
         unit: "dollars",
         source: "calculated",

@@ -4,11 +4,12 @@
 //   projectPortfolio ─► rows ─► assessSolvency ─► Solvency ─► Results screen
 //
 // Pure, like the rest of the engine. The earliest-retirement search calls it
-// once per candidate retirement age. Ages quoted are the first person's;
-// naming every partner comes with the couple wording in M7 PR B.
+// once per candidate retirement age. For a couple, ages are quoted for both
+// people ("Alex 52 · Sam 50") and each partner whose super is still locked is
+// named in the locked-super note.
 
 import type { Explained } from "./explained";
-import { isShortfallWithSuperLocked, type ProjectionRow } from "./projection";
+import { describeAges, isShortfallWithSuperLocked, type ProjectionRow } from "./projection";
 import type { ExplanationLine } from "./explained";
 
 /** Whether the plan's money lasts to the end age, with the working behind the answer. */
@@ -24,6 +25,8 @@ export type Solvency =
       readonly year: number;
       /** The first person's age in that year. */
       readonly age: number;
+      /** Every person's age in that year, with their display names, for wording like "Alex 94 · Sam 92". */
+      readonly ages: readonly { readonly label: string; readonly age: number }[];
       /** Every calendar year that can't be fully funded, in order. */
       readonly shortfallYears: readonly number[];
       /** That first year's spending, what was available, and the shortfall. */
@@ -37,11 +40,15 @@ export type Solvency =
  * Otherwise it "runsOut" at the first shortfall year, and lists all of them
  * (the projection carries on after a shortfall, so later years can be flagged
  * too). `superAccessAge` is the effective access age (see
- * `effectiveSuperAccessAge`), used to word the locked-super note; callers
- * without super can leave it out. Called by `summariseProjection`
+ * `effectiveSuperAccessAge`), used to word the locked-super note: one number
+ * for one person, or one entry per person (in order, `undefined` for someone
+ * without super) for a couple. Callers without super can leave it out. Called by `summariseProjection`
  * (src/engine/fiNumber.ts) and by the earliest-retirement search.
  */
-export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: number): Solvency {
+export function assessSolvency(
+  rows: readonly ProjectionRow[],
+  superAccessAge?: number | readonly (number | undefined)[],
+): Solvency {
   const shortfallRows = rows.filter((row) => row.shortfall > 0);
   const firstShortfall = shortfallRows[0];
 
@@ -65,22 +72,13 @@ export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: 
     // A year before the access age that only locked super could have funded: say so, as a note
     // that is not part of the sum above it.
     const lockedSuperLines: ExplanationLine[] = isShortfallWithSuperLocked(firstShortfall)
-      ? [
-          {
-            label:
-              superAccessAge === undefined
-                ? "Super (not yet accessible)"
-                : `Super (not accessible until ${superAccessAge})`,
-            value: firstShortfall.superClosing,
-            unit: "dollars",
-            source: "calculated",
-          },
-        ]
+      ? lockedSuperNotes(firstShortfall, superAccessAge)
       : [];
     return {
       status: "runsOut",
       year: firstShortfall.calendarYear,
       age: firstShortfall.people[0].age,
+      ages: firstShortfall.people.map(({ label, age }) => ({ label, age })),
       shortfallYears: shortfallRows.map((row) => row.calendarYear),
       explanation: {
         value: firstShortfall.shortfall,
@@ -125,7 +123,7 @@ export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: 
           ? []
           : [
               {
-                label: `Cash at end of ${lastRow.calendarYear} (age ${lastRow.people[0].age})`,
+                label: `Cash at end of ${lastRow.calendarYear} (${describeAges(lastRow)})`,
                 value: lastRow.cashClosing,
                 unit: "dollars",
                 source: "calculated",
@@ -159,4 +157,45 @@ export function assessSolvency(rows: readonly ProjectionRow[], superAccessAge?: 
             ],
     },
   };
+}
+
+/**
+ * The notes under a shortfall saying whose super is locked. One person keeps
+ * the plain wording ("Super (not accessible until 65)"); in a couple each
+ * person whose super has a balance but can't be drawn yet gets their own line
+ * ("Sam's super (not accessible until 60)"). They are notes, not part of the
+ * sum above them. Called by `assessSolvency`.
+ */
+function lockedSuperNotes(
+  row: ProjectionRow,
+  superAccessAge: number | readonly (number | undefined)[] | undefined,
+): ExplanationLine[] {
+  const accessAges = typeof superAccessAge === "number" ? [superAccessAge] : (superAccessAge ?? []);
+
+  const untilWords = (accessAge: number | undefined): string =>
+    accessAge === undefined ? "not yet accessible" : `not accessible until ${accessAge}`;
+
+  if (row.people.length === 1) {
+    return [
+      {
+        label: `Super (${untilWords(accessAges[0])})`,
+        value: row.superClosing,
+        unit: "dollars",
+        source: "calculated",
+      },
+    ];
+  }
+
+  return row.people.flatMap((personYear, personIndex): ExplanationLine[] =>
+    !personYear.superAccessible && personYear.superClosing > 0
+      ? [
+          {
+            label: `${personYear.label}'s super (${untilWords(accessAges[personIndex])})`,
+            value: personYear.superClosing,
+            unit: "dollars",
+            source: "calculated",
+          },
+        ]
+      : [],
+  );
 }

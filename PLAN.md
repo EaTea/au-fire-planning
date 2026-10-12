@@ -2093,7 +2093,45 @@ there are two-person engine tests for D and D2.
 
 #### Step 5 · The engine for couples (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- Resolution: `ResolvedPerson.label` is the display name; `interimAnnual`
+  (default $0, `DEFAULT_INTERIM_SPENDING`) and `portfolioOwnerIds` come from
+  the plan. Ownership resolves to person ids in the plan's order: sole is that
+  person, joint is everyone in the split, nothing stored is Person 1 for one
+  person and both for a couple, and an id not in the plan counts as Person 1.
+  The first owner measures an entered stop age. One-person messages are word
+  for word as before; a couple's read "Sam: Target retirement age must be at
+  or after Sam's current age", "Plan until age must be after the younger
+  person's current age" and "Sam: Target retirement age must be before the end
+  of the plan, when Sam is 95".
+- Engine: `ProjectionInputs.interimSpendingAnnual?` (absent is $0) is drawn,
+  indexed, in `oneRetired` years. `PersonYear.label` carries the display name;
+  `describeAges(row)` / `formatAges` give "age 52" for one person and
+  "Alex 52 · Sam 50" for a couple, used by every engine line that quotes an
+  age (FI reached, solvency, Coast FIRE, coast split, earliest retirement).
+  `Solvency.runsOut` has `ages` (label and age for each person).
+- Bridge: the need is net of portfolio contributions paid in the bridge years
+  (a "Less portfolio contributions paid in those years, discounted" line, only
+  when there are some, so one-person lines are unchanged; the need is never
+  below $0). The after-access discount rate is each holder's after-tax super
+  return weighted by balance at the row before access (one person's rate
+  exactly). With two or more people who have super, the projected working has
+  one line each, and a partner still locked at the start of after access is
+  marked "locked until {age} ({year})". `assessSolvency` takes one access age
+  or one per person, and names each locked partner.
+- Coast FIRE and the coast split zero interim spending in their super-only
+  runs. Earliest retirement runs per person; a couple's lines say "Sam
+  retiring at 54".
+- Fixture `tests/worked-examples/m7-couples.json` has D and D2 (with interim
+  $20,000 and at the default $0) and E. **Every worked figure matched on the
+  first run**, including E's FI number $3,686,886.99, bridge need $864,875.22
+  and after-access need $3,626,576.69. The test harness reads a partner, the
+  interim amount, per-person earliest retirement and per-row super figures.
+- Property tests (`couple.properties.test.ts`): an empty partner with the same
+  ages gives the first person's projection exactly; swapping the people
+  doesn't change household totals; money is conserved each year.
 
 1. **Resolving a couple:**
    - Person 2's ages become required ("Sam: current age").

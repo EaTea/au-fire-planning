@@ -19,8 +19,10 @@ import type { Explained, ExplanationLine } from "./explained";
 import {
   effectiveSuperAccessAge,
   inputsWithRetirementAge,
+  formatAges,
   personAtIndex,
   projectPortfolio,
+  type ProjectionPerson,
   youngestAgeAtRow,
   type ProjectionInputs,
 } from "./projection";
@@ -64,6 +66,7 @@ export function findEarliestRetirementAge(
 ): EarliestRetirement {
   const person = personAtIndex(inputs, personIndex);
   const currentAge = person.currentAge;
+  const retiringPhrase = retiringPhraseFor(inputs, person);
 
   // The end age is measured on the youngest person; this person's own last age is the same row.
   const endAge = currentAge + (inputs.endAge - youngestAgeAtRow(inputs, 0));
@@ -82,11 +85,11 @@ export function findEarliestRetirementAge(
     const lines: ExplanationLine[] = [];
 
     if (lastFailure !== undefined) {
-      lines.push(describeFailure(lastFailure.age, lastFailure.solvency));
+      lines.push(describeFailure(retiringPhrase, lastFailure.age, lastFailure.solvency));
     }
 
     lines.push({
-      label: `Retiring at ${candidateAge}: lasts to age ${endAge}`,
+      label: `${retiringPhrase} ${candidateAge}: lasts to age ${endAge}`,
       value: solvency.explanation.value,
       unit: "dollars",
       source: "calculated",
@@ -116,7 +119,9 @@ export function findEarliestRetirementAge(
       value: failure?.explanation.value ?? 0,
       unit: "dollars",
       lines:
-        lastFailure === undefined ? [] : [describeFailure(lastFailure.age, lastFailure.solvency)],
+        lastFailure === undefined
+          ? []
+          : [describeFailure(retiringPhrase, lastFailure.age, lastFailure.solvency)],
     },
   };
 }
@@ -135,21 +140,38 @@ function solvencyWhenRetiringAt(
   const triedInputs = inputsWithRetirementAge(inputs, personIndex, retirementAge);
   const rows = projectPortfolio(triedInputs, startYear);
 
-  // The access age depends on when the person retires, so it is worked out for the age being tried.
-  const triedPerson = personAtIndex(triedInputs, personIndex);
+  // The access age depends on when the person retires, so it is worked out for the age being tried
+  // (for everyone, so the locked-super note can name each partner).
+  const accessAges = triedInputs.people.map((member) =>
+    effectiveSuperAccessAge(member, triedInputs, startYear),
+  );
 
-  return assessSolvency(rows, effectiveSuperAccessAge(triedPerson, triedInputs, startYear));
+  return assessSolvency(rows, accessAges);
+}
+
+/**
+ * The words that start each line about a tried age: "Retiring at" for one
+ * person, "Sam retiring at" for a couple, so it is clear whose age is being
+ * moved. Called by `findEarliestRetirementAge`.
+ */
+function retiringPhraseFor(inputs: ProjectionInputs, person: ProjectionPerson): string {
+  return inputs.people.length > 1 ? `${person.label} retiring at` : "Retiring at";
 }
 
 /**
  * One line saying a retirement age fails: "Retiring at 42: runs short in 2085
- * (age 93)", valued at that year's shortfall. A solvent result can't be
- * described this way, so it is shown as a zero shortfall defensively.
+ * (age 93)", valued at that year's shortfall; for a couple the ages of both
+ * are given. A solvent result can't be described this way, so it is shown as
+ * a zero shortfall defensively.
  */
-function describeFailure(retirementAge: number, solvency: Solvency): ExplanationLine {
+function describeFailure(
+  retiringPhrase: string,
+  retirementAge: number,
+  solvency: Solvency,
+): ExplanationLine {
   if (solvency.status === "lasts") {
     return {
-      label: `Retiring at ${retirementAge}: lasts`,
+      label: `${retiringPhrase} ${retirementAge}: lasts`,
       value: 0,
       unit: "dollars",
       source: "calculated",
@@ -157,7 +179,7 @@ function describeFailure(retirementAge: number, solvency: Solvency): Explanation
   }
 
   return {
-    label: `Retiring at ${retirementAge}: runs short in ${solvency.year} (age ${solvency.age})`,
+    label: `${retiringPhrase} ${retirementAge}: runs short in ${solvency.year} (${formatAges(solvency.ages)})`,
     value: solvency.explanation.value,
     unit: "dollars",
     source: "calculated",

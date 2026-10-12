@@ -402,6 +402,7 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     people: [
       {
         personId: "person-1",
+        label: "Person 1",
         age: 40 + yearIndex,
         phase: "working",
         salary: 0,

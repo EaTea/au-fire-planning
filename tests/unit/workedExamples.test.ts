@@ -53,6 +53,12 @@ interface WorkedScenario {
     readonly superAccount?: SuperAccount | null;
     /** M6 onwards: the age the person wants super accessible from; absent means left unset (65). */
     readonly superAccessAge?: number;
+    /** M7 onwards: the first person's name; absent means unnamed ("Person 1"). */
+    readonly name?: string;
+    /** M7 onwards: dollars a year drawn while only one of a couple has retired; absent means left unset ($0). */
+    readonly interimAnnual?: number;
+    /** M7 onwards: a second person, with the same fields as the first. Absent means just one person. */
+    readonly partner?: FixturePartner;
   };
   /** M1 figures: present in M1 fixtures only. */
   readonly expected: {
@@ -80,6 +86,12 @@ interface WorkedScenario {
     readonly bridge?: ExpectedBridge;
     /** M6 figures: Coast FIRE for super and outside super. Only the listed fields are checked. */
     readonly coastSplit?: ExpectedCoastSplit;
+    /** M7 figures: one entry per person, in order. */
+    readonly people?: readonly ExpectedPerson[];
+    /** M7 figures: the calendar year of the household retirement row (the last year anybody works). */
+    readonly householdRetirementYear?: number;
+    /** M7 figures: per-person figures in the listed rows. */
+    readonly personRows?: readonly ExpectedPersonRow[];
   };
 }
 
@@ -116,6 +128,37 @@ interface ExpectedBridge {
   readonly effectiveAccessAge?: number;
   readonly bridge?: ExpectedBridgePart | null;
   readonly afterAccess?: ExpectedBridgePart | null;
+}
+
+/** A partner as written in a fixture: the same person fields as the first person. */
+interface FixturePartner {
+  readonly name?: string;
+  readonly currentAge?: number;
+  readonly targetRetirementAge?: number;
+  readonly salaryAnnual?: number | null;
+  readonly salaryGrowth?: SalaryGrowth | null;
+  readonly superAccount?: SuperAccount | null;
+  readonly superAccessAge?: number;
+}
+
+/** The figures checked for one person of a couple; unlisted fields aren't checked. */
+interface ExpectedPerson {
+  /** The earliest feasible retirement for this person, with the partner keeping their target. */
+  readonly earliestRetirement?: ExpectedEarliestRetirement;
+  readonly retirementYear?: number;
+  /** The effective super access age. */
+  readonly superAccessAge?: number;
+}
+
+/** Per-person figures in one row of a couple's projection; unlisted fields aren't checked. */
+interface ExpectedPersonRow {
+  readonly yearIndex: number;
+  /** One entry per person, in order: their super at the end of the row. */
+  readonly superClosing?: readonly number[];
+  /** One entry per person, in order: what each paid from super that year. */
+  readonly fromSuper?: readonly number[];
+  readonly portfolioClosing?: number;
+  readonly phase?: "working" | "oneRetired" | "retired";
 }
 
 /** One of the two Coast FIRE tests. `reached: null` means it isn't reached before retirement. */
@@ -171,6 +214,8 @@ interface ExpectedSolvency {
   /** For "runsOut": the first shortfall year, its age, every shortfall year and the first year's shortfall. */
   readonly year?: number;
   readonly age?: number;
+  /** M7: every person's age in that year, in order. */
+  readonly ages?: readonly number[];
   readonly shortfallYears?: readonly number[];
   readonly shortfall?: number;
 }
@@ -223,12 +268,15 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
   const [portfolio] = blank.portfolios;
   if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
 
+  const partner = inputs.partner;
+
   return {
     ...blank,
     household: {
       people: [
         {
           ...person,
+          ...(inputs.name === undefined ? {} : { name: inputs.name }),
           currentAge: inputs.currentAge,
           targetRetirementAge: inputs.targetRetirementAge,
           salary: {
@@ -238,6 +286,23 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
           superAccount: inputs.superAccount ?? undefined,
           superAccessAge: inputs.superAccessAge,
         },
+        ...(partner === undefined
+          ? []
+          : [
+              {
+                id: "person-2",
+                label: "Person 2",
+                ...(partner.name === undefined ? {} : { name: partner.name }),
+                currentAge: partner.currentAge,
+                targetRetirementAge: partner.targetRetirementAge,
+                salary: {
+                  annual: partner.salaryAnnual ?? undefined,
+                  growth: partner.salaryGrowth ?? undefined,
+                },
+                superAccount: partner.superAccount ?? undefined,
+                superAccessAge: partner.superAccessAge,
+              },
+            ]),
       ],
       projectionEndAge: inputs.projectionEndAge ?? undefined,
     },
@@ -245,6 +310,7 @@ function planFromScenario(inputs: WorkedScenario["inputs"]): Plan {
     expenses: {
       livingAnnual: inputs.livingExpensesAnnual ?? undefined,
       retirementSpending: inputs.retirementSpending ?? undefined,
+      interimAnnual: inputs.interimAnnual,
       datedExpenses: (inputs.datedExpenses ?? []).map((expense, index): DatedExpense => ({
         id: `expense-${index}`,
         ...expense,
@@ -556,6 +622,66 @@ function checkSuperFigures(summary: CompleteSummary, expected: WorkedScenario["e
   }
 }
 
+/** Checks the per-person figures of a couple (M7): earliest retirement, retirement year, access age and the listed rows. */
+function checkPeopleFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (
+    expected.people === undefined &&
+    expected.householdRetirementYear === undefined &&
+    expected.personRows === undefined
+  ) {
+    return;
+  }
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+  const { projection } = summary;
+
+  if (expected.householdRetirementYear !== undefined) {
+    expect(projection.householdRetirementYear).toBe(expected.householdRetirementYear);
+  }
+
+  for (const [index, expectedPerson] of (expected.people ?? []).entries()) {
+    const person = projection.people[index];
+    expect(person, `person ${index} should exist`).toBeDefined();
+    if (person === undefined) continue;
+
+    if (expectedPerson.retirementYear !== undefined) {
+      expect(person.retirementYear).toBe(expectedPerson.retirementYear);
+    }
+    if (expectedPerson.superAccessAge !== undefined) {
+      expect(person.superAccessAge).toBe(expectedPerson.superAccessAge);
+    }
+    if (expectedPerson.earliestRetirement !== undefined) {
+      expect(person.earliestRetirement.status).toBe(expectedPerson.earliestRetirement.status);
+      if (person.earliestRetirement.status === "feasible") {
+        expect(person.earliestRetirement.age, `person ${index} earliest age`).toBe(
+          expectedPerson.earliestRetirement.age,
+        );
+        expect(person.earliestRetirement.year, `person ${index} earliest year`).toBe(
+          expectedPerson.earliestRetirement.year,
+        );
+      }
+    }
+  }
+
+  for (const expectedRow of expected.personRows ?? []) {
+    const row = projection.rows[expectedRow.yearIndex];
+    expect(row, `row ${expectedRow.yearIndex} should exist`).toBeDefined();
+    if (row === undefined) continue;
+
+    if (expectedRow.phase !== undefined) expect(row.phase).toBe(expectedRow.phase);
+    if (expectedRow.portfolioClosing !== undefined) {
+      expectToTheCent(row.portfolioClosing, expectedRow.portfolioClosing);
+    }
+    for (const [index, expectedClosing] of (expectedRow.superClosing ?? []).entries()) {
+      expectToTheCent(row.people[index]?.superClosing ?? Number.NaN, expectedClosing);
+    }
+    for (const [index, expectedDrawn] of (expectedRow.fromSuper ?? []).entries()) {
+      expectToTheCent(row.people[index]?.fromSuper ?? Number.NaN, expectedDrawn);
+    }
+  }
+}
+
 /** Checks the "does the money last?" answer against a fixture, field by field. */
 function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
   expect(actual.status).toBe(expected.status);
@@ -569,6 +695,7 @@ function checkSolvency(actual: CompleteProjection["solvency"], expected: Expecte
 
   if (expected.year !== undefined) expect(actual.year).toBe(expected.year);
   if (expected.age !== undefined) expect(actual.age).toBe(expected.age);
+  if (expected.ages !== undefined) expect(actual.ages.map(({ age }) => age)).toEqual(expected.ages);
   if (expected.shortfallYears !== undefined) {
     expect(actual.shortfallYears).toEqual(expected.shortfallYears);
   }
@@ -609,6 +736,7 @@ describe("worked examples", () => {
           checkSuperFigures(summary, scenario.expected);
           checkBridgeFigures(summary, scenario.expected);
           checkCoastSplitFigures(summary, scenario.expected);
+          checkPeopleFigures(summary, scenario.expected);
         },
       );
     });

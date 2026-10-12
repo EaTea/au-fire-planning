@@ -39,6 +39,7 @@ import type { BridgeAssessment } from "./bridge";
 import { inputsWithVoluntaryContributionsStoppedAfter, portfolioNeededFromRow } from "./coastFire";
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  describeAges,
   firstRetirementRowIndex,
   householdRetirementRowIndex,
   mapNonEmpty,
@@ -326,6 +327,7 @@ function superPathFromRow(
         cashOpening: 0,
         livingAnnual: 0,
         retirementSpendingAnnual: 0,
+        interimSpendingAnnual: 0,
         datedExpenses: [],
         people: mapNonEmpty(stopped.people, (person) => {
           if (person.superAccount === undefined) return person;
@@ -370,7 +372,7 @@ function milestone(
       unit: "dollars",
       lines: [
         {
-          label: `${balanceLabel} at end of ${row.calendarYear} (age ${row.people[0].age})`,
+          label: `${balanceLabel} at end of ${row.calendarYear} (${describeAges(row)})`,
           value: balance,
           unit: "dollars",
           source: "calculated",

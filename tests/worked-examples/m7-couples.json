@@ -1,0 +1,494 @@
+{
+  "milestone": "M7",
+  "description": "Couples: worked examples D, D2 and E from the M7 plan (and D, D2 with the interim amount at its default $0). Checked by an independent script, not the app's code.",
+  "startYear": 2026,
+  "scenarios": [
+    {
+      "name": "D: a couple, bridge met (interim $20,000)",
+      "checkedBy": "independent calculation (not the app's code), per the M7 plan",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 200000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 66,
+        "cashBalance": null,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 150000,
+          "returnRate": 0,
+          "employerRate": 0,
+          "earningsTaxRate": 0
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 53,
+          "targetRetirementAge": 58,
+          "superAccount": {
+            "balance": 100000,
+            "returnRate": 0,
+            "employerRate": 0,
+            "earningsTaxRate": 0
+          },
+          "superAccessAge": 60
+        },
+        "interimAnnual": 20000
+      },
+      "arithmetic": [
+        "Alex 55 retires at 56, super $150,000, access 65 (2036). Sam 53 retires at 58, super $100,000, access 60 (2033). Plan until Sam is 66 (2039). Portfolio $200,000 joint, all rates 0",
+        "Phases: working 2026-2027, oneRetired 2028-2031 (Alex retired, Sam working), retired 2032-2039. The first super to open is Sam's in 2033",
+        "Bridge 2028-2032: need 4 x $20,000 + $40,000 = $120,000; projected $200,000 (portfolio at the end of 2027); MET",
+        "After access 2033-2039: need 7 x $40,000 = $280,000; projected $80,000 portfolio + $150,000 + $100,000 = $330,000; MET",
+        "Portfolio: 200,000 - 80,000 (2028-2031) = 120,000; 2032 and 2033 leave 80,000 and 40,000; 2034 empties it. Sam's super pays 2035 ($40,000, leaving $60,000)",
+        "2036 pro rata: Alex $150,000 and Sam $60,000 share $40,000 in proportion: Alex pays 28,571.43 (leaves 121,428.57), Sam 11,428.57 (leaves 48,571.43). 2039: Alex 35,714.29, Sam 14,285.71"
+      ],
+      "expected": {
+        "bridge": {
+          "effectiveAccessAge": 60,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2032,
+            "need": 120000,
+            "projected": 200000,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2033,
+            "lastYear": 2039,
+            "need": 280000,
+            "projected": 330000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "solvency": {
+          "status": "lasts",
+          "investableClosing": 50000
+        },
+        "householdRetirementYear": 2031,
+        "people": [
+          {
+            "retirementYear": 2027,
+            "superAccessAge": 65,
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 55,
+              "year": 2026
+            }
+          },
+          {
+            "retirementYear": 2031,
+            "superAccessAge": 60,
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 56,
+              "year": 2029
+            }
+          }
+        ],
+        "personRows": [
+          {
+            "yearIndex": 2,
+            "phase": "oneRetired",
+            "portfolioClosing": 180000
+          },
+          {
+            "yearIndex": 6,
+            "phase": "retired",
+            "portfolioClosing": 80000
+          },
+          {
+            "yearIndex": 8,
+            "portfolioClosing": 0
+          },
+          {
+            "yearIndex": 9,
+            "superClosing": [150000, 60000]
+          },
+          {
+            "yearIndex": 10,
+            "superClosing": [121428.57, 48571.43],
+            "fromSuper": [28571.43, 11428.57]
+          },
+          {
+            "yearIndex": 13,
+            "superClosing": [35714.29, 14285.71]
+          }
+        ]
+      }
+    },
+    {
+      "name": "D with the interim amount at its default $0",
+      "checkedBy": "independent calculation (not the app's code), per the M7 plan",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 200000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 66,
+        "cashBalance": null,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 150000,
+          "returnRate": 0,
+          "employerRate": 0,
+          "earningsTaxRate": 0
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 53,
+          "targetRetirementAge": 58,
+          "superAccount": {
+            "balance": 100000,
+            "returnRate": 0,
+            "employerRate": 0,
+            "earningsTaxRate": 0
+          },
+          "superAccessAge": 60
+        }
+      },
+      "arithmetic": [
+        "Same people and money as D, interim left unset ($0): the working partner's pay is assumed to cover spending while only one of them is retired",
+        "Bridge 2028-2032: only 2032 draws, the $40,000 retirement year, so need $40,000; projected $200,000; MET",
+        "After access 2033-2039: need $280,000; projected at the end of 2032: portfolio 200,000 - 40,000 = $160,000 (2028-2031 drew nothing), plus super $150,000 + $100,000 = $410,000; MET",
+        "Total drawn 2032-2039 is 8 x $40,000 = $320,000, leaving $450,000 - $320,000 = $130,000"
+      ],
+      "expected": {
+        "bridge": {
+          "effectiveAccessAge": 60,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2032,
+            "need": 40000,
+            "projected": 200000,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2033,
+            "lastYear": 2039,
+            "need": 280000,
+            "projected": 410000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "solvency": {
+          "status": "lasts",
+          "investableClosing": 130000
+        },
+        "people": [
+          {},
+          {
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 55,
+              "year": 2028
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "D2: bridge short, with both partners' super locked (interim $20,000)",
+      "checkedBy": "independent calculation (not the app's code), per the M7 plan",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 200000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 66,
+        "cashBalance": null,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 150000,
+          "returnRate": 0,
+          "employerRate": 0,
+          "earningsTaxRate": 0
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 53,
+          "targetRetirementAge": 58,
+          "superAccount": {
+            "balance": 100000,
+            "returnRate": 0,
+            "employerRate": 0,
+            "earningsTaxRate": 0
+          },
+          "superAccessAge": null
+        },
+        "interimAnnual": 20000
+      },
+      "arithmetic": [
+        "D with Sam's access left at the default 65: Alex's super opens in 2036 and Sam's in 2038, so the first to open is Alex's",
+        "Bridge 2028-2035: need 4 x $20,000 + 4 x $40,000 = $240,000 against $200,000 projected: SHORT in 2035 by $40,000, with both partners' super locked",
+        "After access 2036-2039: need 4 x $40,000 = $160,000; projected $250,000 (super only, the portfolio is empty); MET",
+        "Earliest retirement: Alex 58 (2029) with Sam retiring at 58; Sam 60 (2033) with Alex retiring at 56"
+      ],
+      "expected": {
+        "bridge": {
+          "effectiveAccessAge": 65,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2035,
+            "need": 240000,
+            "projected": 200000,
+            "status": "short",
+            "shortYears": [2035]
+          },
+          "afterAccess": {
+            "firstYear": 2036,
+            "lastYear": 2039,
+            "need": 160000,
+            "projected": 250000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "solvency": {
+          "status": "runsOut",
+          "year": 2035,
+          "age": 64,
+          "ages": [64, 62],
+          "shortfallYears": [2035],
+          "shortfall": 40000
+        },
+        "people": [
+          {
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 58,
+              "year": 2029
+            }
+          },
+          {
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 60,
+              "year": 2033
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "D2 with the interim amount at its default $0",
+      "checkedBy": "independent calculation (not the app's code), per the M7 plan",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 200000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 66,
+        "cashBalance": null,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 55,
+        "targetRetirementAge": 56,
+        "superAccount": {
+          "balance": 150000,
+          "returnRate": 0,
+          "employerRate": 0,
+          "earningsTaxRate": 0
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 53,
+          "targetRetirementAge": 58,
+          "superAccount": {
+            "balance": 100000,
+            "returnRate": 0,
+            "employerRate": 0,
+            "earningsTaxRate": 0
+          },
+          "superAccessAge": null
+        }
+      },
+      "arithmetic": [
+        "Same as D2 with no interim spending. Bridge 2028-2035 draws only 2032-2035, 4 x $40,000 = $160,000 against $200,000 projected; MET",
+        "After access 2036-2039: need $160,000; projected $40,000 portfolio + $150,000 + $100,000 = $290,000; MET",
+        "2036 the portfolio's last $40,000 pays; 2037 Alex pays $40,000 (leaves $110,000); 2038 Sam's super opens too: Alex $110,000 and Sam $100,000 share $40,000 in proportion 110:100, Alex pays 20,952.38 and Sam 19,047.62"
+      ],
+      "expected": {
+        "bridge": {
+          "effectiveAccessAge": 65,
+          "bridge": {
+            "firstYear": 2028,
+            "lastYear": 2035,
+            "need": 160000,
+            "projected": 200000,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2036,
+            "lastYear": 2039,
+            "need": 160000,
+            "projected": 290000,
+            "status": "met",
+            "shortYears": []
+          }
+        },
+        "solvency": {
+          "status": "lasts",
+          "investableClosing": 130000
+        },
+        "personRows": [
+          {
+            "yearIndex": 12,
+            "fromSuper": [20952.38, 19047.62],
+            "superClosing": [89047.62, 80952.38]
+          }
+        ]
+      }
+    },
+    {
+      "name": "E: realistic couple",
+      "checkedBy": "independent calculation (not the app's code), per the M7 plan",
+      "inputs": {
+        "livingExpensesAnnual": 90000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 90000
+        },
+        "interimAnnual": 50000,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0.07,
+        "annualContribution": 20000,
+        "contributionsStopAge": null,
+        "projectionEndAge": null,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "name": "Alex",
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "salaryAnnual": 145000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0.01
+        },
+        "superAccount": {
+          "balance": 185000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 32,
+          "targetRetirementAge": 52,
+          "salaryAnnual": 110000,
+          "salaryGrowth": {
+            "kind": "none"
+          },
+          "superAccount": {
+            "balance": 120000,
+            "returnRate": 0.07
+          },
+          "superAccessAge": 60
+        }
+      },
+      "arithmetic": [
+        "Alex 34 retires at 50, Sam 32 retires at 52; rates: inflation 2.5%, return 7%, interest 4%, super 7%; plan until Sam is 95 (2089, Alex 97), 64 rows",
+        "Phases: oneRetired 2043-2046 (Alex retired, Sam works), retired from 2047. Household retirement is 2046",
+        "FI number at the household retirement: $90,000 / 4% = $2,250,000 x 1.025^20 = $3,686,886.99 nominal",
+        "Bridge 2043-2053 (Sam's super opens at 60 in 2054): need $864,875.22, net of $67,744.23 of portfolio contributions paid 2043-2046; projected $890,437.07; MET",
+        "After access 2054-2089: need $3,626,576.69 against $3,439,371.73 projected; SHORT in 2086-2089",
+        "Money runs out in 2086 (Alex 94, Sam 92). Earliest retirement: Alex 52 (2044), Sam 54 (2048)"
+      ],
+      "expected": {
+        "fiNumberAtRetirement": 3686886.99,
+        "householdRetirementYear": 2046,
+        "bridge": {
+          "effectiveAccessAge": 60,
+          "bridge": {
+            "firstYear": 2043,
+            "lastYear": 2053,
+            "need": 864875.22,
+            "projected": 890437.07,
+            "status": "met",
+            "shortYears": []
+          },
+          "afterAccess": {
+            "firstYear": 2054,
+            "lastYear": 2089,
+            "need": 3626576.69,
+            "projected": 3439371.73,
+            "status": "short",
+            "shortYears": [2086, 2087, 2088, 2089]
+          }
+        },
+        "solvency": {
+          "status": "runsOut",
+          "year": 2086,
+          "age": 94,
+          "ages": [94, 92],
+          "shortfallYears": [2086, 2087, 2088, 2089]
+        },
+        "people": [
+          {
+            "retirementYear": 2042,
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 52,
+              "year": 2044
+            }
+          },
+          {
+            "retirementYear": 2046,
+            "superAccessAge": 60,
+            "earliestRetirement": {
+              "status": "feasible",
+              "age": 54,
+              "year": 2048
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

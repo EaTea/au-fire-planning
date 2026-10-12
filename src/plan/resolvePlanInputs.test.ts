@@ -144,7 +144,10 @@ describe("resolvePlanInputs: projection inputs", () => {
     return {
       ...plan,
       household: {
-        people: [person, { id: "person-2", label: "Sam", ...sam, superAccessAge: 60 }],
+        people: [
+          person,
+          { id: "person-2", label: "Person 2", name: "Sam", ...sam, superAccessAge: 60 },
+        ],
       },
     };
   }
@@ -157,7 +160,9 @@ describe("resolvePlanInputs: projection inputs", () => {
     expect(projection.inputs.people.map((person) => person.id)).toEqual(["id-1", "person-2"]);
     expect(projection.inputs.people[1]?.currentAge).toEqual({ value: 32, source: "input" });
     expect(projection.inputs.people[1]?.superAccessAge).toEqual({ value: 60, source: "input" });
-    expect(projection.inputs.portfolioOwnerIds).toEqual(["id-1"]);
+    // With nothing stored, a couple jointly owns the portfolio.
+    expect(projection.inputs.portfolioOwnerIds).toEqual(["id-1", "person-2"]);
+    expect(projection.inputs.people.map((person) => person.label)).toEqual(["Person 1", "Sam"]);
   });
 
   // With several people a message names whose input is missing; the one-person labels never change.
@@ -179,7 +184,7 @@ describe("resolvePlanInputs: projection inputs", () => {
       missing: [
         {
           field: "targetRetirementAge",
-          label: "Sam: Target retirement age must be before your plan-until age",
+          label: "Sam: Target retirement age must be before the end of the plan, when Sam is 95",
         },
       ],
     });
@@ -202,6 +207,79 @@ describe("resolvePlanInputs: projection inputs", () => {
         },
       ],
     });
+  });
+
+  // The wording names the person ("Sam's"), where one person's reads "your".
+  it("words a couple's retirement-before-today message with the person's name", () => {
+    expect(projectionOf(planWithTwoPeople({ currentAge: 40, targetRetirementAge: 38 }))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "targetRetirementAge",
+          label: "Sam: Target retirement age must be at or after Sam's current age",
+        },
+      ],
+    });
+  });
+
+  it("words the plan-until message for a couple as the younger person's age", () => {
+    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 40 });
+
+    expect(
+      projectionOf({ ...plan, household: { ...plan.household, projectionEndAge: 30 } }),
+    ).toMatchObject({
+      status: "incomplete",
+      missing: expect.arrayContaining([
+        {
+          field: "projectionEndAge",
+          label: "Plan until age must be after the younger person's current age",
+        },
+      ]),
+    });
+  });
+
+  // Ownership decides who the portfolio's contributions follow (IN-14, part).
+  it.each([
+    ["sole Person 2", { kind: "sole", personId: "person-2" }, ["person-2"]],
+    [
+      "joint",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "person-2", fraction: 0.5 },
+          { personId: "id-1", fraction: 0.5 },
+        ],
+      },
+      ["id-1", "person-2"],
+    ],
+    ["an id that isn't in the plan", { kind: "sole", personId: "gone" }, ["id-1"]],
+  ] as const)(
+    "resolves %s ownership to the owners, in the plan's order",
+    (_name, ownership, owners) => {
+      const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
+      const projection = projectionOf({
+        ...plan,
+        portfolios: [{ ...plan.portfolios[0]!, ownership }],
+      });
+      if (projection.status !== "complete") throw new Error("expected complete");
+
+      expect(projection.inputs.portfolioOwnerIds).toEqual(owners);
+    },
+  );
+
+  it("resolves the interim amount, defaulting to $0", () => {
+    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
+    const withInterim = projectionOf({
+      ...plan,
+      expenses: { ...plan.expenses, interimAnnual: 20000 },
+    });
+    const withoutInterim = projectionOf(plan);
+
+    if (withInterim.status !== "complete" || withoutInterim.status !== "complete") {
+      throw new Error("expected complete");
+    }
+    expect(withInterim.inputs.interimAnnual).toEqual({ value: 20000, source: "input" });
+    expect(withoutInterim.inputs.interimAnnual).toEqual({ value: 0, source: "default" });
   });
 
   // Retiring this year is allowed.
@@ -236,6 +314,7 @@ describe("resolvePlanInputs: projection inputs", () => {
         },
       ],
       portfolioOwnerIds: ["id-1"],
+      interimAnnual: { value: 0, source: "default" },
       inflationRate: { value: 0.025, source: "default" },
       expectedReturn: { value: 0.07, source: "default" },
       annualContribution: { value: 0, source: "default" },

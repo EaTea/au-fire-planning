@@ -361,6 +361,7 @@ function summariseProjection(
     cashOpening: inputs.cashBalance.value,
     livingAnnual: inputs.livingAnnual.value,
     retirementSpendingAnnual,
+    interimSpendingAnnual: projectionInputs.interimAnnual.value,
     datedExpenses: projectionInputs.datedExpenses.map((expense) => ({
       annual: expense.annual.value,
       fromYear: expense.fromYear,
@@ -407,8 +408,11 @@ function summariseProjection(
     people: personSummaries,
     householdRetirementYear: startYear + yearsUntilRetirement,
     endAge: projectionInputs.endAge.value,
-    // Until the couple wording (M7 PR B) the locked-super note quotes the first person's access age.
-    solvency: assessSolvency(rows, personSummaries[0].superAccessAge),
+    // The locked-super note names each partner whose super is still locked, with their own access age.
+    solvency: assessSolvency(
+      rows,
+      personSummaries.map((personSummary) => personSummary.superAccessAge),
+    ),
     bridge,
     coast: { ...calculateCoastFire(rows, projectionSettings), split: coastSplit },
   };
