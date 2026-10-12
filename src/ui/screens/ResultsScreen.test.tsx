@@ -176,9 +176,7 @@ describe("ResultsScreen", () => {
     renderResults(blankPlan);
 
     expect(
-      screen.getByText(
-        /Not yet modelled: super is only drawn from 65 \(M6 lets you change this and checks the years before\), tax \(M8\)/,
-      ),
+      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
     ).toBeInTheDocument();
   });
 
@@ -186,9 +184,7 @@ describe("ResultsScreen", () => {
     renderResults(workedPlan);
 
     expect(
-      screen.getByText(
-        /Not yet modelled: super is only drawn from 65 \(M6 lets you change this and checks the years before\), tax \(M8\)/,
-      ),
+      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
     ).toBeInTheDocument();
   });
 

@@ -25,6 +25,8 @@ function sampleRulesFile(overrides: Partial<RulesFileV1> = {}): RulesFileV1 {
       contributionsTaxPercent: 15,
       earningsTaxPercent: 15,
       discountedCapitalGainsTaxPercent: 10,
+      preservationAgeYears: 60,
+      unconditionalReleaseAgeYears: 65,
     },
     sources: {
       guaranteeRatePercent: url,
@@ -32,6 +34,8 @@ function sampleRulesFile(overrides: Partial<RulesFileV1> = {}): RulesFileV1 {
       contributionsTaxPercent: url,
       earningsTaxPercent: url,
       discountedCapitalGainsTaxPercent: url,
+      preservationAgeYears: url,
+      unconditionalReleaseAgeYears: url,
     },
     ...overrides,
   };
@@ -57,6 +61,18 @@ describe("bundled rules data", () => {
     expect(rules.superannuation.contributionsTaxRate).toBeCloseTo(0.15);
     expect(rules.superannuation.earningsTaxRate).toBeCloseTo(0.15);
     expect(rules.superannuation.discountedCapitalGainsTaxRate).toBeCloseTo(0.1);
+    expect(rules.superannuation.preservationAgeYears).toBe(60);
+    expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
+  });
+
+  it("is marked unverified, with a note naming the two M6 values, until the owner checks them", () => {
+    const [snapshot] = bundledRuleSet.snapshots;
+
+    expect(snapshot?.verificationStatus).toBe("unverified");
+    expect(snapshot?.verificationNote).toContain("preservationAgeYears");
+    expect(snapshot?.verificationNote).toContain("unconditionalReleaseAgeYears");
+    expect(snapshot?.sourceUrls.preservationAgeYears).toMatch(/\/preservation-age$/);
+    expect(snapshot?.sourceUrls.unconditionalReleaseAgeYears).toMatch(/\/conditions-of-release$/);
   });
 });
 
@@ -86,6 +102,24 @@ describe("rules file schema", () => {
     expect(() => parseRulesFile(withoutVerification)).toThrow();
   });
 
+  it("rejects a missing or non-whole age and a missing age source", () => {
+    const file = sampleRulesFile();
+
+    const withoutPreservation: Record<string, unknown> = { ...file.superannuation };
+    delete withoutPreservation.preservationAgeYears;
+    expect(() => parseRulesFile({ ...file, superannuation: withoutPreservation })).toThrow();
+
+    const fractional = {
+      ...file,
+      superannuation: { ...file.superannuation, unconditionalReleaseAgeYears: 65.5 },
+    };
+    expect(() => parseRulesFile(fractional)).toThrow();
+
+    const withoutSource: Record<string, unknown> = { ...file.sources };
+    delete withoutSource.unconditionalReleaseAgeYears;
+    expect(() => parseRulesFile({ ...file, sources: withoutSource })).toThrow();
+  });
+
   it("rejects a negative rate", () => {
     const file = sampleRulesFile();
     const negative = {
@@ -112,6 +146,8 @@ describe("ruleSetFromWire", () => {
     expect(snapshot?.superannuation.contributionsTaxRate).toBeCloseTo(0.15);
     expect(snapshot?.superannuation.maximumContributionBaseAnnualDollars).toBe(250000);
     expect(snapshot?.verificationStatus).toBe("verified");
+    expect(snapshot?.superannuation.preservationAgeYears).toBe(60);
+    expect(snapshot?.superannuation.unconditionalReleaseAgeYears).toBe(65);
   });
 
   it("sorts snapshots by start date", () => {
@@ -139,6 +175,8 @@ describe("rulesForYear", () => {
     expect(rules.financialYear).toBe("2025-26");
     expect(rules.isEstimated).toBe(false);
     expect(rules.superannuation.maximumContributionBaseAnnualDollars).toBe(250000);
+    expect(rules.superannuation.preservationAgeYears).toBe(60);
+    expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
   });
 
   it("uses the earliest file for earlier years, without adjusting", () => {
@@ -158,8 +196,10 @@ describe("rulesForYear", () => {
     expect(year2028.superannuation.maximumContributionBaseAnnualDollars).toBeCloseTo(
       250000 * 1.025 * 1.025,
     );
-    // Rates are law, not indexed.
+    // Rates are law, not indexed, and the ages aren't dollar thresholds.
     expect(year2027.superannuation.guaranteeRate).toBeCloseTo(0.12);
+    expect(year2027.superannuation.preservationAgeYears).toBe(60);
+    expect(year2027.superannuation.unconditionalReleaseAgeYears).toBe(65);
   });
 
   it("lets a later snapshot replace the earlier one from its date", () => {

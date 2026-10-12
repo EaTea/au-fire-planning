@@ -145,6 +145,7 @@ const plans: fc.Arbitrary<Plan> = fc
     inflationRate: fc.option(wholeHundredthsFraction, { nil: undefined }),
     currentAge: fc.option(ages, { nil: undefined }),
     targetRetirementAge: fc.option(ages, { nil: undefined }),
+    superAccessAge: fc.option(ages, { nil: undefined }),
     expectedReturn: fc.option(wholeHundredthsFraction, { nil: undefined }),
     annualContribution: fc.option(dollars, { nil: undefined }),
     contributionsStopAge: fc.option(ages, { nil: undefined }),
@@ -170,6 +171,9 @@ const plans: fc.Arbitrary<Plan> = fc
           ...(generated.currentAge !== undefined ? { currentAge: generated.currentAge } : {}),
           ...(generated.targetRetirementAge !== undefined
             ? { targetRetirementAge: generated.targetRetirementAge }
+            : {}),
+          ...(generated.superAccessAge !== undefined
+            ? { superAccessAge: generated.superAccessAge }
             : {}),
           ...(generated.salary !== undefined ? { salary: generated.salary } : {}),
           ...(generated.superAccount !== undefined ? { superAccount: generated.superAccount } : {}),

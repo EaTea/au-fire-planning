@@ -26,6 +26,13 @@ export interface SuperannuationRules {
   readonly earningsTaxRate: number;
   /** Tax rate on discounted capital gains inside super, as a fraction. */
   readonly discountedCapitalGainsTaxRate: number;
+  /**
+   * The preservation age in whole years: the earliest age super can be
+   * accessed once retired (60 for anyone born after 30 June 1964).
+   */
+  readonly preservationAgeYears: number;
+  /** The age at which super can be accessed whether or not retired (65). */
+  readonly unconditionalReleaseAgeYears: number;
 }
 
 /** One rules file in internal form: the rules from `effectiveFrom` until the next snapshot. */
@@ -72,6 +79,8 @@ function snapshotFromWire(rulesFile: RulesFileV1): RuleSnapshot {
       contributionsTaxRate: wireSuper.contributionsTaxPercent / 100,
       earningsTaxRate: wireSuper.earningsTaxPercent / 100,
       discountedCapitalGainsTaxRate: wireSuper.discountedCapitalGainsTaxPercent / 100,
+      preservationAgeYears: wireSuper.preservationAgeYears,
+      unconditionalReleaseAgeYears: wireSuper.unconditionalReleaseAgeYears,
     },
     sourceUrls: { ...rulesFile.sources },
   };

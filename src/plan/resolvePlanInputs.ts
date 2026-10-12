@@ -108,6 +108,13 @@ export interface ResolvedProjectionInputs {
   readonly salaryGrowth: Sourced<SalaryGrowth>;
   /** The super account (default: empty, $0). */
   readonly superAccount: ResolvedSuperAccount;
+  /**
+   * The age the person wants super accessible from, or `undefined` with
+   * source "rule" when left to the law: the default is then the unconditional
+   * release age from the rules (65). The engine clamps a user value between the
+   * preservation age and that age, because both come from the rules data.
+   */
+  readonly superAccessAge: Sourced<number | undefined>;
 }
 
 /**
@@ -260,6 +267,10 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
       salaryAnnual: sourceOrDefault(person?.salary?.annual, DEFAULT_SALARY_ANNUAL),
       salaryGrowth: sourceOrDefault(person?.salary?.growth, DEFAULT_SALARY_GROWTH),
       superAccount: resolveSuperAccount(person?.superAccount),
+      superAccessAge:
+        person?.superAccessAge === undefined
+          ? { value: undefined, source: "rule" }
+          : { value: person.superAccessAge, source: "input" },
     },
   };
 }

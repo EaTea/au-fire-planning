@@ -135,7 +135,7 @@ async function findLowContrastWhileInteracting(page: Page): Promise<string[]> {
 /**
  * Types a value into every input on the current page, then moves focus away.
  * "valid" uses a value every field accepts: 50 for ages (15 to 100), 90 for
- * "Plan until age" (50 to 110, and after the other ages), 2030 for a contribution
+ * "Plan until age" (50 to 110, and after the other ages), 62 for "Super accessible at" (60 to 65), 2030 for a contribution
  * year, and 5 for everything else (percentages are capped at 15%). "invalid" uses -5, which every field
  * rejects.
  */
@@ -149,12 +149,15 @@ async function fillEveryInput(page: Page, values: "valid" | "invalid"): Promise<
     const labelText = await labelTextOf(input);
     const isAge = /age/i.test(labelText);
     const isEndAge = /plan until age/i.test(labelText);
+    const isAccessAge = /super accessible at/i.test(labelText);
     const isContributionYear = /(from|to) year$/i.test(labelText);
 
     if (values === "invalid") {
       await input.fill("-5");
     } else {
-      await input.fill(isEndAge ? "90" : isAge ? "50" : isContributionYear ? "2030" : "5");
+      await input.fill(
+        isEndAge ? "90" : isAccessAge ? "62" : isAge ? "50" : isContributionYear ? "2030" : "5",
+      );
     }
   }
   await page.locator("h1").click();
@@ -462,5 +465,97 @@ test("results has readable text with a shortfall, its banners and an outlined ro
     await page.getByRole("button", { name: mode }).click();
     expect(await findLowContrastText(page), mode).toEqual([]);
     expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});
+
+test("the bridge check has readable text with SHORT showing and both breakdowns open", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B2 (tests/worked-examples/m6-bridge.json): the bridge is SHORT, after access is MET.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "55"],
+    ["#/household", "Target retirement age", "56"],
+    ["#/household", "Plan until age", "66"],
+    ["#/income-expenses", "Per year, after tax", "20000"],
+    ["#/assets", "Super balance", "100000"],
+    ["#/assets", "Return, net of fees", "0"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "0"],
+    ["#/assets", "Cash savings", "0"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "0"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  await page.goto("#/results?view=bridge");
+  const card = page.locator("#bridge");
+  await expect(card.getByText("SHORT", { exact: true })).toBeVisible();
+  await expect(card.getByText("MET", { exact: true })).toBeVisible();
+
+  // Open both breakdowns, so the working's text is checked too.
+  for (const toggle of await card.getByRole("button", { name: "How is this calculated?" }).all()) {
+    await toggle.click();
+  }
+  await expect(card.locator(".explain-panel")).toHaveCount(2);
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});
+
+test("the bridge chart and the Coast FIRE split card have readable text in both dollar modes, with a tooltip and a breakdown open", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page);
+
+  // Worked example B2 (tests/worked-examples/m6-bridge.json): the bridge band is shaded, outside super is not reached.
+  const entries: [string, string, string][] = [
+    ["#/household", "Current age", "55"],
+    ["#/household", "Target retirement age", "56"],
+    ["#/household", "Plan until age", "66"],
+    ["#/income-expenses", "Per year, after tax", "20000"],
+    ["#/assets", "Super balance", "100000"],
+    ["#/assets", "Return, net of fees", "0"],
+    ["#/assets", "Current value", "100000"],
+    ["#/assets", "Expected return per year", "0"],
+    ["#/assets", "Cash savings", "0"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "0"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  await page.goto("#/results?view=coast-split");
+  const splitCard = page.locator("#coast-split");
+  await expect(splitCard.getByText("Coasting since 2026", { exact: true })).toBeVisible();
+  await expect(splitCard.getByText("Not before retirement", { exact: true })).toBeVisible();
+  await splitCard.getByRole("button", { name: "How is this calculated?" }).first().click();
+  await expect(splitCard.locator(".explain-panel")).toHaveCount(1);
+
+  // Show the chart's tooltip while checking, since it is text on its own background.
+  const picture = page.locator("#bridge .chart-picture");
+  await expect(page.locator("#bridge .chart-band")).toHaveCount(1);
+  await picture.scrollIntoViewIfNeeded();
+  const box = (await picture.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    expect(await findLowContrastText(page), mode).toEqual([]);
   }
 });

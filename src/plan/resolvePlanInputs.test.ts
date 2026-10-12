@@ -166,6 +166,7 @@ describe("resolvePlanInputs: projection inputs", () => {
         nonConcessional: { annual: { value: 0, source: "default" } },
         earningsTaxRate: { value: undefined, source: "rule" },
       },
+      superAccessAge: { value: undefined, source: "rule" },
     });
   });
 
@@ -404,5 +405,39 @@ describe("resolvePlanInputs: super account", () => {
       toYear: 2042,
     });
     expect(account.nonConcessional).toEqual({ annual: { value: 5000, source: "input" } });
+  });
+});
+
+// Tests for the super access age input (IN-5).
+describe("resolvePlanInputs: super access age", () => {
+  /** Resolves a plan for a person aged 40 retiring at 50, returning the resolved access age. */
+  function resolveAccessAge(superAccessAge: number | undefined) {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    if (person === undefined) throw new Error("blank plan is empty");
+
+    const resolvedPlan = resolvePlanInputs({
+      ...blank,
+      household: {
+        people: [{ ...person, currentAge: 40, targetRetirementAge: 50, superAccessAge }],
+      },
+      expenses: { livingAnnual: 50000 },
+    });
+    if (
+      resolvedPlan.status !== "complete" ||
+      resolvedPlan.inputs.projection.status !== "complete"
+    ) {
+      throw new Error("expected a complete plan");
+    }
+
+    return resolvedPlan.inputs.projection.inputs.superAccessAge;
+  }
+
+  it("leaves an unset age to the law (the rules' unconditional release age)", () => {
+    expect(resolveAccessAge(undefined)).toEqual({ value: undefined, source: "rule" });
+  });
+
+  it("keeps an entered age, with source input", () => {
+    expect(resolveAccessAge(60)).toEqual({ value: 60, source: "input" });
   });
 });

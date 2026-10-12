@@ -22,7 +22,7 @@
 //                     + concessional − contributions tax + non-concessional
 //
 //   take it from: 1. portfolio available
-//                 2. super available, only if age ≥ the super access age (65)
+//                 2. super available, only once it is drawable (see isSuperDrawable)
 //                 3. cash available (last, as a buffer)
 //   anything left over = shortfall for this year (everything drawn ends at $0)
 //
@@ -33,9 +33,8 @@
 // Every value in row k shares one inflation index, (1+i)^k, so converting any
 // of them to today's dollars divides by that single number.
 
-import { DEFAULT_SUPER_ACCESS_AGE } from "../plan/defaults";
 import type { SalaryGrowth } from "../plan/types";
-import { rulesForYear, type RuleSet } from "../rules/ruleSet";
+import { rulesForYear, type RuleSet, type SuperannuationRules } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
 
 /** A dated expense as the projection needs it: today's dollars per year, over calendar years. */
@@ -78,6 +77,12 @@ export interface ProjectionSuper {
   readonly earningsTaxRate?: number;
   readonly salarySacrifice: ProjectionSuperContribution;
   readonly nonConcessional: ProjectionSuperContribution;
+  /**
+   * The age the person wants super accessible from (IN-5). Absent means the
+   * unconditional release age (65). Whatever is given is clamped between the
+   * preservation age and that age, using the rules (see `resolveSuperAccessAge`).
+   */
+  readonly accessAge?: number;
   /** The statutory rules, from which each row takes its rates and the contribution base. */
   readonly ruleSet: RuleSet;
 }
@@ -145,8 +150,10 @@ export interface ProjectionRow {
   readonly fromCash: number;
   /** The part of spending that couldn't be funded; 0 in a funded year. */
   readonly shortfall: number;
-  /** The part of spending paid from super, after the portfolio and before cash; 0 before the super access age. */
+  /** The part of spending paid from super, after the portfolio and before cash; 0 while super isn't drawable. */
   readonly fromSuper: number;
+  /** Whether super can be drawn this year, by the condition of release (see `isSuperDrawable`); false when there is no super. */
+  readonly superAccessible: boolean;
   /** Cash plus portfolio plus super at the end of the year. */
   readonly investableClosing: number;
   readonly livingExpenses: number;
@@ -169,14 +176,80 @@ export interface ProjectionRow {
 }
 
 /**
- * True when a year can't be fully funded while some super sits locked: the
- * person is younger than the access age and has a super balance that could
- * not be drawn. Used by the Year by year status and by the "Money runs out"
- * breakdown, so both say the same thing about the same year. M6 replaces the
- * fixed access age with the person's own.
+ * True when a year can't be fully funded while some super sits locked: super
+ * can't be drawn this year (`superAccessible` is false) but has a balance
+ * that could otherwise have helped. Used by the Year by year status and by
+ * the "Money runs out" breakdown, so both say the same thing about the same
+ * year; the age they quote is `effectiveSuperAccessAge`.
  */
 export function isShortfallWithSuperLocked(row: ProjectionRow): boolean {
-  return row.shortfall > 0 && row.age < DEFAULT_SUPER_ACCESS_AGE && row.superClosing > 0;
+  return row.shortfall > 0 && !row.superAccessible && row.superClosing > 0;
+}
+
+/**
+ * Clamps the access age a person asked for (IN-5) into the range the rules
+ * allow: no lower than the preservation age, no higher than the unconditional
+ * release age, and the release age when none was given. Called by
+ * `isSuperDrawable` and `effectiveSuperAccessAge`.
+ */
+function resolveSuperAccessAge(
+  requestedAge: number | undefined,
+  rules: SuperannuationRules,
+): number {
+  const age = requestedAge ?? rules.unconditionalReleaseAgeYears;
+
+  return Math.min(Math.max(age, rules.preservationAgeYears), rules.unconditionalReleaseAgeYears);
+}
+
+/**
+ * The condition of release (SUPER-1): whether super can be drawn at `age`.
+ *
+ *   drawable at age a  ⇔  a ≥ unconditional release age (65)
+ *                       or (a ≥ access age  and  a ≥ preservation age (60)
+ *                           and  a > retirement age)
+ *
+ * So the condition is met on retiring at or after the preservation age, or at
+ * 65 regardless. Both ages come from `rules`, never from literals. Called by
+ * `projectPortfolio` for every row.
+ */
+function isSuperDrawable(
+  age: number,
+  retirementAge: number,
+  requestedAccessAge: number | undefined,
+  rules: SuperannuationRules,
+): boolean {
+  const accessAge = resolveSuperAccessAge(requestedAccessAge, rules);
+
+  return (
+    age >= rules.unconditionalReleaseAgeYears ||
+    (age >= accessAge && age >= rules.preservationAgeYears && age > retirementAge)
+  );
+}
+
+/**
+ * The effective access age: the first age at which super can be drawn while
+ * retired. It is the (clamped) access age when the person retires before it,
+ * otherwise the year after retirement, capped at the unconditional release age.
+ * It drives the bridge, the milestones and the "super locked until" wording.
+ *
+ * Returns `undefined` when the plan has no super account, since there are no
+ * rules to read the ages from. The rules are the ones in effect in
+ * `startYear`; the ages are not indexed, so this agrees with the per-row rules
+ * `projectPortfolio` uses. Called by `summarisePlan` and the retirement-age search.
+ */
+export function effectiveSuperAccessAge(
+  inputs: ProjectionInputs,
+  startYear: number,
+): number | undefined {
+  const account = inputs.superAccount;
+  if (account === undefined) return undefined;
+
+  const rules = rulesForYear(account.ruleSet, startYear, inputs.inflationRate).superannuation;
+  const accessAge = resolveSuperAccessAge(account.accessAge, rules);
+
+  return inputs.retirementAge < accessAge
+    ? accessAge
+    : Math.min(inputs.retirementAge + 1, rules.unconditionalReleaseAgeYears);
 }
 
 /** The year investable net worth first reaches the FI number, with the working behind it. */
@@ -219,6 +292,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       fromPortfolio: 0,
       shortfall: 0,
       fromSuper: 0,
+      superAccessible: isSuperAccessibleInYear(inputs, inputs.currentAge, startYear),
       investableClosing: inputs.cashOpening + inputs.portfolioOpening + superOpeningToday,
       livingExpenses: inputs.livingAnnual,
       fiNumber: inputs.fiNumberToday,
@@ -266,11 +340,11 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       sumDatedExpensesInYear(inputs.datedExpenses, calendarYear) * inflationIndex;
     const spending = retirementSpending + datedSpending;
 
-    // The portfolio is drawn first, then super but only from the access age,
-    // and cash last, so cash stays as a buffer until everything else is
+    // The portfolio is drawn first, then super but only once it is drawable
+    // (the condition of release), and cash last, so cash stays as a buffer until everything else is
     // spent; whatever is left over is the shortfall.
     const fromPortfolio = Math.min(spending, portfolioAvailable);
-    const superIsAccessible = age >= DEFAULT_SUPER_ACCESS_AGE;
+    const superIsAccessible = isSuperAccessibleInYear(inputs, age, calendarYear);
     const fromSuper = superIsAccessible
       ? Math.min(spending - fromPortfolio, superYear.available)
       : 0;
@@ -299,6 +373,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       fromPortfolio,
       shortfall,
       fromSuper,
+      superAccessible: superIsAccessible,
       investableClosing: cash + portfolio + superBalance,
       livingExpenses: inputs.livingAnnual * inflationIndex,
       fiNumber: inputs.fiNumberToday * inflationIndex,
@@ -315,6 +390,24 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
   }
 
   return rows;
+}
+
+/**
+ * Whether the person's super can be drawn at `age` in `calendarYear`, using
+ * that year's rules. False when there is no super account. Called by
+ * `projectPortfolio` for each row.
+ */
+function isSuperAccessibleInYear(
+  inputs: ProjectionInputs,
+  age: number,
+  calendarYear: number,
+): boolean {
+  const account = inputs.superAccount;
+  if (account === undefined) return false;
+
+  const rules = rulesForYear(account.ruleSet, calendarYear, inputs.inflationRate).superannuation;
+
+  return isSuperDrawable(age, inputs.retirementAge, account.accessAge, rules);
 }
 
 /** One year of super before any drawing, as worked out by `projectSuperYear`. */

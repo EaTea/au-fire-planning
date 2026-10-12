@@ -115,3 +115,24 @@ describe("ExplainPanel", () => {
     expect(row).not.toHaveTextContent("%");
   });
 });
+
+describe("ExplainPanel with a trailing law note", () => {
+  it("keeps the result bold when a rule line follows it", () => {
+    render(
+      <ExplainPanel
+        explained={{
+          value: 10,
+          unit: "dollars",
+          lines: [
+            { label: "Thing", value: 10, unit: "dollars", source: "calculated" },
+            { label: "Result", value: 10, unit: "dollars", operator: "=", source: "calculated" },
+            { label: "Tax-free from age", value: 60, unit: "years", source: "rule" },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Result").closest("b")).not.toBeNull();
+    expect(screen.getByText("Tax-free from age").closest("b")).toBeNull();
+  });
+});
