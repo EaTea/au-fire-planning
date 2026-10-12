@@ -4,7 +4,7 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last and the salary growth default are done. The M7 (couples) step-by-step plan is in review.
+**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. The M7 (couples) step-by-step plan is in review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
@@ -588,6 +588,7 @@ is split, it is finished in the last milestone listed.
 | **NFR-5** Disclaimer | Must | M1 |
 | **NFR-6** Accuracy tests with worked examples | Must | M1 → every milestone |
 | **NFR-7** Further reading links | Should | M21 |
+| **NFR-8** Start over | Must | Start over from the logo (side plan) |
 ### Decisions
 
 Agreed in review of part 1:
@@ -2340,6 +2341,98 @@ there are two-person engine tests for D and D2.
   migrated records once the first migration exists; two tabs on an empty
   database (M16).
 
+### Start over from the logo: step-by-step plan
+
+**Kind:** behavior change. **Status:** done. The plan was approved in
+PR #31, and step 1 was merged in PR #36.
+
+**Why.** The owner wants a quick way to throw away the current plan and
+begin again. The "AU FIRE Planner" logo at the top left is where people
+expect a "home" or "start again" control, and it currently does nothing.
+
+**What changes for the user:**
+- The logo becomes a button. Hovering or focusing it shows a "Start over"
+  tooltip, and it gets the same focus ring as the other buttons. It
+  keeps its green and gold look, with a slightly stronger border on hover
+  so it reads as clickable.
+- Clicking it opens a confirmation dialog: "Start over? This clears
+  everything you've entered on this device. It can't be undone." with two
+  buttons, **Start over** and **Keep my plan**. Keep my plan has focus
+  when the dialog opens, so pressing Enter by accident loses nothing.
+  Escape or clicking outside the dialog also keeps the plan.
+- Confirming replaces the plan with a brand new blank one (the same plan a
+  first-time visitor gets: "Person 1" and an empty "Share portfolio") and
+  goes to step 1, Household. Every field shows its default again.
+- If nothing has been entered yet, there is nothing to lose, so the
+  dialog is skipped and the logo just goes to step 1.
+- On the welcome page the logo stays plain text, because there is no plan
+  to clear before the disclaimer is accepted.
+
+**What happens to the saved plan.** The app keeps one plan in this
+browser's storage and autosaves it. Starting over is saved like any other
+edit: the blank plan overwrites the saved one, so after a reload the user
+still sees the blank plan. Nothing is kept for undo; the dialog says so.
+The disclaimer acceptance is kept, so the welcome page doesn't come back.
+The "today's dollars / nominal dollars" choice is a display setting, not
+part of the plan, and stays as it was. If another tab has changed the plan
+(the "changed in another tab" banner is showing), autosave is already
+stopped, so the blank plan isn't saved either; the banner still tells the
+user to reload. When saved scenarios arrive (M16), Start over will clear
+only the plan being edited, and that milestone's plan will revisit this.
+
+**Accessibility.** The button's accessible name is "AU FIRE Planner,
+start over", so it starts with the text people see (WCAG 2.5.3, label in
+name). The dialog is the browser's native modal `<dialog>`, which traps
+focus and handles Escape; focus returns to the logo when it closes
+without starting over.
+
+**Alternatives considered.** A separate "Start over" button next to the
+logo is more discoverable, but the owner asked for the logo itself. An
+undo toast instead of a confirmation would be friendlier, but needs the
+old plan kept somewhere, which is more than this change needs.
+
+**Requirements wording.** A new requirement, **NFR-8 Start over** (Must):
+"The user can clear their plan and start again from the first step. The
+app asks for confirmation first, because the cleared data can't be
+recovered."
+
+**Files touched:** `src/ui/components/AppShell.tsx` (the logo becomes a
+button), a new `src/ui/components/StartOverDialog.tsx`,
+`src/ui/styles/app.css` (logo button and dialog styles), a small
+`isBlankPlan` helper in `src/plan/` (to skip the dialog when nothing has
+been entered, ignoring the generated ids), and
+`requirements/REQUIREMENTS.md`. The reset itself uses the existing
+`replacePlan` action with `createNewPlan`, so the reducer, the engine and
+the persistence layer don't change.
+
+#### Step 1 · Start over (one PR)
+
+1. `isBlankPlan(plan)`: true when the plan matches a fresh `createNewPlan`
+   apart from its ids. Unit tests: a new plan is blank; any entered value,
+   renamed portfolio or dated expense makes it not blank.
+2. `StartOverDialog`: the confirmation dialog, with `onConfirm` and
+   `onCancel`. Component tests: Keep my plan has focus on open, Keep my
+   plan cancels, Start over confirms. jsdom has no modal dialog, so Escape,
+   the backdrop and focus returning to the logo are covered by the E2E
+   test instead, and the contrast sweep gains a check of the open dialog.
+3. `AppShell`: the logo button, hidden as a button on the welcome page.
+   On confirm (or straight away for a blank plan) it dispatches
+   `replacePlan` with a new plan and navigates to Household. Component
+   tests: confirming clears the plan and lands on Household; cancelling
+   leaves the plan and the page as they were; a blank plan skips the
+   dialog.
+4. E2E (`tests/e2e/startOver.spec.ts`): enter a few values, click the
+   logo, cancel, and see the values kept; click again, confirm, and see
+   Household with empty fields; reload and see it still empty, with no
+   welcome page. The contrast check covers the logo's hover and focus
+   states.
+5. Requirements (NFR-8) and this section marked done.
+
+**Checks:** `npm run check` and the E2E suite all pass.
+
+**Merge point:** after step 1. It only touches the header and doesn't
+depend on any other work in progress, so it can merge at any time.
+
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
@@ -2390,6 +2483,9 @@ there are two-person engine tests for D and D2.
 - [x] Implement M6 (steps 1 to 9) in the implementation PR stacked on the
       plan PR.
 - [x] Owner verifies and merges the M6 PRs.
+- [x] Approve the start over plan.
+- [x] Implement start over (step 1), then open it for verification.
+- [x] Owner verifies and merges the start over PR.
 - [ ] Owner verifies the two M6 rule values (preservation age 60 and
       unconditional release at 65) against the ATO.
 - [ ] Approve the M7 step-by-step plan (plan PR), including the four owner
