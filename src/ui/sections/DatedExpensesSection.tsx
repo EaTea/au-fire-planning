@@ -17,8 +17,8 @@ import { formatDollars } from "../format";
  *   plan.expenses.datedExpenses ──► EditableTable rows ──edits──► dispatch(updateDatedExpense, ...)
  *
  * The From and To years are limited to the years the projection covers: the
- * start year + 1 (row 0 is today and has no flows) up to the year the person
- * reaches their plan-until age. The upper limit needs the current age; until it
+ * start year + 1 (row 0 is today and has no flows) up to the year the youngest
+ * person reaches the plan-until age. The upper limit needs the current age; until it
  * is entered the years are only limited from below.
  */
 export function DatedExpensesSection() {
@@ -29,7 +29,11 @@ export function DatedExpensesSection() {
   const expenses = plan.expenses.datedExpenses ?? [];
 
   const firstYear = startYear + 1;
-  const currentAge = plan.household.people[0]?.currentAge;
+  // The plan runs until the youngest person with a known age reaches the plan-until age.
+  const knownAges = plan.household.people.flatMap((person) =>
+    person.currentAge === undefined ? [] : [person.currentAge],
+  );
+  const currentAge = knownAges.length === 0 ? undefined : Math.min(...knownAges);
   const endAge = plan.household.projectionEndAge ?? DEFAULT_PROJECTION_END_AGE;
 
   // The last year of the projection; unknown until the current age is entered,
