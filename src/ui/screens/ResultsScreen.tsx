@@ -10,6 +10,7 @@ import { StepPage } from "../components/StepPage";
 import { DollarsModeToggle } from "../dollarsMode";
 import { capitaliseFirst, formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { planEndWords } from "../planEndWords";
 import { BRIDGE_SECTION_ID, BridgeSection, hasBridgeSection } from "../sections/BridgeSection";
 import { COAST_CHART_SECTION_ID, CoastChartSection } from "../sections/CoastChartSection";
 import {
@@ -198,7 +199,7 @@ function FiReachedTile({
     return (
       <MetricTile
         label="FI reached"
-        value={`Not by age ${projection.endAge}`}
+        value={`Not by ${planEndWords(projection)}`}
         subLine="With today's inputs"
       />
     );
@@ -316,7 +317,7 @@ function MoneyLastsTile({ projection }: { readonly projection: CompleteProjectio
     return (
       <MetricTile
         label="Money lasts"
-        value={`To ${plansLastAgeWords(projection)} ✓`}
+        value={`To ${planEndWords(projection)} ✓`}
         subLine={`${formatDollars(solvency.explanation.value)} left in ${lastRow?.calendarYear} (nominal dollars)`}
         explanation={solvency.explanation}
       />
@@ -373,22 +374,6 @@ function agesAtHouseholdRetirement(projection: CompleteProjection) {
   return householdRetirementRow === undefined
     ? [{ label: projection.people[0].label, age: projection.people[0].retirementAge }]
     : agesOf(householdRetirementRow);
-}
-
-/**
- * Where the plan ends, in words: "age 95" for one person, and for a couple the
- * younger person's name and the plan-until age ("Sam 95"), since the plan
- * runs until the younger one reaches it. Used by the "Money lasts" tile.
- */
-function plansLastAgeWords(projection: CompleteProjection): string {
-  const lastRow = projection.rows[projection.rows.length - 1];
-  const youngest = lastRow?.people.reduce((younger, person) =>
-    person.age < younger.age ? person : younger,
-  );
-
-  return projection.people.length > 1 && youngest !== undefined
-    ? `${youngest.label} ${projection.endAge}`
-    : `age ${projection.endAge}`;
 }
 
 /**

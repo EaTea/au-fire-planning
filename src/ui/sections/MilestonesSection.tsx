@@ -3,6 +3,7 @@ import type { ProjectionSummary } from "../../engine/fiNumber";
 import { agesOf, formatAges, type ProjectionRow } from "../../engine/projection";
 import { capitaliseFirst } from "../format";
 import { Card } from "../components/Card";
+import { planEndWords } from "../planEndWords";
 import { MilestoneTimeline, type MilestoneItem } from "../components/MilestoneTimeline";
 
 /** The complete variant of the projection summary: the only one with milestones. */
@@ -21,8 +22,9 @@ function statusForYear(year: number, startYear: number): MilestoneItem["status"]
 
 /**
  * The "Super accessible" milestone (OUT-4): the year of the effective access
- * age, the first age super can be drawn while retired. If the plan ends
- * before that age it is an undated "not reached" item. Used by
+ * age, the first age super can be drawn while retired. If it is already open
+ * today it says "now"; if the plan ends before that age it is an undated
+ * "not reached" item. Used by
  * buildMilestoneItems, only when the plan has super.
  */
 function buildSuperAccessibleItem(
@@ -31,6 +33,11 @@ function buildSuperAccessibleItem(
 ): MilestoneItem {
   const accessAge = projection.people[0].superAccessAge as number;
   const accessRow = projection.rows.find((row) => row.people[0].age === accessAge);
+
+  // Already open (for example past 65 today): nothing to wait for.
+  if ((projection.rows[0]?.people[0].age ?? 0) >= accessAge) {
+    return { year: startYear, label: "Super accessible: now", status: "reached" };
+  }
 
   if (accessRow === undefined) {
     return { label: `Super accessible: not by age ${projection.endAge}`, status: "notReached" };
@@ -79,19 +86,29 @@ function buildPerPersonItems(projection: CompleteProjection, startYear: number):
       const accessYear = startYear + (person.superAccessAge - todayAge);
       const accessRow = projection.rows.find((row) => row.calendarYear === accessYear);
 
-      items.push(
-        accessRow === undefined
-          ? {
-              label: `${person.label}'s super accessible: not by age ${projection.endAge}`,
-              status: "notReached",
-            }
-          : {
-              year: accessYear,
-              label: `${person.label}'s super accessible`,
-              detail: agesDetail(accessRow),
-              status: statusForYear(accessYear, startYear),
-            },
-      );
+      // This person's own last age in the plan (the plan-until age is the younger person's).
+      const lastAge = projection.rows[projection.rows.length - 1]?.people[personIndex]?.age;
+
+      if (accessYear <= startYear) {
+        // Already open (for example an older partner past 65): nothing to wait for.
+        items.push({
+          year: startYear,
+          label: `${person.label}'s super accessible: now`,
+          status: "reached",
+        });
+      } else if (accessRow === undefined) {
+        items.push({
+          label: `${person.label}'s super accessible: not by age ${lastAge ?? projection.endAge}`,
+          status: "notReached",
+        });
+      } else {
+        items.push({
+          year: accessYear,
+          label: `${person.label}'s super accessible`,
+          detail: agesDetail(accessRow),
+          status: statusForYear(accessYear, startYear),
+        });
+      }
     }
 
     return items;
@@ -101,7 +118,8 @@ function buildPerPersonItems(projection: CompleteProjection, startYear: number):
 /**
  * Turns the projection summary into the timeline's items: Coast FIRE, FI
  * reached, retirement (the target), whether the money lasts and, with super,
- * when super becomes accessible. A milestone
+ * when super becomes accessible. A couple's wording matches the tiles ("Sam
+ * 95", "you've both retired") and has an item for each person. A milestone
  * that never happens becomes an undated "not reached" item. The first
  * projection row's year is "today". Called by MilestonesSection.
  */
@@ -111,7 +129,13 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
 
   const coastItem: MilestoneItem =
     coast.reached === undefined
-      ? { label: "Coast FIRE: not before retirement", status: "notReached" }
+      ? {
+          label:
+            projection.people.length > 1
+              ? "Coast FIRE: not before you've both retired"
+              : "Coast FIRE: not before retirement",
+          status: "notReached",
+        }
       : {
           year: coast.reached.calendarYear,
           label: "Coast FIRE",
@@ -121,7 +145,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
 
   const fiItem: MilestoneItem =
     fiReached === undefined
-      ? { label: `FI reached: not by age ${projection.endAge}`, status: "notReached" }
+      ? { label: `FI reached: not by ${planEndWords(projection)}`, status: "notReached" }
       : {
           year: fiReached.calendarYear,
           label: "FI reached",
@@ -141,7 +165,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
     solvency.status === "lasts"
       ? {
           year: lastRow?.calendarYear,
-          label: `Money lasts to ${projection.endAge}`,
+          label: `Money lasts to ${projection.people.length > 1 ? planEndWords(projection) : projection.endAge}`,
           status: statusForYear(lastRow?.calendarYear ?? startYear + 1, startYear),
         }
       : {

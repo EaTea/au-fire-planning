@@ -337,3 +337,133 @@ describe("Results for a couple where one partner has no super", () => {
     ]);
   });
 });
+
+describe("Milestones for a couple whose super is already open or out of the plan", () => {
+  /** Alex 67 and still working with $300,000 of super; Sam 40 with $100,000. Plan until Sam is 80. */
+  const alexPastAccess: Plan = {
+    ...blankPlan,
+    household: {
+      people: [
+        {
+          id: "person-1",
+          label: "Person 1",
+          name: "Alex",
+          currentAge: 67,
+          targetRetirementAge: 70,
+          superAccount: { balance: 300000, returnRate: 0 },
+        },
+        {
+          id: "person-2",
+          label: "Person 2",
+          name: "Sam",
+          currentAge: 40,
+          targetRetirementAge: 50,
+          superAccount: { balance: 100000, returnRate: 0 },
+        },
+      ],
+      projectionEndAge: 80,
+    },
+    expenses: { livingAnnual: 20000, retirementSpending: { kind: "amount", annual: 20000 } },
+    assumptions: { inflationRate: 0 },
+    portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 1000000, expectedReturn: 0 }],
+  };
+
+  function milestones() {
+    return within(screen.getByRole("heading", { name: "Milestones" }).closest("section")!);
+  }
+
+  it("says an open super is accessible now, rather than not reached", () => {
+    renderResults(alexPastAccess);
+
+    expect(milestones().getByText("Alex's super accessible: now")).toBeInTheDocument();
+    expect(milestones().getByText("Sam's super accessible")).toBeInTheDocument();
+    expect(milestones().queryByText(/Alex's super accessible: not by/)).not.toBeInTheDocument();
+  });
+
+  it("says the same for a partner who has already retired", () => {
+    const [alex, sam] = alexPastAccess.household.people;
+    renderResults({
+      ...alexPastAccess,
+      household: {
+        ...alexPastAccess.household,
+        people: [{ ...alex!, currentAge: 70, targetRetirementAge: 70 }, sam!],
+      },
+    });
+
+    expect(milestones().getByText("Alex's super accessible: now")).toBeInTheDocument();
+  });
+
+  // Alex is 15 years older than Sam, so Alex's last age in a plan that ends when Sam is 49 is 64.
+  it("uses the person's own last age when their super opens after the plan ends", () => {
+    renderResults({
+      ...alexPastAccess,
+      household: {
+        people: [
+          { ...alexPastAccess.household.people[0]!, currentAge: 45, targetRetirementAge: 50 },
+          { ...alexPastAccess.household.people[1]!, currentAge: 30, targetRetirementAge: 40 },
+        ],
+        projectionEndAge: 49,
+      },
+    });
+
+    expect(milestones().getByText("Alex's super accessible: not by age 64")).toBeInTheDocument();
+    expect(milestones().getByText("Sam's super accessible: not by age 49")).toBeInTheDocument();
+  });
+
+  it("words 'money lasts' for a couple like the tile", () => {
+    renderResults(alexPastAccess);
+
+    expect(milestones().getByText("Money lasts to Sam 80")).toBeInTheDocument();
+  });
+
+  it("says Coast FIRE isn't reached before they have both retired", () => {
+    renderResults({
+      ...alexPastAccess,
+      expenses: { livingAnnual: 80000 },
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 10000 }],
+    });
+
+    expect(
+      milestones().getByText("Coast FIRE: not before you've both retired"),
+    ).toBeInTheDocument();
+  });
+
+  it("words FI not reached with the younger person's name", () => {
+    renderResults({
+      ...alexPastAccess,
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 10000 }],
+    });
+
+    expect(milestones().getByText("FI reached: not by Sam 80")).toBeInTheDocument();
+    expect(tileText("FI reached")).toContain("Not by Sam 80");
+  });
+});
+
+describe("Milestones for one person already past their access age", () => {
+  it("says super is accessible now", () => {
+    renderResults({
+      ...blankPlan,
+      household: {
+        people: [
+          {
+            id: "person-1",
+            label: "Person 1",
+            currentAge: 67,
+            targetRetirementAge: 70,
+            superAccount: { balance: 300000, returnRate: 0 },
+          },
+        ],
+        projectionEndAge: 80,
+      },
+      expenses: { livingAnnual: 20000 },
+      assumptions: { inflationRate: 0 },
+      portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 100000 }],
+    });
+
+    const milestones = within(
+      screen.getByRole("heading", { name: "Milestones" }).closest("section")!,
+    );
+
+    expect(milestones.getByText("Super accessible: now")).toBeInTheDocument();
+  });
+});
