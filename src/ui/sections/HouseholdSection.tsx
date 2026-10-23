@@ -1,3 +1,4 @@
+import { displayName } from "../../plan/displayName";
 import { usePlan, usePlanDispatch, usePlanIdGenerator } from "../../plan/PlanProvider";
 import { Card } from "../components/Card";
 import { SegmentedToggle } from "../components/SegmentedToggle";
@@ -17,6 +18,11 @@ export function HouseholdSection() {
   const plan = usePlan();
   const dispatch = usePlanDispatch();
   const generateId = usePlanIdGenerator();
+
+  // The hint names the partner who would be removed, as they are named elsewhere (their name, else "Person 2").
+  const partner = plan.household.people[1];
+  const partnerName =
+    partner === undefined ? "Person 2" : displayName(partner, 1, plan.household.people);
 
   const isCouple = plan.household.people.length > 1;
 
@@ -45,7 +51,7 @@ export function HouseholdSection() {
 
         <span className="hint">
           {isCouple
-            ? "Choosing Just me removes Person 2 and everything entered for them. A shared portfolio goes back to Person 1. There is no undo yet."
+            ? `Choosing Just me removes ${partnerName} and everything entered for them. A shared portfolio goes back to Person 1. There is no undo yet.`
             : "A couple adds a second person with their own salary and super."}
         </span>
       </div>

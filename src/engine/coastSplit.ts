@@ -31,9 +31,10 @@
 //
 // With several people, the outside-super test runs to the first retirement
 // row (where the bridge starts) and the super test to the household
-// retirement row. The couple's version of the super test, which needs each
-// partner's super separately, comes with M7 step 5; until then $1 of super
-// is placed with the first person who has a super account.
+// retirement row. The super test counts the super needed as one balance, so the
+// test dollar is placed with the first person who has a super account (the
+// other partners' balances start at $0 in that run); the answer is the total
+// super needed across the couple, not a split between them.
 
 import type { BridgeAssessment } from "./bridge";
 import { inputsWithVoluntaryContributionsStoppedAfter, portfolioNeededFromRow } from "./coastFire";

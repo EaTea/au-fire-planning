@@ -67,6 +67,20 @@ describe("HouseholdSection", () => {
     expect(readPlan().portfolios[0]?.ownership).toEqual({ kind: "sole", personId: "person-1" });
   });
 
+  it("names the partner by their name in the Just me hint", () => {
+    renderSection(<HouseholdSection />, {
+      ...blankPlan,
+      household: {
+        people: [
+          { id: "person-1", label: "Person 1" },
+          { id: "person-2", label: "Person 2", name: "Sam" },
+        ],
+      },
+    });
+
+    expect(screen.getByText(/removes Sam and everything entered for them/)).toBeInTheDocument();
+  });
+
   it("does nothing when the chosen option is already selected", async () => {
     const user = userEvent.setup();
     const { readPlan } = renderSection(<HouseholdSection />);

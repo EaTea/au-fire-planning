@@ -68,6 +68,12 @@ export function findEarliestRetirementAge(
   const currentAge = person.currentAge;
   const retiringPhrase = retiringPhraseFor(inputs, person);
 
+  // A couple has an answer for each person, so the closing line says whose it is.
+  const finalLineLabel =
+    inputs.people.length > 1
+      ? `Earliest feasible retirement age for ${person.label}`
+      : "Earliest feasible retirement age";
+
   // The end age is measured on the youngest person; this person's own last age is the same row.
   const endAge = currentAge + (inputs.endAge - youngestAgeAtRow(inputs, 0));
 
@@ -95,7 +101,7 @@ export function findEarliestRetirementAge(
       source: "calculated",
     });
     lines.push({
-      label: "Earliest feasible retirement age",
+      label: finalLineLabel,
       value: candidateAge,
       unit: "years",
       operator: "=",

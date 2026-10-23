@@ -382,7 +382,7 @@ describe("ages in explanation lines", () => {
     const labels = result.explanation.lines.map((line) => line.label);
 
     expect(labels[0]).toMatch(/^Sam retiring at \d+: runs short in \d{4} \(Alex \d+ · Sam \d+\)$/);
-    expect(labels.at(-1)).toBe("Earliest feasible retirement age");
+    expect(labels.at(-1)).toBe("Earliest feasible retirement age for Sam");
   });
 });
 

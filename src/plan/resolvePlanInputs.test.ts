@@ -252,6 +252,17 @@ describe("resolvePlanInputs: projection inputs", () => {
       },
       ["id-1", "person-2"],
     ],
+    [
+      "a joint share of 0% (not an owner)",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "id-1", fraction: 1 },
+          { personId: "person-2", fraction: 0 },
+        ],
+      },
+      ["id-1"],
+    ],
     ["an id that isn't in the plan", { kind: "sole", personId: "gone" }, ["id-1"]],
   ] as const)(
     "resolves %s ownership to the owners, in the plan's order",

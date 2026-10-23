@@ -1521,10 +1521,10 @@ Conventions settled while building M6, which later milestones rely on:
 
 ### M7 · Couples: step-by-step plan
 
-**Status:** plan, awaiting the owner's approval. As with M6, the owner
-asked for the plan PR and the implementation to be opened stacked on each
-other. The plan is still reviewed first, and the implementation follows
-any change to it.
+**Status:** plan approved (PR #35); PR A merged (#37); PR B in review. As
+with M6, the owner asked for the plan PR and the implementation to be opened
+stacked on each other. The plan was reviewed first, and the implementation
+follows any change to it.
 
 **Goal:** a plan can be for one person or a couple. Each partner has
 their own age, retirement age, salary, super and super access age. Every

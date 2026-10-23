@@ -286,7 +286,10 @@ function addPartner(plan: Plan, id: string): Plan {
  * Removes Person 2 and everything entered for them (the "Just me" choice).
  * Any portfolio they owned, alone or in a joint split, goes back to Person 1
  * as sole owner; portfolios with no stored owner keep following the default.
- * Ignored when there is no second person.
+ * The interim amount ("Drawn from savings while one of you is retired") is
+ * cleared too, since a single person has no such years and a stale amount
+ * would come back if a partner is added again. Ignored when there is no
+ * second person.
  */
 function removePartner(plan: Plan): Plan {
   const [firstPerson, removedPerson] = plan.household.people;
@@ -301,6 +304,7 @@ function removePartner(plan: Plan): Plan {
   return {
     ...plan,
     household: { ...plan.household, people: [firstPerson] },
+    expenses: withoutKey(plan.expenses, "interimAnnual"),
     portfolios: plan.portfolios.map((portfolio) => {
       const ownership: PortfolioOwnership | undefined =
         portfolio.ownership !== undefined && namesRemovedPerson(portfolio.ownership)

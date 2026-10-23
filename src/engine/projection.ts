@@ -17,6 +17,7 @@
 //
 //   spending to fund (nominal) =
 //       retirement spending × index    (only once everyone has retired)
+//     + interim spending × index       (only while some, not all, have retired)
 //     + dated expenses for this year × index
 //
 //   super, once for each person (M5), in this order:
@@ -40,7 +41,7 @@
 //     ProjectionRow (household totals: the sums over `people`)
 //       ├─ cash, portfolio, spending, shortfall ...  (household only)
 //       └─ people[0] ─ PersonYear: age, phase, salary, super flows
-//          people[1] ─ PersonYear: ...                (couples, later)
+//          people[1] ─ PersonYear: ...                (a couple; one entry for one person)
 //
 // Cash is drawn last so it acts as a buffer: it is only touched once the
 // portfolio is empty. That holds in working years too, so a dated expense

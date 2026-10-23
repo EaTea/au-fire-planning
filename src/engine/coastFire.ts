@@ -11,8 +11,11 @@
 // row k. Each year's dated expenses are paid from the portfolio first, then
 // super (from 65) and cash last (see projection.ts). Looking forward from
 // row k to the retirement row n (m = n − k years), only the portfolio's
-// starting amount P is ours to choose. portfolioNeeded(k) is the smallest P
-// that still reaches the FI number at row n:
+// starting amount P is ours to choose. A couple's one-retired years before
+// row n draw the interim amount, which is spent like a dated expense here
+// (read off each row's spending), so "dated" below means both.
+// portfolioNeeded(k) is the smallest P that still reaches the FI number at
+// row n:
 //
 //   coast path from row k, starting with portfolio P and cash(k):
 //     each row j: portfolio grows at r, cash at the interest rate g;
@@ -310,9 +313,10 @@ const BISECTION_STEPS = 200;
  * `fromIndex`, looking forward to the last row of `workingRows` (the
  * retirement row). Called by `calculateCoastFire` for every row of the path.
  *
- * Before retirement a row's `spending` is only dated expenses (retirement
- * spending starts the year after), so they are read straight off the
- * projection rows instead of being recomputed. `superLeftAtRetirement` is
+ * Before the retirement row a row's `spending` is dated expenses plus, for a
+ * couple, the interim amount in the years only one has retired (retirement
+ * spending starts the year after the last person retires), so they are read
+ * straight off the projection rows instead of being recomputed. `superLeftAtRetirement` is
  * superLeft(k), from `superAtRetirementWhenCoastingFrom`.
  *
  * `targetAtRetirement` is the amount the coast path must reach at the

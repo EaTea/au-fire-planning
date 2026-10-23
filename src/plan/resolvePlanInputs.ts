@@ -397,7 +397,8 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
  * Works out who owns the portfolio, as person ids in the plan's order. Sole
  * ownership is that person and a joint portfolio is everyone in the split. With
  * nothing stored the default applies: Person 1 for one person, both for a
- * couple. An id that isn't in the plan (the stored plan can name a person
+ * couple. A joint share of 0% is not an owner (the portfolio is then wholly
+ * the other person's, so a stop age follows them). An id that isn't in the plan (the stored plan can name a person
  * removed since) counts as Person 1. Called by `resolveProjectionInputs`, and
  * by the portfolio card to word the contributions stop age.
  */
@@ -414,7 +415,7 @@ export function resolveOwnerIds(
       ? people.map((person) => person.id)
       : ownership.kind === "sole"
         ? [ownership.personId]
-        : ownership.shares.map((share) => share.personId);
+        : ownership.shares.filter((share) => share.fraction > 0).map((share) => share.personId);
 
   // A single person owns it alone however it was stored; otherwise unknown ids fall back to Person 1.
   const ownerIds = new Set(

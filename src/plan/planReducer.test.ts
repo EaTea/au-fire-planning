@@ -557,6 +557,15 @@ describe("planReducer: couples", () => {
     ]);
   });
 
+  it("clears the interim amount with the partner", () => {
+    const withInterim = planReducer(couplePlan(), { type: "setInterimSpending", annual: 20000 });
+
+    const removed = planReducer(withInterim, { type: "removePartner" });
+
+    expect(removed.expenses.interimAnnual).toBeUndefined();
+    expect("interimAnnual" in removed.expenses).toBe(false);
+  });
+
   it("ignores removePartner with only one person", () => {
     const plan = buildBlankPlan();
 

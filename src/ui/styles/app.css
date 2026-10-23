@@ -652,8 +652,6 @@ button:focus-visible {
   white-space: nowrap;
 }
 
-/* ---------- Charts (TimeSeriesChart) and the chart card ---------- */
-
 /* ---------- Household screen: the toggle row and the person cards ---------- */
 
 /* The toggle card, the person card(s) and the planning horizon card, with room between them. */
@@ -699,6 +697,8 @@ button:focus-visible {
   font-size: 13px;
   color: var(--colour-text-muted);
 }
+
+/* ---------- Charts (TimeSeriesChart) and the chart card ---------- */
 
 /* A card header with a control beside the title; the title loses its own bottom margin. */
 .card-header {
