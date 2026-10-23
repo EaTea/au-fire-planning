@@ -493,6 +493,14 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+/* The last column (Status) holds notes of unbounded length, so it wraps instead of widening the table past the page. */
+.projection-table th:last-child,
+.projection-table td:last-child {
+  white-space: normal;
+  min-width: 11em;
+  text-align: left;
+}
+
 /* Year is the row's label, so it reads from the left. */
 .projection-table th:first-child,
 .projection-table td:first-child {
@@ -631,9 +639,12 @@ button:focus-visible {
   background: var(--colour-page-background);
 }
 
-/* Text for assistive technology only. */
+/*
+ * Text for assistive technology only. Fixed rather than absolute so a wide
+ * hidden table (the charts' data tables) can't widen the page's scroll area.
+ */
 .visually-hidden {
-  position: absolute;
+  position: fixed;
   width: 1px;
   height: 1px;
   overflow: hidden;
