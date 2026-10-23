@@ -1,6 +1,6 @@
 {
   "milestone": "M7",
-  "description": "Couples: worked examples D, D2 and E from the M7 plan (and D, D2 with the interim amount at its default $0). Checked by an independent script, not the app's code.",
+  "description": "Couples: worked examples D, D2 and E from the M7 plan (and D, D2 with $0 entered as the interim amount). Checked by an independent script, not the app's code.",
   "startYear": 2026,
   "scenarios": [
     {
@@ -129,7 +129,7 @@
       }
     },
     {
-      "name": "D with the interim amount at its default $0",
+      "name": "D with $0 entered as the interim amount",
       "checkedBy": "independent calculation (not the app's code), per the M7 plan",
       "inputs": {
         "livingExpensesAnnual": 40000,
@@ -166,10 +166,11 @@
             "earningsTaxRate": 0
           },
           "superAccessAge": 60
-        }
+        },
+        "interimAnnual": 0
       },
       "arithmetic": [
-        "Same people and money as D, interim left unset ($0): the working partner's pay is assumed to cover spending while only one of them is retired",
+        "Same people and money as D, interim amount entered as $0: nothing is drawn while only one of them is retired",
         "Bridge 2028-2032: only 2032 draws, the $40,000 retirement year, so need $40,000; projected $200,000; MET",
         "After access 2033-2039: need $280,000; projected at the end of 2032: portfolio 200,000 - 40,000 = $160,000 (2028-2031 drew nothing), plus super $150,000 + $100,000 = $410,000; MET",
         "Total drawn 2032-2039 is 8 x $40,000 = $320,000, leaving $450,000 - $320,000 = $130,000"
@@ -304,7 +305,7 @@
       }
     },
     {
-      "name": "D2 with the interim amount at its default $0",
+      "name": "D2 with $0 entered as the interim amount",
       "checkedBy": "independent calculation (not the app's code), per the M7 plan",
       "inputs": {
         "livingExpensesAnnual": 40000,
@@ -341,10 +342,11 @@
             "earningsTaxRate": 0
           },
           "superAccessAge": null
-        }
+        },
+        "interimAnnual": 0
       },
       "arithmetic": [
-        "Same as D2 with no interim spending. Bridge 2028-2035 draws only 2032-2035, 4 x $40,000 = $160,000 against $200,000 projected; MET",
+        "Same as D2 with $0 entered as the interim amount. Bridge 2028-2035 draws only 2032-2035, 4 x $40,000 = $160,000 against $200,000 projected; MET",
         "After access 2036-2039: need $160,000; projected $40,000 portfolio + $150,000 + $100,000 = $290,000; MET",
         "2036 the portfolio's last $40,000 pays; 2037 Alex pays $40,000 (leaves $110,000); 2038 Sam's super opens too: Alex $110,000 and Sam $100,000 share $40,000 in proportion 110:100, Alex pays 20,952.38 and Sam 19,047.62"
       ],

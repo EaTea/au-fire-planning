@@ -267,19 +267,91 @@ describe("resolvePlanInputs: projection inputs", () => {
     },
   );
 
-  it("resolves the interim amount, defaulting to $0", () => {
-    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
-    const withInterim = projectionOf({
-      ...plan,
-      expenses: { ...plan.expenses, interimAnnual: 20000 },
-    });
-    const withoutInterim = projectionOf(plan);
+  /**
+   * The resolved interim amount for example A's plan plus Sam, after `changes`.
+   * Person 1 (34, retiring at 50) has 16 years to go; by default Sam (32,
+   * retiring at 52) has 20, so Sam is the later-retiring partner.
+   */
+  function resolvedInterim(
+    changes: (plan: Plan) => Plan,
+    sam: { currentAge: number; targetRetirementAge: number } = {
+      currentAge: 32,
+      targetRetirementAge: 52,
+    },
+  ) {
+    const projection = projectionOf(changes(planWithTwoPeople(sam)));
+    if (projection.status !== "complete") throw new Error("expected complete");
+    return projection.inputs.interimAnnual;
+  }
 
-    if (withInterim.status !== "complete" || withoutInterim.status !== "complete") {
-      throw new Error("expected complete");
-    }
-    expect(withInterim.inputs.interimAnnual).toEqual({ value: 20000, source: "input" });
-    expect(withoutInterim.inputs.interimAnnual).toEqual({ value: 0, source: "default" });
+  /** The plan with one person given a salary, to tell the later partner's pay apart. */
+  function withSalary(plan: Plan, personIndex: number, annual: number): Plan {
+    return {
+      ...plan,
+      household: {
+        people: plan.household.people.map((person, index) =>
+          index === personIndex ? { ...person, salary: { annual } } : person,
+        ),
+      },
+    };
+  }
+
+  it("resolves an entered interim amount as an input, and $0 entered stays $0", () => {
+    expect(
+      resolvedInterim((plan) => ({
+        ...plan,
+        expenses: { ...plan.expenses, interimAnnual: 20000 },
+      })),
+    ).toEqual({ value: 20000, source: "input" });
+    expect(
+      resolvedInterim((plan) => ({ ...plan, expenses: { ...plan.expenses, interimAnnual: 0 } })),
+    ).toEqual({ value: 0, source: "input" });
+  });
+
+  it("defaults to the retirement spending when the later-retiring partner has no salary", () => {
+    // Sam retires later and has no salary.
+    const interim = resolvedInterim((plan) => ({
+      ...plan,
+      expenses: {
+        ...plan.expenses,
+        livingAnnual: 50000,
+        retirementSpending: { kind: "amount", annual: 40000 },
+      },
+    }));
+
+    expect(interim).toEqual({ value: 40000, source: "default" });
+  });
+
+  it("follows a percent retirement spending, as a share of living expenses", () => {
+    const interim = resolvedInterim((plan) => ({
+      ...plan,
+      expenses: {
+        ...plan.expenses,
+        livingAnnual: 50000,
+        retirementSpending: { kind: "percentOfToday", fraction: 0.8 },
+      },
+    }));
+
+    expect(interim).toEqual({ value: 40000, source: "default" });
+  });
+
+  it("defaults to $0 when the later-retiring partner has a salary", () => {
+    const interim = resolvedInterim((plan) =>
+      withSalary(
+        {
+          ...plan,
+          expenses: {
+            ...plan.expenses,
+            livingAnnual: 50000,
+            retirementSpending: { kind: "amount", annual: 40000 },
+          },
+        },
+        1,
+        90000,
+      ),
+    );
+
+    expect(interim).toEqual({ value: 0, source: "default" });
   });
 
   // A stop age is an age of the first owner; one before their age today can't happen.

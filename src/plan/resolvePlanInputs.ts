@@ -23,6 +23,7 @@ import {
   DEFAULT_SUPER_RETURN,
 } from "./defaults";
 import { displayName } from "./displayName";
+import { defaultInterimSpending } from "./interimDefault";
 import type {
   Person,
   Plan,
@@ -142,7 +143,9 @@ export interface ResolvedProjectionInputs {
   readonly interestRate: Sourced<number>;
   /**
    * Dollars per year in today's dollars drawn from savings while some but not
-   * all of the household have retired (default $0).
+   * all of the household have retired. Unset it defaults to $0 when the partner
+   * who retires later has a salary, and otherwise to the retirement spending
+   * (see `defaultInterimSpending`).
    */
   readonly interimAnnual: Sourced<number>;
   /** Dated and one-off expenses, in the order entered. */
@@ -369,7 +372,10 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
           ? { value: undefined, source: "default" }
           : { value: portfolio.contributionsStopAge, source: "input" },
       portfolioOwnerIds: resolveOwnerIds(portfolio?.ownership, planPeople),
-      interimAnnual: sourceOrDefault(plan.expenses.interimAnnual, DEFAULT_INTERIM_SPENDING),
+      interimAnnual: sourceOrDefault(
+        plan.expenses.interimAnnual,
+        defaultInterimSpending(plan).amount ?? DEFAULT_INTERIM_SPENDING,
+      ),
       endAge,
       interestRate: sourceOrDefault(plan.assumptions.interestRate, DEFAULT_INTEREST_RATE),
       datedExpenses: (plan.expenses.datedExpenses ?? []).map((expense): ResolvedDatedExpense => ({

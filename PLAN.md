@@ -1619,9 +1619,13 @@ delivered") before it's opened.
 - **Retired** years draw retirement spending, as now.
 - **oneRetired** years draw the **interim amount**: "Drawn from savings
   while one of you is retired", in today's dollars, grown by inflation.
-  **Default $0**: the working partner's pay is assumed to cover spending,
-  the same assumption as working years until M8. **Owner decision 1**
-  below.
+  **Default:** $0 if the partner who retires later has a salary above $0
+  (their pay is assumed to cover spending, the same assumption as working
+  years until M8); otherwise the household's retirement spending, because
+  nothing else would pay for it. If both retire in the same year there are
+  no such years and the default doesn't matter. Entering $0 is respected,
+  and Results then shows an info note when the later partner has no salary.
+  **Owner decision 1** below.
 - **Dated expenses** are added in every phase.
 
 **Super per person** (IN-6, SUPER-1, IN-5): each person's super runs
@@ -1742,12 +1746,16 @@ projection inputs, so this is done once.
 
 #### Owner decisions to confirm in review
 
-1. **The interim amount defaults to $0,** meaning the working partner's
-   pay covers spending while one of you is retired.
-   - **Why:** it matches how working years are treated until M8 brings
-     take-home pay.
-   - **The alternative:** default it to the full retirement spending.
-     That's more cautious, but double-counts the working partner's pay.
+1. **The interim amount defaults to $0 if the partner who retires later
+   has a salary, otherwise to the retirement spending.** The owner chose
+   this rule on 2026-10-23, after the PR B review (the first draft always
+   defaulted to $0).
+   - **Why:** a working partner's pay covers spending, as in working years
+     until M8 brings take-home pay; with no salary nothing would pay, and
+     $0 would quietly under-state the need.
+   - **The field and Results:** the field's default text and hint show which
+     applies; Results shows an info note only when $0 is *entered* and the
+     later partner has no salary.
    - **In M8:** this becomes a spending level that take-home pay helps
      fund.
 2. **Super is drawn in proportion to each accessible balance.**
@@ -1806,7 +1814,7 @@ $2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
 - **Earliest retirement:**
   - **Alex:** 55 (2026), with Sam retiring at 58;
   - **Sam:** 56 (2029), with Alex retiring at 56.
-- **Interim amount at the default $0:** the bridge need is $40,000, and
+- **Interim amount with $0 entered:** the bridge need is $40,000, and
   after access is projected at $410,000.
 
 **D2: bridge short, with both partners' super locked.** D with Sam's
@@ -1991,7 +1999,7 @@ example changes.
   `contributionsStopAge` resolves to `Sourced<number | undefined>`
   (`undefined` with source "default" means while the owners work);
   `findEarliestRetirementAge` throws a `RangeError` for a person that isn't
-  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0).
+  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0 entered).
 - Checks: `npm run check` (779 unit tests) and `npm run test:e2e` (38) pass.
 
 1. **Resolve every person.** `resolvePlanInputs` resolves every person
@@ -2098,7 +2106,7 @@ there are two-person engine tests for D and D2.
 
 **As built:**
 - Resolution: `ResolvedPerson.label` is the display name; `interimAnnual`
-  (default $0, `DEFAULT_INTERIM_SPENDING`) and `portfolioOwnerIds` come from
+  (default per owner decision 1, `defaultInterimSpending`; $0 for one person) and `portfolioOwnerIds` come from
   the plan. Ownership resolves to person ids in the plan's order: sole is that
   person, joint is everyone in the split, nothing stored is Person 1 for one
   person and both for a couple, and an id not in the plan counts as Person 1.
@@ -2126,7 +2134,7 @@ there are two-person engine tests for D and D2.
   runs. Earliest retirement runs per person; a couple's lines say "Sam
   retiring at 54".
 - Fixture `tests/worked-examples/m7-couples.json` has D and D2 (with interim
-  $20,000 and at the default $0) and E. **Every worked figure matched on the
+  $20,000 and with $0 entered) and E. **Every worked figure matched on the
   first run**, including E's FI number $3,686,886.99, bridge need $864,875.22
   and after-access need $3,626,576.69. The test harness reads a partner, the
   interim amount, per-person earliest retirement and per-row super figures.
@@ -2227,9 +2235,14 @@ there are two-person engine tests for D and D2.
 **As built:**
 - `InterimSpendingSection` (own card, "Spending while one of you has
   retired", after "Spending in retirement", couple only) holds "Drawn from
-  savings while one of you is retired" with the $0 default and a hint saying
-  the partner still working is assumed to cover spending until tax and
-  take-home pay arrive.
+  savings while one of you is retired". Its default depends on the later
+  partner's salary (owner decision 1, `defaultInterimSpending` in
+  `src/plan/interimDefault.ts`, shared with resolution): "$0", or for no
+  salary "$40,000, the same as retirement spending, because Sam has no
+  salary"; the hint explains both. `ResultsScreen` shows an info note only
+  when $0 is entered, one-retired years exist and the later partner has no
+  salary. Tests that expect the $0 figures enter $0 (D and D2 "with $0
+  entered").
 - New shared `OwnershipField` (`src/ui/components/OwnershipField.tsx`): a
   `SegmentedToggle` with each person's display name and "Joint"; Joint shows
   a `PercentField` "{Person 1}'s share" (0 to 100%, an out-of-range value

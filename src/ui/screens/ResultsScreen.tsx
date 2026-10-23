@@ -3,7 +3,9 @@ import { Link, useLocation, useSearchParams } from "react-router";
 
 import type { Explained, ExplanationLine } from "../../engine/explained";
 import { agesOf, formatAges } from "../../engine/projection";
-import { usePlanSummary } from "../../plan/PlanProvider";
+import { displayName } from "../../plan/displayName";
+import { defaultInterimSpending } from "../../plan/interimDefault";
+import { usePlan, usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
@@ -78,6 +80,7 @@ export function ResultsScreen() {
                 <EarliestRetirementTile projection={summary.projection} />
                 <MoneyLastsTile projection={summary.projection} />
                 <RunsOutBanner projection={summary.projection} />
+                <NothingDrawnBanner projection={summary.projection} />
                 <MilestonesSection projection={summary.projection} />
                 <FireChartSection projection={summary.projection} />
                 <BridgeSection projection={summary.projection} />
@@ -355,6 +358,43 @@ function RunsOutBanner({ projection }: { readonly projection: CompleteProjection
           See the years that can&apos;t be funded.
         </Link>
       </div>
+    </Banner>
+  );
+}
+
+/**
+ * An info note for a couple when $0 is ENTERED as "Drawn from savings while
+ * one of you is retired" yet the partner who retires later has no salary: in
+ * those years nothing pays for spending, which is probably not intended. It
+ * is not shown for the $0 default (which only applies when that partner has a
+ * salary) or when the household retires in the same year. Names come from the
+ * plan's display names, matched to the projection's people by position.
+ */
+function NothingDrawnBanner({ projection }: { readonly projection: CompleteProjection }) {
+  const plan = usePlan();
+  const people = plan.household.people;
+
+  const hasOneRetiredYears = projection.rows.some((row) => row.phase === "oneRetired");
+  if (plan.expenses.interimAnnual !== 0 || !hasOneRetiredYears || people.length < 2) return null;
+
+  const { laterPerson, earlierPerson, laterIndex, earlierIndex } = defaultInterimSpending(plan);
+  if (
+    laterPerson === undefined ||
+    earlierPerson === undefined ||
+    laterIndex === undefined ||
+    earlierIndex === undefined ||
+    (laterPerson.salary?.annual ?? 0) > 0
+  ) {
+    return null;
+  }
+
+  const laterName = displayName(laterPerson, laterIndex, people);
+  const earlierName = displayName(earlierPerson, earlierIndex, people);
+
+  return (
+    <Banner tone="info">
+      While {earlierName} is retired, {laterName} has no salary, but nothing is drawn for spending.
+      Check &quot;Drawn from savings while one of you is retired&quot; on Income &amp; expenses.
     </Banner>
   );
 }

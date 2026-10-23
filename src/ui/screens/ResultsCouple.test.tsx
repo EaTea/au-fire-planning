@@ -486,3 +486,65 @@ describe("Milestones for one person already past their access age", () => {
     expect(milestones.getByText("Super accessible: now")).toBeInTheDocument();
   });
 });
+
+// The info banner for $0 ENTERED as the interim amount when nobody has a salary
+// to cover spending (owner decision, 2026-10-23); the $0 default never shows it.
+describe("The nothing-drawn banner", () => {
+  const bannerText =
+    /While Alex is retired, Sam has no salary, but nothing is drawn for spending\./;
+
+  /** D2 with the interim amount changed (or left unset when undefined). */
+  const d2WithInterim = (interimAnnual: number | undefined): Plan => ({
+    ...exampleD2,
+    expenses: { ...exampleD2.expenses, interimAnnual },
+  });
+
+  it("appears when $0 is entered and the later-retiring partner has no salary", () => {
+    renderResults(d2WithInterim(0));
+
+    expect(screen.getByText(bannerText)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Check "Drawn from savings while one of you is retired" on Income & expenses/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("is absent when the amount is unset (the default is then the retirement spending)", () => {
+    renderResults(d2WithInterim(undefined));
+
+    expect(screen.queryByText(bannerText)).not.toBeInTheDocument();
+  });
+
+  it("is absent when an amount above $0 is entered", () => {
+    renderResults(d2WithInterim(20000));
+
+    expect(screen.queryByText(bannerText)).not.toBeInTheDocument();
+  });
+
+  it("is absent when the later-retiring partner has a salary", () => {
+    const [alex, sam] = exampleD2.household.people;
+    renderResults({
+      ...d2WithInterim(0),
+      household: {
+        ...exampleD2.household,
+        people: [alex!, { ...sam!, salary: { annual: 90000 } }],
+      },
+    });
+
+    expect(screen.queryByText(bannerText)).not.toBeInTheDocument();
+  });
+
+  it("is absent when both retire in the same year", () => {
+    const [alex, sam] = exampleD2.household.people;
+    renderResults({
+      ...d2WithInterim(0),
+      household: {
+        ...exampleD2.household,
+        people: [alex!, { ...sam!, currentAge: 54, targetRetirementAge: 55 }],
+      },
+    });
+
+    expect(screen.queryByText(/nothing is drawn for spending/)).not.toBeInTheDocument();
+  });
+});
