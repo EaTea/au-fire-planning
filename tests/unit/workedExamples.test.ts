@@ -411,7 +411,7 @@ function checkProjectionFigures(summary: CompleteSummary, expected: WorkedScenar
 
     expect(fiReached.yearIndex).toBe(expected.fiReached.yearIndex);
     expect(fiReached.calendarYear).toBe(expected.fiReached.calendarYear);
-    expect(fiReached.age).toBe(expected.fiReached.age);
+    expect(fiReached.firstPersonAge).toBe(expected.fiReached.age);
 
     const row = projection.rows[fiReached.yearIndex];
     if (expected.fiReached.portfolioClosing !== undefined) {
@@ -467,7 +467,7 @@ function checkCoastFigures(summary: CompleteSummary, expected: WorkedScenario["e
 
     expect(coast.reached.yearIndex).toBe(expected.coast.reached.yearIndex);
     expect(coast.reached.calendarYear).toBe(expected.coast.reached.calendarYear);
-    expect(coast.reached.age).toBe(expected.coast.reached.age);
+    expect(coast.reached.firstPersonAge).toBe(expected.coast.reached.age);
 
     const point = coast.path[coast.reached.yearIndex];
     if (expected.coast.reached.investable !== undefined) {
@@ -563,7 +563,7 @@ function checkCoastSplitPart(
     expect(actual.reached?.calendarYear, `${name} reached year`).toBe(
       expected.reached.calendarYear,
     );
-    expect(actual.reached?.age, `${name} reached age`).toBe(expected.reached.age);
+    expect(actual.reached?.firstPersonAge, `${name} reached age`).toBe(expected.reached.age);
   }
 }
 
@@ -699,7 +699,7 @@ function checkSolvency(actual: CompleteProjection["solvency"], expected: Expecte
   }
 
   if (expected.year !== undefined) expect(actual.year).toBe(expected.year);
-  if (expected.age !== undefined) expect(actual.age).toBe(expected.age);
+  if (expected.age !== undefined) expect(actual.firstPersonAge).toBe(expected.age);
   if (expected.ages !== undefined) expect(actual.ages.map(({ age }) => age)).toEqual(expected.ages);
   if (expected.shortfallYears !== undefined) {
     expect(actual.shortfallYears).toEqual(expected.shortfallYears);

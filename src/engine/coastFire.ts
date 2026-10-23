@@ -80,7 +80,7 @@ export interface CoastPathPoint {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
   /** Everyone's age in that year with their display names; see `formatAges`. */
   readonly ages: readonly PersonAge[];
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
@@ -102,7 +102,7 @@ export interface CoastMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
   /** Everyone's age in that year with their display names; see `formatAges`. */
   readonly ages: readonly PersonAge[];
   /** Investable net worth against the Coast FIRE number in that year. */
@@ -156,7 +156,7 @@ export function calculateCoastFire(
     return {
       yearIndex: row.yearIndex,
       calendarYear: row.calendarYear,
-      age: row.people[0].age,
+      firstPersonAge: row.people[0].age,
       ages: agesOf(row),
       inflationIndex: row.inflationIndex,
       coastNumber: row.cashClosing + row.superClosing + need.portfolioNeeded,
@@ -494,7 +494,7 @@ function explainCoastNumber(
 
   if (hasSuper) {
     lines.push({
-      label: `Your super, growing at ${formatPercent(inputs.people[0].superAccount?.returnRate ?? 0)} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
+      label: `${inputs.people.length > 1 ? "Your super (both of you)" : "Your super"}, growing at ${formatPercent(superReturnToday(inputs, todayRow))} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
       value: need.superLeftAtRetirement,
       unit: "dollars",
       operator: "−",
@@ -555,6 +555,29 @@ function explainCoastNumber(
   });
 
   return { value: today.coastNumber, unit: "dollars", lines };
+}
+
+/**
+ * The super return quoted in the Coast FIRE breakdown. One person: their own
+ * return. A couple: each person's return weighted by their super balance today
+ * (equal weights when nobody has a balance), so "growing at X%" describes both
+ * accounts together. Called by `explainCoastNumber`.
+ */
+function superReturnToday(inputs: ProjectionInputs, todayRow: ProjectionRow): number {
+  const returns = inputs.people.map((person) => person.superAccount?.returnRate ?? 0);
+  const balances = todayRow.people.map((personYear) => personYear.superClosing);
+  const totalBalance = balances.reduce((total, balance) => total + balance, 0);
+
+  if (inputs.people.length === 1) return returns[0] ?? 0;
+  if (totalBalance <= 0) {
+    return returns.reduce((total, rate) => total + rate, 0) / Math.max(1, returns.length);
+  }
+
+  // Share first, then multiply, like every weighted figure here.
+  return returns.reduce(
+    (total, rate, personIndex) => total + ((balances[personIndex] ?? 0) / totalBalance) * rate,
+    0,
+  );
 }
 
 /**
@@ -682,7 +705,7 @@ function findCoastReached(
     return {
       yearIndex: point.yearIndex,
       calendarYear: point.calendarYear,
-      age: point.age,
+      firstPersonAge: point.firstPersonAge,
       ages: point.ages,
       explanation: { value: point.investable, unit: "dollars", lines },
     };

@@ -56,7 +56,7 @@ export interface CoastSplitMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
   /** Everyone's age in that year with their display names; see `formatAges`. */
   readonly ages: readonly PersonAge[];
   /** The balance against the need in that year. */
@@ -371,7 +371,7 @@ function milestone(
   return {
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
-    age: row.people[0].age,
+    firstPersonAge: row.people[0].age,
     ages: agesOf(row),
     explanation: {
       value: balance,

@@ -169,7 +169,7 @@ describe("a couple that runs short while one partner's super is locked", () => {
   it("runs out in 2035, quoting the first person's age", () => {
     const result = assessSolvency(rows, 65);
 
-    expect(result).toMatchObject({ status: "runsOut", year: 2035, age: 64 });
+    expect(result).toMatchObject({ status: "runsOut", year: 2035, firstPersonAge: 64 });
     expect(result.status === "runsOut" && result.shortfallYears[0]).toBe(2035);
   });
 
@@ -489,5 +489,46 @@ describe("the outside-super Coast FIRE test when contributions are paid in the b
       label: "Bridge need at 2027",
       value: 120_000,
     });
+  });
+});
+
+describe("couple wording in the Coast FIRE results", () => {
+  it("quotes both people's ages when a split test is reached", () => {
+    const inputs = exampleD();
+    const rows = projectPortfolio(inputs, START_YEAR);
+    const split = calculateCoastSplit(rows, inputs, assessBridge(rows, inputs));
+
+    expect(split.outside?.reached?.ages).toEqual([
+      { label: "Alex", age: 55 },
+      { label: "Sam", age: 53 },
+    ]);
+    expect(split.outside?.reached?.firstPersonAge).toBe(55);
+  });
+
+  // Alex's 10% on $150,000 and Sam's 4% on $100,000, weighted by today's balances: 7.6%.
+  it("says the super grows at the balance-weighted return of both people", () => {
+    const [alex, sam] = exampleD().people;
+    const inputs: ProjectionInputs = {
+      ...exampleD(),
+      people: [
+        { ...alex, superAccount: { ...alex.superAccount!, returnRate: 0.1 } },
+        { ...sam!, superAccount: { ...sam!.superAccount!, returnRate: 0.04 } },
+      ],
+    };
+    const coast = calculateCoastFire(projectPortfolio(inputs, START_YEAR), inputs);
+    const superLine = coast.number.lines.find((line) => line.label.startsWith("Your super"));
+
+    expect(superLine?.label).toContain(
+      "Your super (both of you), growing at 7.6% net of fees and tax",
+    );
+  });
+
+  it("keeps the one-person wording for one person", () => {
+    const [alex] = exampleD().people;
+    const inputs: ProjectionInputs = { ...exampleD(), people: [alex] };
+    const coast = calculateCoastFire(projectPortfolio(inputs, START_YEAR), inputs);
+    const superLine = coast.number.lines.find((line) => line.label.startsWith("Your super"));
+
+    expect(superLine?.label).toContain("Your super, growing at 0% net of fees and tax");
   });
 });

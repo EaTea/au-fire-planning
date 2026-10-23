@@ -171,7 +171,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
       : {
           year: solvency.year,
           // One person keeps "at 94"; a couple names both ages ("at Alex 94 · Sam 92").
-          label: `Money runs out at ${projection.people.length > 1 ? formatAges(solvency.ages) : solvency.age}`,
+          label: `Money runs out at ${projection.people.length > 1 ? formatAges(solvency.ages) : solvency.firstPersonAge}`,
           status: statusForYear(solvency.year, startYear),
         };
 

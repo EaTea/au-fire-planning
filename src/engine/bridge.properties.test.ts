@@ -84,14 +84,14 @@ test.prop([planArbitrary], { numRuns: 300 })(
     const accessAge = result.effectiveAccess?.age as number;
 
     if (result.bridge !== undefined) {
-      expect(result.bridge.firstAge).toBe(inputs.people[0].retirementAge + 1);
-      expect(result.bridge.lastAge).toBeLessThan(accessAge);
+      expect(result.bridge.firstPersonFirstAge).toBe(inputs.people[0].retirementAge + 1);
+      expect(result.bridge.firstPersonLastAge).toBeLessThan(accessAge);
     }
     if (result.afterAccess !== undefined) {
-      expect(result.afterAccess.firstAge).toBe(
+      expect(result.afterAccess.firstPersonFirstAge).toBe(
         Math.max(accessAge, inputs.people[0].currentAge + 1),
       );
-      expect(result.afterAccess.lastAge).toBe(inputs.endAge);
+      expect(result.afterAccess.firstPersonLastAge).toBe(inputs.endAge);
     }
   },
 );

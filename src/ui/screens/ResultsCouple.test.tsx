@@ -161,7 +161,7 @@ describe("Results for a couple: example D2 (bridge short, both partners' super l
 
     expect(within(bridgeCard).getAllByText(/SHORT/).length).toBeGreaterThan(0);
     expect(
-      within(bridgeCard).getByText(/After super is accessible, 2036 – 2039/),
+      within(bridgeCard).getByText(/After Alex's super opens, 2036 – 2039/),
     ).toBeInTheDocument();
   });
 
@@ -174,7 +174,7 @@ describe("Results for a couple: example D2 (bridge short, both partners' super l
       .getByRole("heading", { name: "Can you bridge to super?" })
       .closest("section")!;
     const afterAccessMeter = within(bridgeCard)
-      .getByText(/After super is accessible, 2036 – 2039/)
+      .getByText(/After Alex's super opens, 2036 – 2039/)
       .closest<HTMLElement>(".status-meter")!;
 
     for (const button of within(afterAccessMeter).getAllByRole("button", {
@@ -188,6 +188,25 @@ describe("Results for a couple: example D2 (bridge short, both partners' super l
     expect(text).toContain("Alex's super at end of 2035$150,000");
     expect(text).toContain("Sam's super at end of 2035, locked until 65 (2038)$100,000");
     expect(text).not.toContain("Alex's super at end of 2035, locked");
+  });
+
+  it("names the person whose super opens first in the after-access heading", () => {
+    const [alex, sam] = exampleD2.household.people;
+    renderResults({
+      ...exampleD2,
+      household: {
+        ...exampleD2.household,
+        people: [alex!, { ...sam!, superAccessAge: 60 }],
+      },
+    });
+
+    const bridgeCard = screen
+      .getByRole("heading", { name: "Can you bridge to super?" })
+      .closest("section")!;
+
+    expect(
+      within(bridgeCard).getByText(/After Sam's super opens, 2033 – 2039/),
+    ).toBeInTheDocument();
   });
 
   it("lists each person's retirement and super access as milestones, with both ages", () => {

@@ -49,7 +49,7 @@ describe("assessSolvency", () => {
     expect(result).toMatchObject({
       status: "runsOut",
       year: 2031,
-      age: 65,
+      firstPersonAge: 65,
       shortfallYears: [2031],
     });
     expect(result.explanation.value).toBeCloseTo(9339.18, 2);
@@ -88,7 +88,11 @@ describe("assessSolvency", () => {
       2026,
     );
 
-    expect(assessSolvency(rows)).toMatchObject({ status: "runsOut", year: 2027, age: 61 });
+    expect(assessSolvency(rows)).toMatchObject({
+      status: "runsOut",
+      year: 2027,
+      firstPersonAge: 61,
+    });
   });
 
   // S4 (tests/worked-examples/m5-super.json): retired at 60 with only locked super.
@@ -165,7 +169,7 @@ describe("assessSolvency", () => {
       expect(result.status).toBe("runsOut");
       if (result.status !== "runsOut") return;
 
-      expect(result.age).toBe(89);
+      expect(result.firstPersonAge).toBe(89);
       expect(result.explanation.lines.map((line) => [line.label, line.value])).toEqual([
         ["Spending to fund in 2051", 20000],
         ["Cash and portfolio available", 0],

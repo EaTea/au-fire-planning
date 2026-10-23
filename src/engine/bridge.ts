@@ -49,8 +49,8 @@ export interface BridgePart {
   readonly firstYear: number;
   readonly lastYear: number;
   /** The ages in those years. */
-  readonly firstAge: number;
-  readonly lastAge: number;
+  readonly firstPersonFirstAge: number;
+  readonly firstPersonLastAge: number;
   /** The spending in those years, discounted to the row before the part starts (nominal dollars of that row). */
   readonly need: Explained;
   /** What the plan holds at the end of that row (nominal dollars of that row): the bar to compare with the need. */
@@ -468,8 +468,8 @@ function describePart(description: PartDescription): BridgePart {
   return {
     firstYear: firstRow.calendarYear,
     lastYear: lastRow.calendarYear,
-    firstAge: firstRow.people[0].age,
-    lastAge: lastRow.people[0].age,
+    firstPersonFirstAge: firstRow.people[0].age,
+    firstPersonLastAge: lastRow.people[0].age,
     need: needExplained,
     needBeforeContributions: discountedSpending,
     projected: projectedExplained,

@@ -101,7 +101,7 @@ test("D2 is SHORT on the bridge with both names, Sam's access at 60 makes it D (
     card.getByText("Need $240,000 in 2027 · projected $200,000 · short in 2035"),
   ).toBeVisible();
   await expect(card.getByText("SHORT", { exact: true })).toBeVisible();
-  await expect(card.getByText("After super is accessible, 2036 – 2039")).toBeVisible();
+  await expect(card.getByText("After Alex's super opens, 2036 – 2039")).toBeVisible();
   await expect(card.getByText("MET", { exact: true })).toBeVisible();
 
   // Both names in the tiles and the banner.
@@ -130,7 +130,7 @@ test("D2 is SHORT on the bridge with both names, Sam's access at 60 makes it D (
   await expect(
     card.getByText("Need $120,000 in 2027 · projected $200,000", { exact: true }),
   ).toBeVisible();
-  await expect(card.getByText("After super is accessible, 2033 – 2039")).toBeVisible();
+  await expect(card.getByText("After Sam's super opens, 2033 – 2039")).toBeVisible();
   await expect(card.getByText("Need $280,000 in 2032 · projected $330,000")).toBeVisible();
   await expect(card.getByText("MET", { exact: true })).toHaveCount(2);
 

@@ -167,7 +167,11 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
       {afterAccess !== undefined && (
         <BridgeMeter
-          label={`After super is accessible, ${formatPartYears(afterAccess)}`}
+          label={
+            isCouple && accessPersonLabel !== undefined
+              ? `After ${accessPersonLabel}'s super opens, ${formatPartYears(afterAccess)}`
+              : `After super is accessible, ${formatPartYears(afterAccess)}`
+          }
           part={afterAccess}
           baseInflationIndex={inflationIndexBefore(afterAccess)}
           baseYear={afterAccess.firstYear - 1}

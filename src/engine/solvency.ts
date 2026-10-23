@@ -24,7 +24,7 @@ export type Solvency =
       /** The first calendar year spending can't be fully funded. */
       readonly year: number;
       /** The first person's age in that year. */
-      readonly age: number;
+      readonly firstPersonAge: number;
       /** Every person's age in that year, with their display names, for wording like "Alex 94 · Sam 92". */
       readonly ages: readonly { readonly label: string; readonly age: number }[];
       /** Every calendar year that can't be fully funded, in order. */
@@ -77,7 +77,7 @@ export function assessSolvency(
     return {
       status: "runsOut",
       year: firstShortfall.calendarYear,
-      age: firstShortfall.people[0].age,
+      firstPersonAge: firstShortfall.people[0].age,
       ages: firstShortfall.people.map(({ label, age }) => ({ label, age })),
       shortfallYears: shortfallRows.map((row) => row.calendarYear),
       explanation: {

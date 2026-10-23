@@ -414,7 +414,7 @@ describe("summarisePlan: projection", () => {
 
     expect(summary.status).toBe("complete");
     if (summary.status !== "complete" || summary.projection.status !== "complete") return;
-    expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, age: 46 });
+    expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, firstPersonAge: 46 });
     expect(summary.projection.fiNumberAtRetirement.value).toBeCloseTo(2375208.99, 2);
     expect(summary.projection.people[0].retirementAge).toBe(50);
     expect(summary.projection.people[0].retirementYear).toBe(2042);
@@ -515,6 +515,10 @@ describe("summarisePlan: cash and solvency", () => {
     const summary = summaryWithAges({ livingAnnual: 64000, portfolioValue: 1000 });
 
     if (summary.projection.status !== "complete") throw new Error("expected complete projection");
-    expect(summary.projection.solvency).toMatchObject({ status: "runsOut", age: 51, year: 2043 });
+    expect(summary.projection.solvency).toMatchObject({
+      status: "runsOut",
+      firstPersonAge: 51,
+      year: 2043,
+    });
   });
 });

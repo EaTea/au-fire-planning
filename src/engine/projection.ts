@@ -502,7 +502,7 @@ export interface FiMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
   /** Everyone's age in that year with their display names; see `formatAges`. */
   readonly ages: readonly PersonAge[];
   /** The investable net worth against the FI number in that year. */
@@ -1123,7 +1123,7 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
   return {
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
-    age: firstPersonAge,
+    firstPersonAge,
     ages: agesOf(row),
     explanation: { value: row.investableClosing, unit: "dollars", lines },
   };
