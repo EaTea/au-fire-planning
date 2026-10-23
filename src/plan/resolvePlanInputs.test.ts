@@ -282,6 +282,49 @@ describe("resolvePlanInputs: projection inputs", () => {
     expect(withoutInterim.inputs.interimAnnual).toEqual({ value: 0, source: "default" });
   });
 
+  // A stop age is an age of the first owner; one before their age today can't happen.
+  it("reports a stop age before the first owner's current age", () => {
+    expect(projectionOf(planWithAges(50, 55, { contributionsStopAge: 45 }))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "contributionsStopAge",
+          label: "Contributions stop age must be at or after your current age",
+        },
+      ],
+    });
+  });
+
+  it("accepts a stop age equal to the current age", () => {
+    expect(projectionOf(planWithAges(50, 55, { contributionsStopAge: 50 })).status).toBe(
+      "complete",
+    );
+  });
+
+  it("names the first owner in a couple's stop-age message", () => {
+    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
+    const projection = projectionOf({
+      ...plan,
+      portfolios: [
+        {
+          ...plan.portfolios[0]!,
+          ownership: { kind: "sole", personId: "person-2" },
+          contributionsStopAge: 30,
+        },
+      ],
+    });
+
+    expect(projection).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "contributionsStopAge",
+          label: "Contributions stop age must be at or after Sam's current age",
+        },
+      ],
+    });
+  });
+
   // Retiring this year is allowed.
   it("accepts a target retirement age equal to the current age", () => {
     expect(projectionOf(planWithAges(50, 50)).status).toBe("complete");

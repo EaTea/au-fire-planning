@@ -150,12 +150,24 @@ test("D2 is SHORT on the bridge with both names, Sam's access at 60 makes it D (
   await page.goto("#/results");
   await expect(card.getByText("MET", { exact: true })).toHaveCount(2);
 
+  // Sam owns the portfolio, and its contributions stop at Sam's age 60 (2033): the stop age is Sam's.
+  await page.goto("#/assets");
+  await page.getByRole("button", { name: "Sam", exact: true }).click();
+  await enter(page, "Contributions stop at Sam's age", "60");
+  await expect(page.getByLabel("Contributions stop at Sam's age", { exact: true })).toHaveValue(
+    "60",
+  );
+
   // Just me: Person 2 is gone, and Results is the one-person plan.
   await page.goto("#/household");
   await page.getByRole("button", { name: "Just me" }).click();
   await expect(page.getByLabel("Sam: Current age", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Current age", { exact: true })).toHaveValue("55");
   await expect.poll(async () => (await savedPeople(page))?.count).toBe(1);
+
+  // The stop age moved to Alex (two years older than Sam), keeping the same year: Sam's 60 is Alex's 62.
+  await page.goto("#/assets");
+  await expect(page.getByLabel("Contributions stop at age", { exact: true })).toHaveValue("62");
 
   await page.goto("#/results");
   const table = page.getByRole("table", { name: "Year by year projection" });

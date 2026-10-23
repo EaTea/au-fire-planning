@@ -41,7 +41,8 @@ export interface MissingInput {
     | "retirementSpending"
     | "currentAge"
     | "targetRetirementAge"
-    | "projectionEndAge";
+    | "projectionEndAge"
+    | "contributionsStopAge";
   readonly label: string;
 }
 
@@ -320,6 +321,25 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
         ),
       });
     }
+  }
+
+  // An entered stop age is an age of the first owner, so it can't be before their age today.
+  const stopAge = portfolio?.contributionsStopAge;
+  const firstOwnerId = resolveOwnerIds(portfolio?.ownership, planPeople)[0];
+  const firstOwnerIndex = planPeople.findIndex((person) => person.id === firstOwnerId);
+  const firstOwner = planPeople[firstOwnerIndex];
+
+  if (
+    stopAge !== undefined &&
+    firstOwner?.currentAge !== undefined &&
+    stopAge < firstOwner.currentAge
+  ) {
+    const ownerName = displayName(firstOwner, firstOwnerIndex);
+
+    missing.push({
+      field: "contributionsStopAge",
+      label: `Contributions stop age must be at or after ${isCouple ? `${ownerName}'s` : "your"} current age`,
+    });
   }
 
   // A person with an age missing resolves to nothing; the plan is then incomplete anyway.

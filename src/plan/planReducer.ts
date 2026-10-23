@@ -6,6 +6,7 @@
 // returns a new object, so React can detect the change and the engine's
 // derived summary can be recomputed from it.
 
+import { resolveOwnerIds } from "./resolvePlanInputs";
 import type {
   DatedExpense,
   Person,
@@ -255,7 +256,7 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
         return plan;
       }
 
-      return updatePortfolio(plan, action.portfolioId, { ownership: action.ownership });
+      return changePortfolioOwnership(plan, action.portfolioId, action.ownership);
 
     case "replacePlan":
       return action.plan;
@@ -300,12 +301,111 @@ function removePartner(plan: Plan): Plan {
   return {
     ...plan,
     household: { ...plan.household, people: [firstPerson] },
-    portfolios: plan.portfolios.map((portfolio) =>
-      portfolio.ownership !== undefined && namesRemovedPerson(portfolio.ownership)
-        ? { ...portfolio, ownership: { kind: "sole", personId: firstPerson.id } }
-        : portfolio,
-    ),
+    portfolios: plan.portfolios.map((portfolio) => {
+      const ownership: PortfolioOwnership | undefined =
+        portfolio.ownership !== undefined && namesRemovedPerson(portfolio.ownership)
+          ? { kind: "sole", personId: firstPerson.id }
+          : portfolio.ownership;
+
+      // The stop age is measured on the first owner, who may have been the person removed.
+      const stopAge = movedStopAge(
+        portfolio.contributionsStopAge,
+        firstOwnerOf(plan.household.people, portfolio.ownership),
+        firstPerson,
+      );
+
+      return {
+        ...withoutKey(withoutKey(portfolio, "ownership"), "contributionsStopAge"),
+        ...(ownership === undefined ? {} : { ownership }),
+        ...(stopAge === undefined ? {} : { contributionsStopAge: stopAge }),
+      };
+    }),
   };
+}
+
+/**
+ * Sets (or clears) a portfolio's ownership. The contributions stop age is an
+ * age of the first owner, so if the first owner changes (for example from Sam
+ * to Person 1) the stop age is moved to the new person (see `movedStopAge`)
+ * rather than silently meaning a different person's age. Used by the
+ * `setPortfolioOwnership` action.
+ */
+function changePortfolioOwnership(
+  plan: Plan,
+  portfolioId: string,
+  ownership: PortfolioOwnership | undefined,
+): Plan {
+  const people = plan.household.people;
+
+  return {
+    ...plan,
+    portfolios: plan.portfolios.map((portfolio) => {
+      if (portfolio.id !== portfolioId) return portfolio;
+
+      const stopAge = movedStopAge(
+        portfolio.contributionsStopAge,
+        firstOwnerOf(people, portfolio.ownership),
+        firstOwnerOf(people, ownership),
+      );
+
+      return {
+        ...withoutKey(withoutKey(portfolio, "ownership"), "contributionsStopAge"),
+        ...(ownership === undefined ? {} : { ownership }),
+        ...(stopAge === undefined ? {} : { contributionsStopAge: stopAge }),
+      };
+    }),
+  };
+}
+
+/** A copy of the object without one key, so an unset field stays absent rather than being set to `undefined`. */
+function withoutKey<Item extends object, Key extends keyof Item>(
+  item: Item,
+  key: Key,
+): Omit<Item, Key> {
+  const { [key]: removed, ...rest } = item;
+  void removed;
+
+  return rest;
+}
+
+/**
+ * The first owner of a portfolio: the earliest person in the household who
+ * owns it (see `resolveOwnerIds`). The contributions stop age is measured on
+ * them. Used by the ownership changes.
+ */
+function firstOwnerOf(
+  people: readonly Person[],
+  ownership: PortfolioOwnership | undefined,
+): Person | undefined {
+  const firstOwnerId = resolveOwnerIds(ownership, people)[0];
+
+  return people.find((person) => person.id === firstOwnerId);
+}
+
+/**
+ * Moves a contributions stop age from one person to another so it keeps its
+ * meaning: the stop is a calendar year, and both people are a year older each
+ * year, so the new person's age is the old age plus the gap between their
+ * ages today. Returns `undefined` (the stop age is cleared) when it would be
+ * before the new person's age today, or when either age isn't known. With no
+ * stop age, or the same person, it is returned as it was. Used when the first
+ * owner changes (`removePartner`, `changePortfolioOwnership`).
+ */
+function movedStopAge(
+  stopAge: number | undefined,
+  oldOwner: Person | undefined,
+  newOwner: Person | undefined,
+): number | undefined {
+  if (stopAge === undefined) return undefined;
+  if (oldOwner?.id === newOwner?.id) return stopAge;
+
+  const oldAge = oldOwner?.currentAge;
+  const newAge = newOwner?.currentAge;
+  if (oldAge === undefined || newAge === undefined) return undefined;
+
+  const movedAge = stopAge + (newAge - oldAge);
+
+  return movedAge < newAge ? undefined : movedAge;
 }
 
 /**
