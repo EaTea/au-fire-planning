@@ -25,12 +25,15 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 
+import { formatAges, type PersonAge } from "../../engine/projection";
 import { formatDollars } from "../format";
 
 /** One year of the chart: its calendar year, the person's age, and a value for each series. */
 export interface TimeSeriesPoint {
   readonly year: number;
   readonly age: number;
+  /** For a couple, everyone's age with their names; the chart then shows "Alex 52 · Sam 50" instead of the single age. */
+  readonly ages?: readonly PersonAge[];
   /** Value of each series in this year, keyed by `TimeSeriesSeries.key`. */
   readonly values: Readonly<Record<string, number>>;
 }
@@ -272,7 +275,7 @@ export function TimeSeriesChart({
           {points.map((point) => (
             <tr key={point.year}>
               <th scope="row">{point.year}</th>
-              <td>{point.age}</td>
+              <td>{point.ages === undefined ? point.age : formatAges(point.ages)}</td>
               {series.map((oneSeries) => (
                 <td key={oneSeries.key}>{formatValue(point.values[oneSeries.key] ?? 0)}</td>
               ))}
@@ -304,7 +307,10 @@ export function ChartTooltip({ tooltipProps, series, formatValue }: ChartTooltip
   return (
     <div className="chart-tooltip">
       <div className="chart-tooltip-title">
-        {hoveredPoint.year} · age {hoveredPoint.age}
+        {hoveredPoint.year} ·{" "}
+        {hoveredPoint.ages === undefined
+          ? `age ${hoveredPoint.age}`
+          : formatAges(hoveredPoint.ages)}
       </div>
       {series.map((oneSeries) => (
         <div key={oneSeries.key} className="chart-tooltip-row">

@@ -135,7 +135,10 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
   const { bridge, afterAccess } = projection.bridge;
   // `hasBridgeSection` guarantees the access exists. The age is that of the person it names.
-  const { age: accessAge } = projection.bridge.effectiveAccess as EffectiveAccess;
+  const { age: accessAge, personIndex: accessPersonIndex } = projection.bridge
+    .effectiveAccess as EffectiveAccess;
+  const isCouple = projection.people.length > 1;
+  const accessPersonLabel = projection.people[accessPersonIndex]?.label;
 
   // The row a part's figures are stated at is the one before its first year.
   const inflationIndexBefore = (part: BridgePart): number =>
@@ -146,7 +149,11 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
   return (
     <Card title="Can you bridge to super?" id={BRIDGE_SECTION_ID}>
       {bridge === undefined && (
-        <p className="section-intro">No bridge needed: super is accessible when you retire.</p>
+        <p className="section-intro">
+          {isCouple
+            ? "No bridge needed: super is accessible when the first of you retires."
+            : "No bridge needed: super is accessible when you retire."}
+        </p>
       )}
 
       {bridge !== undefined && (
@@ -169,7 +176,9 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
       {afterAccess === undefined && (
         <p className="section-intro">
-          Super isn&apos;t accessible until age {accessAge}, after your plan ends
+          {isCouple && accessPersonLabel !== undefined
+            ? `${accessPersonLabel}'s super isn't accessible until age ${accessAge}, after the plan ends`
+            : `Super isn't accessible until age ${accessAge}, after your plan ends`}
           {lastRow === undefined ? "" : ` in ${lastRow.calendarYear}`}.
         </p>
       )}

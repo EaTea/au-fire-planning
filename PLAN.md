@@ -2269,7 +2269,41 @@ there are two-person engine tests for D and D2.
 
 #### Step 8 · Results for a couple (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- No UI copy of the formatter: the engine's `formatAges` / `describeAges`
+  are used, and the engine now carries `ages` (`PersonAge[]`: label and age)
+  on `FiMilestone`, `CoastPathPoint`, `CoastMilestone`, `CoastSplitMilestone`
+  and `Solvency.runsOut`, with `agesOf(row)` to build them. The UI only adds
+  `capitaliseFirst` to start a line with "Age 46".
+- Tiles: FI number "$3,686,887 in 2046, when you've both retired"; Earliest
+  retirement "Alex 52 · Sam 54" with "Alex 2044 · Sam 2048" and "Targets: Alex 50
+  (2042) · Sam 52 (2046)" (the breakdown joins each person's lines); Coast FIRE
+  "Not before you've both retired (2046)" or "Reached in {year}, at {ages}";
+  Money lasts "Runs out at Alex 94 · Sam 92" and, when it lasts, "To Sam 95 ✓"
+  (the younger person's name); the runs-out banner names both ages.
+- Milestones: a couple has "{name} retires (target)" and "{name}'s super
+  accessible" for each person (access only for people who hold super), each
+  with both ages in that year; FI, Coast and money lasting use both ages.
+- Year by year: the Age column is headed "Alex · Sam" and reads "52 · 50"; the
+  band "One retired · Sam working" starts the oneRetired years; the bridge band
+  for a couple reads "Bridge · super locked: Alex until 65 (2036), Sam until 65
+  (2038)"; a shortfall year with locked super says "Alex's super locked until
+  65 (2036), Sam's until 65 (2038)" (the first names what is locked, the rest
+  just whose).
+- Bridge section: "No bridge needed: super is accessible when the first of you
+  retires" and "{name}'s super isn't accessible until age N, after the plan
+  ends in {year}" for a couple. The after-access working lists each partner's
+  super, marking a locked one (step 5). The chart tooltips and data tables show
+  both ages ("Alex 52 · Sam 50") through an optional `ages` on the chart point,
+  set only for a couple.
+- Tests: `ResultsCouple.test.tsx` (examples D2 and E: names and both ages in the
+  tiles, banner, milestones, bands and the after-access lines; one person
+  unchanged). The earlier step 7 test for the FI line was reworded for the
+  couple wording. Screenshots of D2 and E (top, bridge, Year by year) were
+  checked by eye; E's bridge shows need $864,875, projected $890,437, after
+  access need $3,626,577 against $3,439,372, SHORT 2086 to 2089.
 
 1. **A shared formatter** `formatAges(ages, people)`: "Age 52" for one
    person, "Alex 52 · Sam 50" for a couple. Use it everywhere an age is

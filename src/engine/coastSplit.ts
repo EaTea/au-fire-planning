@@ -39,12 +39,14 @@ import type { BridgeAssessment } from "./bridge";
 import { inputsWithVoluntaryContributionsStoppedAfter, portfolioNeededFromRow } from "./coastFire";
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  agesOf,
   describeAges,
   firstRetirementRowIndex,
   householdRetirementRowIndex,
   mapNonEmpty,
   projectPortfolio,
   youngestAgeAtRow,
+  type PersonAge,
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
@@ -55,6 +57,8 @@ export interface CoastSplitMilestone {
   readonly calendarYear: number;
   /** The first person's age in that year. */
   readonly age: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** The balance against the need in that year. */
   readonly explanation: Explained;
 }
@@ -367,6 +371,7 @@ function milestone(
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
     age: row.people[0].age,
+    ages: agesOf(row),
     explanation: {
       value: balance,
       unit: "dollars",

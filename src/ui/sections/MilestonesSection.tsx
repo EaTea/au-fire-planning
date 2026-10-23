@@ -1,5 +1,7 @@
 import { projectionHasSuper } from "../../engine/bridge";
 import type { ProjectionSummary } from "../../engine/fiNumber";
+import { agesOf, formatAges, type ProjectionRow } from "../../engine/projection";
+import { capitaliseFirst } from "../format";
 import { Card } from "../components/Card";
 import { MilestoneTimeline, type MilestoneItem } from "../components/MilestoneTimeline";
 
@@ -42,6 +44,60 @@ function buildSuperAccessibleItem(
   };
 }
 
+/** The wording of everyone's ages in a row, started with a capital: "Age 46" or "Alex 46 · Sam 44". */
+function agesDetail(row: ProjectionRow): string {
+  return capitaliseFirst(formatAges(agesOf(row)));
+}
+
+/**
+ * A couple's milestones for each person's own retirement and super access:
+ * "Alex retires (target)", "Sam's super accessible", each with both people's
+ * ages in that year. A person with no super gets no access item. Used by
+ * buildMilestoneItems when the household has two people.
+ */
+function buildPerPersonItems(projection: CompleteProjection, startYear: number): MilestoneItem[] {
+  const todayRow = projection.rows[0];
+
+  return projection.people.flatMap((person, personIndex): MilestoneItem[] => {
+    const retirementRow = projection.rows.find((row) => row.calendarYear === person.retirementYear);
+    const items: MilestoneItem[] = [
+      {
+        year: person.retirementYear,
+        label: `${person.label} retires (target)`,
+        detail:
+          retirementRow === undefined ? `Age ${person.retirementAge}` : agesDetail(retirementRow),
+        status: statusForYear(person.retirementYear, startYear),
+      },
+    ];
+
+    const holdsSuper = projection.rows.some(
+      (row) => (row.people[personIndex]?.superClosing ?? 0) > 0,
+    );
+    const todayAge = todayRow?.people[personIndex]?.age;
+
+    if (holdsSuper && person.superAccessAge !== undefined && todayAge !== undefined) {
+      const accessYear = startYear + (person.superAccessAge - todayAge);
+      const accessRow = projection.rows.find((row) => row.calendarYear === accessYear);
+
+      items.push(
+        accessRow === undefined
+          ? {
+              label: `${person.label}'s super accessible: not by age ${projection.endAge}`,
+              status: "notReached",
+            }
+          : {
+              year: accessYear,
+              label: `${person.label}'s super accessible`,
+              detail: agesDetail(accessRow),
+              status: statusForYear(accessYear, startYear),
+            },
+      );
+    }
+
+    return items;
+  });
+}
+
 /**
  * Turns the projection summary into the timeline's items: Coast FIRE, FI
  * reached, retirement (the target), whether the money lasts and, with super,
@@ -59,7 +115,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
       : {
           year: coast.reached.calendarYear,
           label: "Coast FIRE",
-          detail: `Age ${coast.reached.age}`,
+          detail: capitaliseFirst(formatAges(coast.reached.ages)),
           status: statusForYear(coast.reached.calendarYear, startYear),
         };
 
@@ -69,7 +125,7 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
       : {
           year: fiReached.calendarYear,
           label: "FI reached",
-          detail: `Age ${fiReached.age}`,
+          detail: capitaliseFirst(formatAges(fiReached.ages)),
           status: statusForYear(fiReached.calendarYear, startYear),
         };
 
@@ -90,9 +146,15 @@ export function buildMilestoneItems(projection: CompleteProjection): MilestoneIt
         }
       : {
           year: solvency.year,
-          label: `Money runs out at ${solvency.age}`,
+          // One person keeps "at 94"; a couple names both ages ("at Alex 94 · Sam 92").
+          label: `Money runs out at ${projection.people.length > 1 ? formatAges(solvency.ages) : solvency.age}`,
           status: statusForYear(solvency.year, startYear),
         };
+
+  // A couple has a retirement (and super access) milestone for each person.
+  if (projection.people.length > 1) {
+    return [coastItem, fiItem, ...buildPerPersonItems(projection, startYear), moneyItem];
+  }
 
   const items = [coastItem, fiItem, retirementItem, moneyItem];
 

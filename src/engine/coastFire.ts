@@ -62,12 +62,14 @@
 
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  agesOf,
   describeAges,
   householdRetirementRowIndex,
   lastPortfolioContributionYear,
   mapNonEmpty,
   projectPortfolio,
   youngestAgeAtRow,
+  type PersonAge,
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
@@ -79,6 +81,8 @@ export interface CoastPathPoint {
   readonly calendarYear: number;
   /** The first person's age in that year. */
   readonly age: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
   readonly inflationIndex: number;
   /** coast(k) = cash(k) + super(k) + portfolioNeeded(k): the savings you need in this year to coast. */
@@ -99,6 +103,8 @@ export interface CoastMilestone {
   readonly calendarYear: number;
   /** The first person's age in that year. */
   readonly age: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** Investable net worth against the Coast FIRE number in that year. */
   readonly explanation: Explained;
 }
@@ -151,6 +157,7 @@ export function calculateCoastFire(
       yearIndex: row.yearIndex,
       calendarYear: row.calendarYear,
       age: row.people[0].age,
+      ages: agesOf(row),
       inflationIndex: row.inflationIndex,
       coastNumber: row.cashClosing + row.superClosing + need.portfolioNeeded,
       portfolioNeeded: need.portfolioNeeded,
@@ -676,6 +683,7 @@ function findCoastReached(
       yearIndex: point.yearIndex,
       calendarYear: point.calendarYear,
       age: point.age,
+      ages: point.ages,
       explanation: { value: point.investable, unit: "dollars", lines },
     };
   }

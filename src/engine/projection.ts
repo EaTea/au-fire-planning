@@ -462,6 +462,17 @@ export function lastPortfolioContributionYear(inputs: ProjectionInputs, startYea
   return startYear + Math.max(-1, ...lastWorkingRows);
 }
 
+/** One person's age with their display name: the data behind `formatAges`. */
+export interface PersonAge {
+  readonly label: string;
+  readonly age: number;
+}
+
+/** Everyone's age in a row, as data for `formatAges`. Used wherever a result carries the ages of its year. */
+export function agesOf(row: ProjectionRow): readonly PersonAge[] {
+  return row.people.map(({ label, age }) => ({ label, age }));
+}
+
 /**
  * How a row's ages read in an explanation line. One person: "age 52". A
  * couple names both: "Alex 52 · Sam 50". Used inside parentheses and after
@@ -469,9 +480,7 @@ export function lastPortfolioContributionYear(inputs: ProjectionInputs, startYea
  * once.
  */
 export function describeAges(row: ProjectionRow): string {
-  return formatAges(
-    row.people.map((personYear) => ({ label: personYear.label, age: personYear.age })),
-  );
+  return formatAges(agesOf(row));
 }
 
 /**
@@ -479,9 +488,7 @@ export function describeAges(row: ProjectionRow): string {
  * for several. Used by `describeAges` and by results that carry ages as data
  * (see `Solvency`).
  */
-export function formatAges(
-  ages: readonly { readonly label: string; readonly age: number }[],
-): string {
+export function formatAges(ages: readonly PersonAge[]): string {
   const [firstAge, ...otherAges] = ages;
 
   if (firstAge === undefined) return "";
@@ -496,6 +503,8 @@ export interface FiMilestone {
   readonly calendarYear: number;
   /** The first person's age in that year. */
   readonly age: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** The investable net worth against the FI number in that year. */
   readonly explanation: Explained;
 }
@@ -1092,6 +1101,7 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
     age: firstPersonAge,
+    ages: agesOf(row),
     explanation: { value: row.investableClosing, unit: "dollars", lines },
   };
 }
