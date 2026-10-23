@@ -67,8 +67,10 @@ Everything is calculated in your browser and saved only on your device.
   hover for the values, or click a year to jump to it in the table.
 - **Results, the bridge:** "Can you bridge to super?" checks the years you are
   retired before super opens: whether your portfolio and cash cover them (the
-  bridge), and whether super plus what is left covers the years after. Each
-  part reads MET or SHORT, with the short years listed. A "Super accessible"
+  bridge), and whether super plus what is left covers the years after. If
+  you still contribute to the portfolio after you retire (a stop age later than
+  your retirement age), those contributions are netted off the bridge need,
+  discounted like the spending. Each part reads MET or SHORT, with the short years listed. A "Super accessible"
   milestone marks the year super opens. A "Bridge period" chart stacks
   outside-super money and super by year, with the bridge years shaded.
 - **Results, Coast FIRE split:** "Super and outside super" asks two stricter

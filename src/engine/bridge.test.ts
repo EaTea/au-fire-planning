@@ -131,6 +131,41 @@ describe("assessBridge", () => {
   });
 });
 
+describe("assessBridge netting contributions paid after retirement", () => {
+  // One person aged 40 retiring at 50 who keeps contributing $30,000 a year
+  // until 55: the portfolio still receives money in the first five bridge
+  // years, so the bridge need is net of it. Before M7 the need ignored those
+  // contributions and was $790,793.56; this pins the netted figure.
+  it("takes the contributions off the bridge need: $667,787.64 rather than $790,793.56", () => {
+    const inputs = bridgeInputs({
+      currentAge: 40,
+      endAge: 90,
+      retirementAge: 50,
+      expectedReturn: 0.07,
+      interestRate: 0.04,
+      inflationRate: 0.025,
+      annualContribution: 30_000,
+      contributionsStopAge: 55,
+      livingAnnual: 60_000,
+      retirementSpendingAnnual: 60_000,
+      superAccount: {
+        ...bridgeSettings.superAccount!,
+        returnRate: 0.07,
+        accessAge: 65,
+      },
+    });
+    const bridge = assess(inputs).bridge;
+
+    expect(bridge?.need.value).toBeCloseTo(667_787.64, 2);
+    expect(bridge?.needBeforeContributions).toBeCloseTo(790_793.56, 2);
+    // The difference is the contributions, discounted like the spending: 30,000 a year for 5 years at 7%.
+    expect((bridge?.needBeforeContributions ?? 0) - (bridge?.need.value ?? 0)).toBeCloseTo(
+      123_005.92,
+      2,
+    );
+  });
+});
+
 describe("assessBridge with two people", () => {
   /** An account with nothing in it and no rates, so only what a test puts in moves. */
   const emptyAccount = { ...bridgeSettings.superAccount!, opening: 0 };
