@@ -87,6 +87,17 @@ function BridgeMeter({ label, part, baseInflationIndex, baseYear }: BridgeMeterP
   const projectedAmount =
     mode === "today" ? part.projected.value / baseInflationIndex : part.projected.value;
 
+  // Locked super isn't in the projected figure, so the summary says where it comes in
+  // ("plus Alex's $150,000 from 2036"), in the same dollars as the other figures.
+  const lockedWords = part.lockedSuper.map(
+    (locked) =>
+      `${locked.label}'s ${formatMoney(locked.amount, baseInflationIndex)} from ${locked.opensYear}`,
+  );
+  const lockedDetail = lockedWords.length === 0 ? undefined : `plus ${lockedWords.join(" and ")}`;
+  const shortDetail =
+    part.shortYears.length > 0 ? `short in ${formatYearRuns(part.shortYears)}` : undefined;
+  const detail = [lockedDetail, shortDetail].filter((piece) => piece !== undefined).join(" · ");
+
   return (
     <StatusMeter
       label={label}
@@ -98,9 +109,7 @@ function BridgeMeter({ label, part, baseInflationIndex, baseYear }: BridgeMeterP
         amount: projectedAmount,
         text: formatMoney(part.projected.value, baseInflationIndex),
       }}
-      detail={
-        part.shortYears.length > 0 ? `short in ${formatYearRuns(part.shortYears)}` : undefined
-      }
+      detail={detail === "" ? undefined : detail}
       explanation={explainPart(part, mode, baseInflationIndex)}
     />
   );

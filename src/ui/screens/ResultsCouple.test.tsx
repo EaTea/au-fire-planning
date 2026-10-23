@@ -186,8 +186,12 @@ describe("Results for a couple: example D2 (bridge short, both partners' super l
     const text = afterAccessMeter.textContent ?? "";
 
     expect(text).toContain("Alex's super at end of 2035$150,000");
-    expect(text).toContain("Sam's super at end of 2035, locked until 65 (2038)$100,000");
-    expect(text).not.toContain("Alex's super at end of 2035, locked");
+    // Sam's locked super is a note below the total, not part of it.
+    expect(text).toContain("Plus Sam's super, locked until 65 (2038)$100,000");
+    expect(text).not.toContain("Sam's super at end of 2035");
+    expect(text.indexOf("Plus Sam's super")).toBeGreaterThan(
+      text.indexOf("Projected after super is accessible"),
+    );
   });
 
   it("names the person whose super opens first in the after-access heading", () => {
@@ -546,5 +550,61 @@ describe("The nothing-drawn banner", () => {
     });
 
     expect(screen.queryByText(/nothing is drawn for spending/)).not.toBeInTheDocument();
+  });
+});
+
+// The summary line under a meter must not look contradictory when super is
+// left out of "projected": it names the locked super and when it comes in.
+describe("The after-access summary names locked super", () => {
+  const bridgeCard = () =>
+    screen.getByRole("heading", { name: "Can you bridge to super?" }).closest("section")!;
+
+  it("D: says Alex's $150,000 comes in from 2036", () => {
+    const [alex, sam] = exampleD2.household.people;
+    renderResults({
+      ...exampleD2,
+      household: { ...exampleD2.household, people: [alex!, { ...sam!, superAccessAge: 60 }] },
+    });
+
+    expect(
+      within(bridgeCard()).getByText(
+        "Need $280,000 in 2032 · projected $180,000 · plus Alex's $150,000 from 2036",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("D2: says Sam's $100,000 comes in from 2038", () => {
+    renderResults(exampleD2);
+
+    expect(
+      within(bridgeCard()).getByText(
+        "Need $160,000 in 2035 · projected $150,000 · plus Sam's $100,000 from 2038",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("E: follows the dollars toggle like the other figures", async () => {
+    const user = userEvent.setup();
+    renderResults(exampleE);
+
+    const nominal = within(bridgeCard()).getByText(
+      /projected \$1,219,220 · plus Alex's \$2,220,152 from 2057 · short in/,
+    );
+    expect(nominal).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+    // 2053 is 27 years out at 2.5% inflation: 2,220,152 / 1.025^27 is about 1,139,000.
+    expect(
+      within(bridgeCard()).getByText(/plus Alex's \$1,1\d\d,\d{3} from 2057/),
+    ).toBeInTheDocument();
+  });
+
+  it("is unchanged for one person and for a bridge", () => {
+    renderResults(exampleD2);
+
+    expect(
+      within(bridgeCard()).getByText("Need $240,000 in 2027 · projected $200,000 · short in 2035"),
+    ).toBeInTheDocument();
   });
 });

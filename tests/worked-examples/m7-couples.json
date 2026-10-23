@@ -48,7 +48,7 @@
         "Alex 55 retires at 56, super $150,000, access 65 (2036). Sam 53 retires at 58, super $100,000, access 60 (2033). Plan until Sam is 66 (2039). Portfolio $200,000 joint, all rates 0",
         "Phases: working 2026-2027, oneRetired 2028-2031 (Alex retired, Sam working), retired 2032-2039. The first super to open is Sam's in 2033",
         "Bridge 2028-2032: need 4 x $20,000 + $40,000 = $120,000; projected $200,000 (portfolio at the end of 2027); MET",
-        "After access 2033-2039: need 7 x $40,000 = $280,000; projected $80,000 portfolio + $150,000 + $100,000 = $330,000; MET",
+        "After access 2033-2039: need 7 x $40,000 = $280,000; projected $80,000 portfolio + Sam's $100,000 (open from 2033) = $180,000, with Alex's $150,000 locked until 2036 shown as a note, not added; MET",
         "Portfolio: 200,000 - 80,000 (2028-2031) = 120,000; 2032 and 2033 leave 80,000 and 40,000; 2034 empties it. Sam's super pays 2035 ($40,000, leaving $60,000)",
         "2036 pro rata: Alex $150,000 and Sam $60,000 share $40,000 in proportion: Alex pays 28,571.43 (leaves 121,428.57), Sam 11,428.57 (leaves 48,571.43). 2039: Alex 35,714.29, Sam 14,285.71"
       ],
@@ -67,7 +67,7 @@
             "firstYear": 2033,
             "lastYear": 2039,
             "need": 280000,
-            "projected": 330000,
+            "projected": 180000,
             "status": "met",
             "shortYears": []
           }
@@ -172,7 +172,7 @@
       "arithmetic": [
         "Same people and money as D, interim amount entered as $0: nothing is drawn while only one of them is retired",
         "Bridge 2028-2032: only 2032 draws, the $40,000 retirement year, so need $40,000; projected $200,000; MET",
-        "After access 2033-2039: need $280,000; projected at the end of 2032: portfolio 200,000 - 40,000 = $160,000 (2028-2031 drew nothing), plus super $150,000 + $100,000 = $410,000; MET",
+        "After access 2033-2039: need $280,000; projected at the end of 2032: portfolio 200,000 - 40,000 = $160,000 (2028-2031 drew nothing), plus Sam's super $100,000 (open) = $260,000, with Alex's $150,000 locked until 2036 as a note; MET",
         "Total drawn 2032-2039 is 8 x $40,000 = $320,000, leaving $450,000 - $320,000 = $130,000"
       ],
       "expected": {
@@ -190,7 +190,7 @@
             "firstYear": 2033,
             "lastYear": 2039,
             "need": 280000,
-            "projected": 410000,
+            "projected": 260000,
             "status": "met",
             "shortYears": []
           }
@@ -255,7 +255,7 @@
       "arithmetic": [
         "D with Sam's access left at the default 65: Alex's super opens in 2036 and Sam's in 2038, so the first to open is Alex's",
         "Bridge 2028-2035: need 4 x $20,000 + 4 x $40,000 = $240,000 against $200,000 projected: SHORT in 2035 by $40,000, with both partners' super locked",
-        "After access 2036-2039: need 4 x $40,000 = $160,000; projected $250,000 (super only, the portfolio is empty); MET",
+        "After access 2036-2039: need 4 x $40,000 = $160,000; projected $150,000 (Alex's super, open from 2036; the portfolio is empty), with Sam's $100,000 locked until 2038 as a note; MET",
         "Earliest retirement: Alex 58 (2029) with Sam retiring at 58; Sam 60 (2033) with Alex retiring at 56"
       ],
       "expected": {
@@ -273,7 +273,7 @@
             "firstYear": 2036,
             "lastYear": 2039,
             "need": 160000,
-            "projected": 250000,
+            "projected": 150000,
             "status": "met",
             "shortYears": []
           }
@@ -347,7 +347,7 @@
       },
       "arithmetic": [
         "Same as D2 with $0 entered as the interim amount. Bridge 2028-2035 draws only 2032-2035, 4 x $40,000 = $160,000 against $200,000 projected; MET",
-        "After access 2036-2039: need $160,000; projected $40,000 portfolio + $150,000 + $100,000 = $290,000; MET",
+        "After access 2036-2039: need $160,000; projected $40,000 portfolio + Alex's $150,000 (open from 2036) = $190,000, with Sam's $100,000 locked until 2038 as a note; MET",
         "2036 the portfolio's last $40,000 pays; 2037 Alex pays $40,000 (leaves $110,000); 2038 Sam's super opens too: Alex $110,000 and Sam $100,000 share $40,000 in proportion 110:100, Alex pays 20,952.38 and Sam 19,047.62"
       ],
       "expected": {
@@ -365,7 +365,7 @@
             "firstYear": 2036,
             "lastYear": 2039,
             "need": 160000,
-            "projected": 290000,
+            "projected": 190000,
             "status": "met",
             "shortYears": []
           }
@@ -439,7 +439,7 @@
         "Phases: oneRetired 2043-2046 (Alex retired, Sam works), retired from 2047. Household retirement is 2046",
         "FI number at the household retirement: $90,000 / 4% = $2,250,000 x 1.025^20 = $3,686,886.99 nominal",
         "Bridge 2043-2053 (Sam's super opens at 60 in 2054): need $864,875.22, net of $67,744.23 of portfolio contributions paid 2043-2046; projected $890,437.07; MET",
-        "After access 2054-2089: need $3,626,576.69 against $3,439,371.73 projected; SHORT in 2086-2089",
+        "After access 2054-2089: need $3,626,576.69 against $1,219,220.01 projected (Sam's super, the portfolio and cash), with Alex's $2,220,151.72 locked until 2057 as a note; SHORT in 2086-2089",
         "Money runs out in 2086 (Alex 94, Sam 92). Earliest retirement: Alex 52 (2044), Sam 54 (2048)",
         "Bridge need before netting contributions: $864,875.22 + $67,744.23 = $932,619.45. Coasting stops the contributions, so the outside-super Coast FIRE test aims at this figure"
       ],
@@ -461,7 +461,7 @@
             "firstYear": 2054,
             "lastYear": 2089,
             "need": 3626576.69,
-            "projected": 3439371.73,
+            "projected": 1219220.01,
             "status": "short",
             "shortYears": [2086, 2087, 2088, 2089]
           }

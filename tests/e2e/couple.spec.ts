@@ -131,7 +131,9 @@ test("D2 is SHORT on the bridge with both names, Sam's access at 60 makes it D (
     card.getByText("Need $120,000 in 2027 · projected $200,000", { exact: true }),
   ).toBeVisible();
   await expect(card.getByText("After Sam's super opens, 2033 – 2039")).toBeVisible();
-  await expect(card.getByText("Need $280,000 in 2032 · projected $330,000")).toBeVisible();
+  await expect(
+    card.getByText("Need $280,000 in 2032 · projected $180,000 · plus Alex's $150,000 from 2036"),
+  ).toBeVisible();
   await expect(card.getByText("MET", { exact: true })).toHaveCount(2);
 
   // Reload: wait for the autosave, then check Person 2 (and the result) are kept.

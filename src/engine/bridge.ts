@@ -16,7 +16,11 @@
 // of portfolio contributions still paid while a partner works, and the
 // after-access need is discounted at the partners' super returns weighted by
 // their balances. A partner whose super is still locked when after access
-// begins gets a separate "locked until" line in the projected working.
+// begins is left out of the projected total, which counts only the super that
+// is open at the start of the after-access years plus the portfolio and cash,
+// and appears instead as a note line below the total ("Plus Alex's super,
+// locked until 65 (2036)"). The status stays exact, since it comes from the
+// rows. The discount rate still weights every partner's super.
 //
 // The status of each part comes from the projection's own shortfalls, so it is
 // exact: a part is MET when none of its years has a shortfall. The "need" and
@@ -43,6 +47,16 @@ import { rulesForYear } from "../rules/ruleSet";
 /** Whether a part of the plan is funded. The words are shown as text, never by colour alone. */
 export type BridgeStatus = "met" | "short";
 
+/** A partner's super that is still locked when a part of the check starts. */
+export interface LockedSuper {
+  /** The partner's display name. */
+  readonly label: string;
+  /** Their super balance at the end of the row before the part (nominal). */
+  readonly amount: number;
+  /** The calendar year it opens. */
+  readonly opensYear: number;
+}
+
 /** One part of the check: the bridge years, or the years after access. */
 export interface BridgePart {
   /** The first and last calendar years of the part. */
@@ -62,6 +76,14 @@ export interface BridgePart {
    * contributions, so the outside-super Coast FIRE test aims at this figure.
    */
   readonly needBeforeContributions: number;
+  /**
+   * Super that is locked when the part starts and so is not counted in
+   * `projected`, one entry per partner (empty for one person and for the
+   * bridge). Results words it after the summary figures ("plus Alex's
+   * $150,000 from 2036"); the amount is nominal, in the dollars of the row
+   * before the part, like `projected`.
+   */
+  readonly lockedSuper: readonly LockedSuper[];
   /** MET when no year in the part has a shortfall. */
   readonly status: BridgeStatus;
   /** The calendar years in the part that can't be fully funded, in order. */
@@ -159,6 +181,10 @@ export function assessBridge(
   const baseRow = rows[firstAfterIndex - 1];
 
   if (baseRow !== undefined && firstAfterIndex <= lastRowIndex) {
+    const superLines = superLinesAt(rows, firstAfterIndex, inputs, startYear, baseRow);
+    const openSuper = superLines.filter((line) => line.lockedNote === undefined);
+    const lockedSuperLines = superLines.filter((line) => line.lockedNote !== undefined);
+
     afterAccess = describePart({
       rows,
       baseRow,
@@ -166,12 +192,16 @@ export function assessBridge(
       lastIndex: lastRowIndex,
       discountRate: weightedSuperReturnAfterTax(inputs, baseRow, account),
       discountRateName: "super's return after earnings tax",
-      projectedAmount: baseRow.superClosing + baseRow.portfolioClosing + baseRow.cashClosing,
+      projectedAmount:
+        openSuper.reduce((total, line) => total + line.value, 0) +
+        baseRow.portfolioClosing +
+        baseRow.cashClosing,
       projectedLines: [
-        ...superLinesAt(rows, firstAfterIndex, inputs, startYear, openingPerson, baseRow),
+        ...openSuper,
         { label: "Portfolio", value: baseRow.portfolioClosing },
         { label: "Cash", value: baseRow.cashClosing },
       ],
+      lockedSuperLines,
       partPhrase: "after super is accessible",
       taxFreeNote,
     });
@@ -292,18 +322,17 @@ function weightedSuperReturnAfterTax(
  * The super lines of the after-access "projected" working. One person who has
  * super gets the single line "Super". With several holders each gets their
  * own line, and a partner whose super is still locked when after access
- * begins is marked "locked until {age} ({year})", so the total can't look
- * healthier than the early after-access years really are. Called by
- * `assessBridge`.
+ * begins carries `lockedNote` ("locked until {age} ({year})"). `assessBridge`
+ * keeps those out of the total and shows them as a note line below it, so the
+ * total can't look healthier than the early after-access years really are.
  */
 function superLinesAt(
   rows: readonly ProjectionRow[],
   firstAfterIndex: number,
   inputs: ProjectionInputs,
   startYear: number,
-  openingPerson: ProjectionPerson,
   baseRow: ProjectionRow,
-): { label: string; value: number; note?: string }[] {
+): { label: string; value: number; lockedNote?: string; opensYear?: number; person?: string }[] {
   const holderIndexes = inputs.people.flatMap((_person, personIndex) =>
     personHasSuper(rows, personIndex) ? [personIndex] : [],
   );
@@ -326,7 +355,9 @@ function superLinesAt(
         value: balance,
         ...(isLocked && accessAge !== undefined
           ? {
-              note: `locked until ${accessAge} (${startYear + (accessAge - person.currentAge)})`,
+              lockedNote: `locked until ${accessAge} (${startYear + (accessAge - person.currentAge)})`,
+              opensYear: startYear + (accessAge - person.currentAge),
+              person: person.label,
             }
           : {}),
       },
@@ -355,7 +386,15 @@ interface PartDescription {
   readonly discountRate: number;
   readonly discountRateName: string;
   readonly projectedAmount: number;
-  readonly projectedLines: readonly { label: string; value: number; note?: string }[];
+  readonly projectedLines: readonly { label: string; value: number }[];
+  /** Super still locked at the start of the part: shown below the total, not added into it. */
+  readonly lockedSuperLines?: readonly {
+    label: string;
+    value: number;
+    lockedNote?: string;
+    opensYear?: number;
+    person?: string;
+  }[];
   /**
    * True for the bridge: portfolio contributions still paid in the part's years
    * (while a partner works) are netted off the need, discounted like spending.
@@ -448,7 +487,7 @@ function describePart(description: PartDescription): BridgePart {
     unit: "dollars",
     lines: [
       ...description.projectedLines.map((line, index): ExplanationLine => ({
-        label: `${line.label} at end of ${baseRow.calendarYear}${line.note === undefined ? "" : `, ${line.note}`}`,
+        label: `${line.label} at end of ${baseRow.calendarYear}`,
         value: line.value,
         unit: "dollars",
         ...(index === 0 ? {} : { operator: "+" as const }),
@@ -461,6 +500,14 @@ function describePart(description: PartDescription): BridgePart {
         operator: "=",
         source: "calculated",
       },
+      // Locked super is not in the total; it is a note below it, with no operator.
+      ...(description.lockedSuperLines ?? []).map((line): ExplanationLine => ({
+        label: `Plus ${line.label}, ${line.lockedNote}`,
+        value: line.value,
+        unit: "dollars",
+        source: "calculated",
+        note: true,
+      })),
       ...(description.taxFreeNote === undefined ? [] : [description.taxFreeNote]),
     ],
   };
@@ -475,5 +522,10 @@ function describePart(description: PartDescription): BridgePart {
     projected: projectedExplained,
     status: shortYears.length === 0 ? "met" : "short",
     shortYears,
+    lockedSuper: (description.lockedSuperLines ?? []).flatMap((line) =>
+      line.person === undefined || line.opensYear === undefined
+        ? []
+        : [{ label: line.person, amount: line.value, opensYear: line.opensYear }],
+    ),
   };
 }

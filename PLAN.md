@@ -1678,11 +1678,17 @@ accessible, each pays in proportion to its available balance that year.
 - **After access:**
   - **need:** discounted at the partners' after-tax super returns,
     weighted by their super balances at the row before access;
-  - **projected:** both partners' super, plus portfolio and cash. When a
-    partner's super is still locked at the start of after access, the
-    breakdown shows that balance on its own line, marked "locked until
-    {age} ({year})". The meter then can't look healthier than the early
-    after-access years really are.
+  - **projected:** the super that is open at the start of after access
+    (the first partner's), plus portfolio and cash. A partner's super that
+    is still locked at that point is **not** counted; the breakdown shows
+    it as a note line below the total, with no operator: "Plus Alex's
+    super, locked until 65 (2036): $150,000". The meter then can't look
+    healthier than the early after-access years really are. **The owner
+    chose this on 2026-10-23** (the first draft added locked super into
+    the total). The discount rate still weights all super balances, and
+    the status stays exact. The summary line under the
+    meter names it too: "Need $280,000 in 2032 · projected $180,000 · plus Alex's
+    $150,000 from 2036" (`BridgePart.lockedSuper`).
 - **The status stays exact,** from shortfalls.
 - **"Super locked" wording for a couple** names each person whose super
   has a balance but can't be drawn yet, e.g. "Alex's super locked until
@@ -1801,8 +1807,9 @@ $2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
   - **MET**.
 - **After access** is 2033–2039:
   - **need** $280,000;
-  - **projected** $330,000 ($80,000 portfolio + $150,000 + $100,000
-    super);
+  - **projected** $180,000 at the end of 2032 ($80,000 portfolio +
+    Sam's $100,000 super), with Alex's $150,000 locked until 2036 as a
+    note;
   - **MET**.
 - **The portfolio** pays until 2034.
 - **Sam's super** pays 2035 ($40,000, leaving $60,000).
@@ -1815,7 +1822,8 @@ $2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
   - **Alex:** 55 (2026), with Sam retiring at 58;
   - **Sam:** 56 (2029), with Alex retiring at 56.
 - **Interim amount with $0 entered:** the bridge need is $40,000, and
-  after access is projected at $410,000.
+  after access is projected at $260,000 (Alex's $150,000 is
+  locked until 2036, shown as a note).
 
 **D2: bridge short, with both partners' super locked.** D with Sam's
 access at the default 65.
@@ -1829,11 +1837,15 @@ access at the default 65.
     65".
 - **After access** is 2036–2039:
   - **need** $160,000;
-  - **projected** $250,000;
+  - **projected** $150,000 at the end of 2035 (Alex's super), with Sam's
+    $100,000 locked until 2038 as a note;
   - **MET**.
 - **Earliest retirement:**
   - **Alex:** 58 (2029), with Sam retiring at 58;
   - **Sam:** 60 (2033), with Alex retiring at 56.
+- **Interim amount with $0 entered:** after access is projected at $190,000
+  ($40,000 portfolio + Alex's $150,000), with Sam's $100,000 locked until
+  2038 as a note.
 
 **E: realistic.**
 - **Inputs:**
@@ -1858,7 +1870,8 @@ access at the default 65.
   - **MET**.
 - **After access** is 2054–2089:
   - **need** $3,626,576.69;
-  - **projected** $3,439,371.73;
+  - **projected** $1,219,220.01 at the end of 2053, with Alex's
+    $2,220,151.72 locked until 2057 as a note;
   - **SHORT** 2086–2089.
 - **Money runs out** in 2086 (Alex 94, Sam 92).
 - **Earliest retirement:** Alex 52 (2044), Sam 54 (2048).
@@ -2127,8 +2140,9 @@ there are two-person engine tests for D and D2.
   below $0). The after-access discount rate is each holder's after-tax super
   return weighted by balance at the row before access (one person's rate
   exactly). With two or more people who have super, the projected working has
-  one line each, and a partner still locked at the start of after access is
-  marked "locked until {age} ({year})". `assessSolvency` takes one access age
+  one line each; a partner still locked at the start of after access is left
+  out of the total and shown as a note line below it ("Plus Alex's super,
+  locked until 65 (2036)", `ExplanationLine.note`, never bolded as the result). `assessSolvency` takes one access age
   or one per person, and names each locked partner.
 - Coast FIRE and the coast split zero interim spending in their super-only
   runs. Earliest retirement runs per person; a couple's lines say "Sam
@@ -2316,7 +2330,8 @@ there are two-person engine tests for D and D2.
   unchanged). The earlier step 7 test for the FI line was reworded for the
   couple wording. Screenshots of D2 and E (top, bridge, Year by year) were
   checked by eye; E's bridge shows need $864,875, projected $890,437, after
-  access need $3,626,577 against $3,439,372, SHORT 2086 to 2089.
+  access need $3,626,577 against $1,219,220 (Alex's $2,220,152 is locked
+  until 2057), SHORT 2086 to 2089.
 
 1. **A shared formatter** `formatAges(ages, people)`: "Age 52" for one
    person, "Alex 52 · Sam 50" for a couple. Use it everywhere an age is
@@ -2382,7 +2397,26 @@ there are two-person engine tests for D and D2.
 
 #### Step 10 · Challenger review of PR B, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer checked three new cases against the
+independent model (one partner already retired, both retiring in the
+same year, and a dated expense with a super return). All matched to the
+cent. Its findings were fixed in their own commits:
+- an empty super account never counts as accessible;
+- "super accessible: now" for a partner past their access age;
+- a stop age keeps its calendar year when its person changes;
+- the dated-expense limit follows the younger partner;
+- the outside-super coast target ignores contributions;
+- Year by year's Status column wraps;
+- the last first-person-only lines name both partners;
+- the "Owned by" label, duplicate names and the name length limit;
+- a one-person netting regression test;
+- tidy-ups.
+
+The owner decided the two plan challenges (2026-10-23): the interim
+default follows the later partner's pay, and locked super stays out of
+the after-access total. Both are recorded above.
 
 1. **Review:** the reviewer subagent checks PR B's diff against this plan
    and the worked examples.

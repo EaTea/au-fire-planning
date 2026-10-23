@@ -22,6 +22,12 @@ export interface ExplanationLine {
   readonly operator?: "+" | "−" | "×" | "÷" | "=";
   /** Typed in by the user, filled in from a default, set by the law (a rule), or worked out by the engine. */
   readonly source: "input" | "default" | "rule" | "calculated";
+  /**
+   * True for an aside that sits below the result without being part of the
+   * sum, e.g. "Plus Alex's super, locked until 65 (2036)". ExplainPanel never
+   * treats a note as the result line.
+   */
+  readonly note?: boolean;
 }
 
 /** A calculated figure and the breakdown that produced it. */

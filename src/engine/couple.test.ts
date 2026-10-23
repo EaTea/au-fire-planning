@@ -96,12 +96,13 @@ describe("example D: Sam's super opens first (2033)", () => {
     expect(result.bridge?.projected.value).toBe(200_000);
   });
 
-  it("runs after access 2033 to 2039 against everything left, which meets it", () => {
+  // Alex's $150,000 is still locked in 2033, so it is not counted: $160,000 portfolio + Sam's $100,000.
+  it("runs after access 2033 to 2039 against the open super and the rest, which meets it", () => {
     const afterAccess = bridgeFor(exampleD()).afterAccess;
 
     expect(afterAccess).toMatchObject({ firstYear: 2033, lastYear: 2039, status: "met" });
     expect(afterAccess?.need.value).toBe(280_000);
-    expect(afterAccess?.projected.value).toBe(410_000);
+    expect(afterAccess?.projected.value).toBe(260_000);
   });
 
   it("finds Sam's earliest retirement at 55 (2028), with Alex retiring at 56", () => {
@@ -137,12 +138,13 @@ describe("example D2: Sam's access at 65, so Alex's super opens first (2036)", (
     expect(result.bridge?.projected.value).toBe(200_000);
   });
 
-  it("runs after access 2036 to 2039 against $290,000, which meets it", () => {
+  // Sam's $100,000 is locked until 2038, so only Alex's $150,000 and the $40,000 portfolio count.
+  it("runs after access 2036 to 2039 against $190,000, which meets it", () => {
     const afterAccess = bridgeFor(inputs).afterAccess;
 
     expect(afterAccess).toMatchObject({ firstYear: 2036, lastYear: 2039, status: "met" });
     expect(afterAccess?.need.value).toBe(160_000);
-    expect(afterAccess?.projected.value).toBe(290_000);
+    expect(afterAccess?.projected.value).toBe(190_000);
   });
 
   // Sam turns 65 in 2038: Alex holds $110,000 by then and Sam $100,000, so the $40,000 splits 110:100.
@@ -316,18 +318,22 @@ describe("the bridge for a couple", () => {
   });
 
   // Alex's $150,000 is locked until 2036 when after access begins in 2033.
-  it("shows a partner's still-locked super on its own line", () => {
+  it("keeps a partner's still-locked super out of the total, as a note line below it", () => {
     const afterAccess = bridgeFor(exampleD()).afterAccess;
     const labelsAndValues = afterAccess?.projected.lines.map((line) => [line.label, line.value]);
+    const noteLine = afterAccess?.projected.lines.find((line) => line.note === true);
 
     expect(labelsAndValues).toEqual([
-      ["Alex's super at end of 2032, locked until 65 (2036)", 150_000],
       ["Sam's super at end of 2032", 100_000],
       ["Portfolio at end of 2032", 160_000],
       ["Cash at end of 2032", 0],
-      ["Projected after super is accessible", 410_000],
+      ["Projected after super is accessible", 260_000],
+      ["Plus Alex's super, locked until 65 (2036)", 150_000],
       ["Withdrawals are tax-free from age", 60],
     ]);
+    expect(afterAccess?.lockedSuper).toEqual([{ label: "Alex", amount: 150_000, opensYear: 2036 }]);
+    // The note has no operator, so it isn't read as part of the sum.
+    expect(noteLine?.operator).toBeUndefined();
   });
 
   // Alex's 10% on $300,000 and Sam's 4% on $100,000 are weighted 3:1 by their balances at 2032.

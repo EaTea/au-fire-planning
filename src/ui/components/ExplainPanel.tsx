@@ -35,11 +35,16 @@ function formatLineValue(line: ExplanationLine): string {
  */
 export function ExplainPanel({ explained }: ExplainPanelProps) {
   // The result is the last line, unless a note about the law (a "rule" line, e.g. "tax-free from age 60") follows it.
-  const lastCalculatedIndex = explained.lines.map((line) => line.source).lastIndexOf("calculated");
+  // Notes (asides below the result, such as locked super) are never the result either.
+  const resultCandidates = explained.lines.flatMap((line, index) =>
+    line.note === true ? [] : [{ line, index }],
+  );
+  const lastCandidate = resultCandidates[resultCandidates.length - 1];
+  const lastCalculated = resultCandidates.filter(({ line }) => line.source === "calculated").at(-1);
   const lastLineIndex =
-    lastCalculatedIndex >= 0 && explained.lines[explained.lines.length - 1]?.source === "rule"
-      ? lastCalculatedIndex
-      : explained.lines.length - 1;
+    lastCalculated !== undefined && lastCandidate?.line.source === "rule"
+      ? lastCalculated.index
+      : (lastCandidate?.index ?? explained.lines.length - 1);
 
   return (
     <table className="explain-panel">
