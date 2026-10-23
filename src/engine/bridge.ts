@@ -55,6 +55,13 @@ export interface BridgePart {
   readonly need: Explained;
   /** What the plan holds at the end of that row (nominal dollars of that row): the bar to compare with the need. */
   readonly projected: Explained;
+  /**
+   * The need before any portfolio contributions are netted off (the same
+   * dollars as `need`). Equal to `need` when no contributions are paid in the
+   * part's years, and always for the after-access part. Coasting stops the
+   * contributions, so the outside-super Coast FIRE test aims at this figure.
+   */
+  readonly needBeforeContributions: number;
   /** MET when no year in the part has a shortfall. */
   readonly status: BridgeStatus;
   /** The calendar years in the part that can't be fully funded, in order. */
@@ -464,6 +471,7 @@ function describePart(description: PartDescription): BridgePart {
     firstAge: firstRow.people[0].age,
     lastAge: lastRow.people[0].age,
     need: needExplained,
+    needBeforeContributions: discountedSpending,
     projected: projectedExplained,
     status: shortYears.length === 0 ? "met" : "short",
     shortYears,

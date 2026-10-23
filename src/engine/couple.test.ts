@@ -459,3 +459,35 @@ describe("an older partner with no super", () => {
     expect(result.bridge).toMatchObject({ firstYear: 2028, lastYear: 2050 });
   });
 });
+
+describe("the outside-super Coast FIRE test when contributions are paid in the bridge years", () => {
+  // Contributions go on while Sam works (to 2031), so they cover part of the bridge spending: the
+  // bridge need is netted to $80,000. Coasting stops them, so the test must aim at the full $120,000.
+  const inputs: ProjectionInputs = {
+    ...exampleD(),
+    interimSpendingAnnual: 20_000,
+    annualContribution: 10_000,
+  };
+  const rows = projectPortfolio(inputs, START_YEAR);
+  const bridge = assessBridge(rows, inputs);
+  const split = calculateCoastSplit(rows, inputs, bridge);
+
+  it("exposes the need before contributions beside the netted need", () => {
+    expect(bridge.bridge?.need.value).toBe(80_000);
+    expect(bridge.bridge?.needBeforeContributions).toBe(120_000);
+  });
+
+  it("is also the need itself when no contributions are paid in the bridge", () => {
+    const withoutContributions = bridgeFor(exampleD()).bridge;
+
+    expect(withoutContributions?.needBeforeContributions).toBe(withoutContributions?.need.value);
+  });
+
+  it("aims at the need before contributions, not the netted need", () => {
+    expect(split.outside?.needToday.value).toBe(120_000);
+    expect(split.outside?.needToday.lines[0]).toMatchObject({
+      label: "Bridge need at 2027",
+      value: 120_000,
+    });
+  });
+});

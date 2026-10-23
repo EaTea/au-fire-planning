@@ -438,7 +438,8 @@
         "FI number at the household retirement: $90,000 / 4% = $2,250,000 x 1.025^20 = $3,686,886.99 nominal",
         "Bridge 2043-2053 (Sam's super opens at 60 in 2054): need $864,875.22, net of $67,744.23 of portfolio contributions paid 2043-2046; projected $890,437.07; MET",
         "After access 2054-2089: need $3,626,576.69 against $3,439,371.73 projected; SHORT in 2086-2089",
-        "Money runs out in 2086 (Alex 94, Sam 92). Earliest retirement: Alex 52 (2044), Sam 54 (2048)"
+        "Money runs out in 2086 (Alex 94, Sam 92). Earliest retirement: Alex 52 (2044), Sam 54 (2048)",
+        "Bridge need before netting contributions: $864,875.22 + $67,744.23 = $932,619.45. Coasting stops the contributions, so the outside-super Coast FIRE test aims at this figure"
       ],
       "expected": {
         "fiNumberAtRetirement": 3686886.99,
@@ -451,7 +452,8 @@
             "need": 864875.22,
             "projected": 890437.07,
             "status": "met",
-            "shortYears": []
+            "shortYears": [],
+            "needBeforeContributions": 932619.45
           },
           "afterAccess": {
             "firstYear": 2054,

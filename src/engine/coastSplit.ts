@@ -121,7 +121,8 @@ function coastOutsideSuper(
     return undefined;
   }
 
-  const target = bridge.bridge.need.value;
+  // Coasting stops the portfolio's contributions, so aim at the need before they are netted off.
+  const target = bridge.bridge.needBeforeContributions;
   const neededAt = (rowIndex: number) =>
     portfolioNeededFromRow(workingRows, rowIndex, inputs, 0, target);
 

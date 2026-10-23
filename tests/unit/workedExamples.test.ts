@@ -118,6 +118,8 @@ interface ExpectedBridgePart {
   readonly firstYear?: number;
   readonly lastYear?: number;
   readonly need?: number;
+  /** M7: the need before portfolio contributions are netted off. */
+  readonly needBeforeContributions?: number;
   readonly projected?: number;
   readonly status?: "met" | "short";
   readonly shortYears?: readonly number[];
@@ -514,6 +516,9 @@ function checkBridgePart(
   if (expected.firstYear !== undefined) expect(actual.firstYear).toBe(expected.firstYear);
   if (expected.lastYear !== undefined) expect(actual.lastYear).toBe(expected.lastYear);
   if (expected.need !== undefined) expectToTheCent(actual.need.value, expected.need);
+  if (expected.needBeforeContributions !== undefined) {
+    expectToTheCent(actual.needBeforeContributions, expected.needBeforeContributions);
+  }
   if (expected.projected !== undefined) expectToTheCent(actual.projected.value, expected.projected);
   if (expected.status !== undefined) expect(actual.status).toBe(expected.status);
   if (expected.shortYears !== undefined) expect(actual.shortYears).toEqual(expected.shortYears);
