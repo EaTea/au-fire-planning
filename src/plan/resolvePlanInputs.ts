@@ -248,12 +248,12 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
 
   /** Words a missing-input label with the person's name when there is more than one person. */
   const labelFor = (person: Person, personIndex: number, text: string): string =>
-    planPeople.length > 1 ? `${displayName(person, personIndex)}: ${text}` : text;
+    planPeople.length > 1 ? `${displayName(person, personIndex, planPeople)}: ${text}` : text;
   const isCouple = planPeople.length > 1;
 
   // Each person's own ages: both must be there, and retirement can't be before today.
   for (const [personIndex, person] of planPeople.entries()) {
-    const name = displayName(person, personIndex);
+    const name = displayName(person, personIndex, planPeople);
 
     if (person.currentAge === undefined) {
       missing.push({ field: "currentAge", label: labelFor(person, personIndex, "Current age") });
@@ -308,7 +308,7 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
     const lastAgeInPlan = endAge.value + yearsOlderThanYoungest;
 
     if (person.targetRetirementAge >= lastAgeInPlan) {
-      const name = displayName(person, personIndex);
+      const name = displayName(person, personIndex, planPeople);
 
       missing.push({
         field: "targetRetirementAge",
@@ -334,7 +334,7 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
     firstOwner?.currentAge !== undefined &&
     stopAge < firstOwner.currentAge
   ) {
-    const ownerName = displayName(firstOwner, firstOwnerIndex);
+    const ownerName = displayName(firstOwner, firstOwnerIndex, planPeople);
 
     missing.push({
       field: "contributionsStopAge",
@@ -344,7 +344,7 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
 
   // A person with an age missing resolves to nothing; the plan is then incomplete anyway.
   const resolvedPeople = planPeople.flatMap((person, personIndex) => {
-    const resolved = resolvePerson(person, personIndex);
+    const resolved = resolvePerson(person, personIndex, planPeople);
 
     return resolved === undefined ? [] : [resolved];
   });
@@ -424,14 +424,18 @@ export function resolveOwnerIds(
  * super and access-age defaults. Returns `undefined` for a person with an age
  * missing, which the caller never uses because the plan is then incomplete.
  */
-function resolvePerson(person: Person, personIndex: number): ResolvedPerson | undefined {
+function resolvePerson(
+  person: Person,
+  personIndex: number,
+  people: readonly Person[],
+): ResolvedPerson | undefined {
   if (person.currentAge === undefined || person.targetRetirementAge === undefined) {
     return undefined;
   }
 
   return {
     id: person.id,
-    label: displayName(person, personIndex),
+    label: displayName(person, personIndex, people),
     currentAge: { value: person.currentAge, source: "input" },
     targetRetirementAge: { value: person.targetRetirementAge, source: "input" },
     salaryAnnual: sourceOrDefault(person.salary?.annual, DEFAULT_SALARY_ANNUAL),

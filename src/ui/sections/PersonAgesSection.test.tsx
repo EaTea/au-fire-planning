@@ -268,3 +268,38 @@ describe("PersonAgesSection for one person", () => {
     expect(readPlan().household.people[0]?.name).toBe("Alex");
   });
 });
+
+describe("PersonAgesSection names", () => {
+  it("limits a name to 40 characters, for one person and for a couple", () => {
+    const { unmount } = renderSection(<PersonAgesSection />);
+    expect(screen.getByLabelText("Name (optional)")).toHaveAttribute("maxLength", "40");
+    unmount();
+
+    renderSection(<PersonAgesSection />, {
+      ...blankPlan,
+      household: {
+        people: [
+          { id: "person-1", label: "Person 1" },
+          { id: "person-2", label: "Person 2" },
+        ],
+      },
+    });
+    expect(screen.getByLabelText("Person 2: Name (optional)")).toHaveAttribute("maxLength", "40");
+  });
+
+  it("labels two people of the same name by position so every label stays unique", () => {
+    renderSection(<PersonAgesSection />, {
+      ...blankPlan,
+      household: {
+        people: [
+          { id: "person-1", label: "Person 1", name: "Alex" },
+          { id: "person-2", label: "Person 2", name: " alex" },
+        ],
+      },
+    });
+
+    expect(screen.getByLabelText("Alex (Person 1): Current age")).toBeInTheDocument();
+    expect(screen.getByLabelText("alex (Person 2): Current age")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alex (Person 1)" })).toBeInTheDocument();
+  });
+});

@@ -684,6 +684,12 @@ button:focus-visible {
   gap: var(--space-large);
 }
 
+.ownership-label {
+  font-size: 12px;
+  color: var(--colour-text-muted);
+  margin-bottom: 4px;
+}
+
 .ownership-other-share {
   margin: -6px 0 var(--space-medium);
 }

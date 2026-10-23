@@ -639,3 +639,29 @@ describe("resolvePlanInputs: super access age", () => {
     expect(resolveAccessAge(60)).toEqual({ value: 60, source: "input" });
   });
 });
+
+describe("resolvePlanInputs: people with the same name", () => {
+  it("labels them with their position, in the resolved people and in messages", () => {
+    const blank = createNewPlan(() => "id");
+    const plan: Plan = {
+      ...blank,
+      expenses: { livingAnnual: 1 },
+      household: {
+        people: [
+          { id: "a", label: "Person 1", name: "Alex", currentAge: 40, targetRetirementAge: 50 },
+          { id: "b", label: "Person 2", name: "alex" },
+        ],
+      },
+    };
+    const resolved = resolvePlanInputs(plan);
+    if (resolved.status !== "complete") throw new Error("expected complete");
+
+    expect(resolved.inputs.projection).toEqual({
+      status: "incomplete",
+      missing: [
+        { field: "currentAge", label: "alex (Person 2): Current age" },
+        { field: "targetRetirementAge", label: "alex (Person 2): Target retirement age" },
+      ],
+    });
+  });
+});

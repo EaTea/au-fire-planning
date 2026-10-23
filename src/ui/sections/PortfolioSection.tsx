@@ -59,7 +59,7 @@ export function PortfolioSection() {
 
       {isCouple && (
         <OwnershipField
-          label="Share portfolio owner"
+          label="Owned by"
           people={people}
           value={portfolio.ownership}
           onChange={(ownership) =>
@@ -103,7 +103,7 @@ export function PortfolioSection() {
       <AgeField
         label={
           isCouple && firstOwner !== undefined
-            ? `Contributions stop at ${displayName(firstOwner, firstOwnerIndex)}'s age`
+            ? `Contributions stop at ${displayName(firstOwner, firstOwnerIndex, people)}'s age`
             : "Contributions stop at age"
         }
         value={portfolio.contributionsStopAge}
@@ -113,7 +113,7 @@ export function PortfolioSection() {
               defaultText:
                 ownerIds.length > 1
                   ? "when you've both retired"
-                  : `when ${displayName(firstOwner, firstOwnerIndex)} retires`,
+                  : `when ${displayName(firstOwner, firstOwnerIndex, people)} retires`,
             }
           : {})}
         min={15}

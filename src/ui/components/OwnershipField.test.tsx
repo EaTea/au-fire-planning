@@ -168,3 +168,36 @@ describe("OwnershipField", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe("OwnershipField label", () => {
+  it("shows the label text above the toggle and names the group with it", () => {
+    render(
+      <OwnershipField
+        label="Owned by"
+        people={[alex, sam]}
+        value={undefined}
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Owned by")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Owned by" })).toBeInTheDocument();
+  });
+
+  it("tells two people with the same name apart on the toggle", () => {
+    render(
+      <OwnershipField
+        label="Owned by"
+        people={[
+          { id: "a", label: "Person 1", name: "Alex" },
+          { id: "b", label: "Person 2", name: "alex" },
+        ]}
+        value={undefined}
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Alex (Person 1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "alex (Person 2)" })).toBeInTheDocument();
+  });
+});

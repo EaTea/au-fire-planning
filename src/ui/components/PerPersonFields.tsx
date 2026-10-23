@@ -32,7 +32,7 @@ export function PerPersonFields({ people, children }: PerPersonFieldsProps) {
       {people.map((person, personIndex) => (
         <Fragment key={person.id}>
           {children(person, (label) =>
-            hasSeveralPeople ? `${displayName(person, personIndex)}: ${label}` : label,
+            hasSeveralPeople ? `${displayName(person, personIndex, people)}: ${label}` : label,
           )}
         </Fragment>
       ))}

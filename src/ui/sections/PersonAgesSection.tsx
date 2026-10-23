@@ -8,6 +8,9 @@ import { AgeField } from "../components/AgeField";
 import { Card } from "../components/Card";
 import { TextField } from "../components/TextField";
 
+/** The longest name accepted, so a name still fits in a label and a card title. */
+const MAXIMUM_NAME_LENGTH = 40;
+
 /**
  * Form section for IN-2, IN-3, IN-4 and IN-5: each person's name, current
  * age, the age they plan to retire and the age they want super accessible
@@ -57,7 +60,7 @@ export function PersonAgesSection() {
     <>
       <div className="person-cards">
         {people.map((person, personIndex) => (
-          <Card key={person.id} title={displayName(person, personIndex)}>
+          <Card key={person.id} title={displayName(person, personIndex, plan.household.people)}>
             <PersonFields person={person} personIndex={personIndex} isCouple />
           </Card>
         ))}
@@ -68,8 +71,8 @@ export function PersonAgesSection() {
 
         {youngest !== undefined && yearsToEnd !== undefined && yearsToEnd > 0 && (
           <p className="horizon-note">
-            The plan runs until {displayName(youngest.person, youngest.index)} reaches this age:{" "}
-            {yearsToEnd} years, to {startYear + yearsToEnd}.
+            The plan runs until {displayName(youngest.person, youngest.index, people)} reaches this
+            age: {yearsToEnd} years, to {startYear + yearsToEnd}.
           </p>
         )}
       </Card>
@@ -127,7 +130,7 @@ function PersonFields({ person, personIndex, isCouple }: PersonFieldsProps) {
   ).superannuation;
 
   const fieldLabel = (label: string): string =>
-    isCouple ? `${displayName(person, personIndex)}: ${label}` : label;
+    isCouple ? `${displayName(person, personIndex, plan.household.people)}: ${label}` : label;
 
   return (
     <>
@@ -135,6 +138,7 @@ function PersonFields({ person, personIndex, isCouple }: PersonFieldsProps) {
         label={isCouple ? `Person ${personIndex + 1}: Name (optional)` : "Name (optional)"}
         value={person.name ?? ""}
         hint="Used for labels only."
+        maxLength={MAXIMUM_NAME_LENGTH}
         onChange={(name) => dispatch({ type: "setPersonName", personId: person.id, name })}
       />
 

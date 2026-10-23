@@ -6,7 +6,7 @@ import { SegmentedToggle } from "./SegmentedToggle";
 
 /** What OwnershipField needs: the people, the stored ownership and a callback. */
 interface OwnershipFieldProps {
-  /** Names the field for assistive technology, e.g. "Share portfolio owner". */
+  /** The visible label above the toggle, e.g. "Owned by"; it also names the group for assistive technology. */
   readonly label: string;
   /** Everyone in the household; the field is for two people. */
   readonly people: readonly Person[];
@@ -41,8 +41,8 @@ export function OwnershipField({ label, people, value, onChange }: OwnershipFiel
 
   const firstId = first.id;
   const secondId = second.id;
-  const firstName = displayName(first, 0);
-  const secondName = displayName(second, 1);
+  const firstName = displayName(first, 0, people);
+  const secondName = displayName(second, 1, people);
 
   const choice: OwnerChoice =
     value === undefined || value.kind === "joint"
@@ -82,6 +82,9 @@ export function OwnershipField({ label, people, value, onChange }: OwnershipFiel
 
   return (
     <div className="ownership-field">
+      <div className="ownership-label" aria-hidden="true">
+        {label}
+      </div>
       <SegmentedToggle<OwnerChoice>
         label={label}
         options={[
