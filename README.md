@@ -8,8 +8,11 @@ what it should do and [PLAN.md](PLAN.md) for how it is being built.
 
 Everything is calculated in your browser and saved only on your device.
 
-- **Household:** enter your current age, target retirement age and the age the
-  plan runs until.
+- **Household:** choose "Just me" or "A couple". Each person has an optional
+  name (used in labels), a current age, a target retirement age and the age
+  they want super accessible. Enter the age the plan runs until; for a couple
+  the plan runs until the younger partner reaches it. "Just me" removes the
+  second person and their data.
 - **Income & expenses, Assets, Assumptions:** enter your living expenses, how
   much you spend in retirement, dated and one-off expenses (a car, school
   fees), your portfolio (value, expected return and yearly contributions), cash
@@ -32,6 +35,19 @@ Everything is calculated in your browser and saved only on your device.
   or the year after you retire if that is later, and at 65 regardless. A year
   before it opens that only super could fund shows as a shortfall in Year by
   year, which says "super locked until" that age.
+- **Couples:** salary and super are entered for each person and every rule
+  (employer contributions, super access, the bridge) applies to each person
+  separately, while cash and the portfolio are shared. For the years only one of
+  you has retired, "Drawn from savings while one of you is retired" sets what is
+  drawn (default $0: the partner still working is assumed to cover spending).
+  The portfolio's owner is either person or a joint split (default joint 50/50);
+  for now it only decides when contributions stop (while any owner is still
+  working). When both partners' super is open, each pays in proportion to its
+  balance. The bridge runs from the first retirement to the year the first
+  partner's super opens, and Results names both partners' ages
+  ("Alex 52 · Sam 50"), gives the earliest retirement age for each person, and
+  marks the years only one has retired and each partner's locked super in Year
+  by year.
 - **Results:** your FI number (in today's dollars, and in nominal dollars at
   your retirement age), your progress to it, the year you reach FI, and
   whether your money lasts to the age you plan until (or the age it runs out),

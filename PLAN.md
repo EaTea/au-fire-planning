@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. The M7 (couples) step-by-step plan is in review.
+**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. M7 (couples) is implemented: the household refactor (PR A) is merged and the couples change (PR B) is in review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M6 and the side plans done. M7 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M6 and the side plans done. M7 implemented; PR B in review |
 
 ## 1. Requirement ordering
 
@@ -2329,7 +2329,27 @@ there are two-person engine tests for D and D2.
 
 #### Step 9 · E2E, contrast, README and wrap-up (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `tests/e2e/couple.spec.ts` (clock fixed in 2026): chooses "A couple", enters
+  D2 (interim $20,000) through the screens; Results shows the bridge SHORT in
+  2035 with both names in the tile, banner, Year by year bands and the shortfall
+  note; Sam's access at 60 makes it D (both parts MET); a reload keeps Person 2;
+  "Just me" removes them and Results is the one-person plan (column "Age", no
+  one-retired band). The reload waits for the autosave of the latest edit
+  (Sam's access age), not just for a save with two people; the first version
+  waited only for the person count and failed 6 of 10 repeats. 10 of 10
+  repeats pass.
+- `tests/e2e/contrast.spec.ts` gains two sweeps: the couple Household screen
+  (names, values, and an inline error) and D2: Income & expenses and Assets for
+  a couple, then Results with the one-retired and bridge bands and every
+  breakdown open, in both dollar modes.
+- README "What it does": the Household choice, names, couples (per-person
+  salary and super, interim spending, ownership, pro rata drawing, the couple
+  bridge, both ages and earliest retirement for each person, the plan running to
+  the younger partner's end age). PLAN.md status and Next steps updated; M7 PR B
+  stays open until its review.
 
 1. **`tests/e2e/couple.spec.ts`,** with the clock fixed in 2026:
    - choose "A couple" and enter D2 through the screens;
@@ -2522,10 +2542,10 @@ depend on any other work in progress, so it can merge at any time.
 - [x] Owner verifies and merges the start over PR.
 - [ ] Owner verifies the two M6 rule values (preservation age 60 and
       unconditional release at 65) against the ATO.
-- [ ] Approve the M7 step-by-step plan (plan PR), including the four owner
-      decisions.
-- [ ] Implement M7 PR A, the household refactor (steps 1 to 3): challenger
-      review, then open it stacked on the plan PR.
+- [x] Approve the M7 step-by-step plan (plan PR), including the four owner
+      decisions, and merge it.
+- [x] Implement M7 PR A, the household refactor (steps 1 to 3): challenger
+      review, then open it stacked on the plan PR (merged as #35 and #37).
 - [ ] Implement M7 PR B, couples (steps 4 to 10): challenger review, then
       open it stacked on PR A.
 - [ ] Owner verifies and merges the M7 PRs.
