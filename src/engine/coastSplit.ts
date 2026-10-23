@@ -31,19 +31,23 @@
 //
 // With several people, the outside-super test runs to the first retirement
 // row (where the bridge starts) and the super test to the household
-// retirement row. The couple's version of the super test, which needs each
-// partner's super separately, comes with M7 step 5; until then $1 of super
-// is placed with the first person who has a super account.
+// retirement row. The super test counts the super needed as one balance, so the
+// test dollar is placed with the first person who has a super account (the
+// other partners' balances start at $0 in that run); the answer is the total
+// super needed across the couple, not a split between them.
 
 import type { BridgeAssessment } from "./bridge";
 import { inputsWithVoluntaryContributionsStoppedAfter, portfolioNeededFromRow } from "./coastFire";
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  agesOf,
+  describeAges,
   firstRetirementRowIndex,
   householdRetirementRowIndex,
   mapNonEmpty,
   projectPortfolio,
   youngestAgeAtRow,
+  type PersonAge,
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
@@ -53,7 +57,9 @@ export interface CoastSplitMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** The balance against the need in that year. */
   readonly explanation: Explained;
 }
@@ -116,7 +122,8 @@ function coastOutsideSuper(
     return undefined;
   }
 
-  const target = bridge.bridge.need.value;
+  // Coasting stops the portfolio's contributions, so aim at the need before they are netted off.
+  const target = bridge.bridge.needBeforeContributions;
   const neededAt = (rowIndex: number) =>
     portfolioNeededFromRow(workingRows, rowIndex, inputs, 0, target);
 
@@ -326,6 +333,7 @@ function superPathFromRow(
         cashOpening: 0,
         livingAnnual: 0,
         retirementSpendingAnnual: 0,
+        interimSpendingAnnual: 0,
         datedExpenses: [],
         people: mapNonEmpty(stopped.people, (person) => {
           if (person.superAccount === undefined) return person;
@@ -364,13 +372,14 @@ function milestone(
   return {
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
-    age: row.people[0].age,
+    firstPersonAge: row.people[0].age,
+    ages: agesOf(row),
     explanation: {
       value: balance,
       unit: "dollars",
       lines: [
         {
-          label: `${balanceLabel} at end of ${row.calendarYear} (age ${row.people[0].age})`,
+          label: `${balanceLabel} at end of ${row.calendarYear} (${describeAges(row)})`,
           value: balance,
           unit: "dollars",
           source: "calculated",

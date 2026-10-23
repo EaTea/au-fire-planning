@@ -124,7 +124,7 @@ describe("calculateCoastFire", () => {
     });
 
     // Investable: 700, 850, 1000 against a Coast FIRE number of 1000 each year.
-    expect(coast.reached).toMatchObject({ yearIndex: 2, calendarYear: 2028, age: 42 });
+    expect(coast.reached).toMatchObject({ yearIndex: 2, calendarYear: 2028, firstPersonAge: 42 });
     expect(coast.reached?.explanation.lines.map((line) => line.label)).toEqual([
       "Investable at end of 2028 (age 42)",
       "Coast FIRE number in 2028",

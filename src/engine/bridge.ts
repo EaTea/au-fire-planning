@@ -12,9 +12,15 @@
 //
 // With several people (M7), row R is the last row everybody works
 // (`firstRetirementRowIndex`) and row A is the earliest row at which any
-// person's super opens. The bridge need and the weighting of the partners'
-// super returns for a couple are built in M7 step 5; until then the person
-// whose super opens first supplies the return and the access age.
+// person's super opens (among people who have super). The bridge need is net
+// of portfolio contributions still paid while a partner works, and the
+// after-access need is discounted at the partners' super returns weighted by
+// their balances. A partner whose super is still locked when after access
+// begins is left out of the projected total, which counts only the super that
+// is open at the start of the after-access years plus the portfolio and cash,
+// and appears instead as a note line below the total ("Plus Alex's super,
+// locked until 65 (2036)"). The status stays exact, since it comes from the
+// rows. The discount rate still weights every partner's super.
 //
 // The status of each part comes from the projection's own shortfalls, so it is
 // exact: a part is MET when none of its years has a shortfall. The "need" and
@@ -41,18 +47,43 @@ import { rulesForYear } from "../rules/ruleSet";
 /** Whether a part of the plan is funded. The words are shown as text, never by colour alone. */
 export type BridgeStatus = "met" | "short";
 
+/** A partner's super that is still locked when a part of the check starts. */
+export interface LockedSuper {
+  /** The partner's display name. */
+  readonly label: string;
+  /** Their super balance at the end of the row before the part (nominal). */
+  readonly amount: number;
+  /** The calendar year it opens. */
+  readonly opensYear: number;
+}
+
 /** One part of the check: the bridge years, or the years after access. */
 export interface BridgePart {
   /** The first and last calendar years of the part. */
   readonly firstYear: number;
   readonly lastYear: number;
   /** The ages in those years. */
-  readonly firstAge: number;
-  readonly lastAge: number;
+  readonly firstPersonFirstAge: number;
+  readonly firstPersonLastAge: number;
   /** The spending in those years, discounted to the row before the part starts (nominal dollars of that row). */
   readonly need: Explained;
   /** What the plan holds at the end of that row (nominal dollars of that row): the bar to compare with the need. */
   readonly projected: Explained;
+  /**
+   * The need before any portfolio contributions are netted off (the same
+   * dollars as `need`). Equal to `need` when no contributions are paid in the
+   * part's years, and always for the after-access part. Coasting stops the
+   * contributions, so the outside-super Coast FIRE test aims at this figure.
+   */
+  readonly needBeforeContributions: number;
+  /**
+   * Super that is locked when the part starts and so is not counted in
+   * `projected`, one entry per partner (empty for one person and for the
+   * bridge). Results words it after the summary figures ("plus Alex's
+   * $150,000 from 2036"); the amount is nominal, in the dollars of the row
+   * before the part, like `projected`.
+   */
+  readonly lockedSuper: readonly LockedSuper[];
   /** MET when no year in the part has a shortfall. */
   readonly status: BridgeStatus;
   /** The calendar years in the part that can't be fully funded, in order. */
@@ -140,6 +171,7 @@ export function assessBridge(
         { label: "Cash", value: retirementRow.cashClosing },
       ],
       partPhrase: "for the bridge",
+      netOffContributions: true,
     });
   }
 
@@ -149,26 +181,27 @@ export function assessBridge(
   const baseRow = rows[firstAfterIndex - 1];
 
   if (baseRow !== undefined && firstAfterIndex <= lastRowIndex) {
-    const rules = rulesForYear(
-      account.ruleSet,
-      baseRow.calendarYear,
-      inputs.inflationRate,
-    ).superannuation;
-    const earningsTaxRate = account.earningsTaxRate ?? rules.earningsTaxRate;
+    const superLines = superLinesAt(rows, firstAfterIndex, inputs, startYear, baseRow);
+    const openSuper = superLines.filter((line) => line.lockedNote === undefined);
+    const lockedSuperLines = superLines.filter((line) => line.lockedNote !== undefined);
 
     afterAccess = describePart({
       rows,
       baseRow,
       firstIndex: firstAfterIndex,
       lastIndex: lastRowIndex,
-      discountRate: account.returnRate * (1 - earningsTaxRate),
+      discountRate: weightedSuperReturnAfterTax(inputs, baseRow, account),
       discountRateName: "super's return after earnings tax",
-      projectedAmount: baseRow.superClosing + baseRow.portfolioClosing + baseRow.cashClosing,
+      projectedAmount:
+        openSuper.reduce((total, line) => total + line.value, 0) +
+        baseRow.portfolioClosing +
+        baseRow.cashClosing,
       projectedLines: [
-        { label: "Super", value: baseRow.superClosing },
+        ...openSuper,
         { label: "Portfolio", value: baseRow.portfolioClosing },
         { label: "Cash", value: baseRow.cashClosing },
       ],
+      lockedSuperLines,
       partPhrase: "after super is accessible",
       taxFreeNote,
     });
@@ -245,6 +278,94 @@ function firstSuperToOpen(
 }
 
 /**
+ * The rate the after-access need is discounted at: each partner's super
+ * return after earnings tax, weighted by their super balance at the base row
+ * (the row before access). With one person that person's rate exactly. If no
+ * one holds a balance at the base row, `fallbackAccount` (the account of the
+ * person whose super opens first) supplies the rate. Called by `assessBridge`.
+ */
+function weightedSuperReturnAfterTax(
+  inputs: ProjectionInputs,
+  baseRow: ProjectionRow,
+  fallbackAccount: NonNullable<ProjectionPerson["superAccount"]>,
+): number {
+  /** One account's return after earnings tax, with the rules of the base row's year. */
+  const afterTaxReturn = (account: NonNullable<ProjectionPerson["superAccount"]>): number => {
+    const rules = rulesForYear(
+      account.ruleSet,
+      baseRow.calendarYear,
+      inputs.inflationRate,
+    ).superannuation;
+
+    return account.returnRate * (1 - (account.earningsTaxRate ?? rules.earningsTaxRate));
+  };
+
+  const holders = inputs.people.flatMap((person, personIndex) => {
+    const balance = baseRow.people[personIndex]?.superClosing ?? 0;
+
+    return person.superAccount === undefined || balance <= 0
+      ? []
+      : [{ account: person.superAccount, balance }];
+  });
+  const totalBalance = holders.reduce((total, holder) => total + holder.balance, 0);
+
+  if (totalBalance <= 0) return afterTaxReturn(fallbackAccount);
+
+  // Share first, then multiply, so one holder's rate comes back exactly.
+  return holders.reduce(
+    (rate, holder) => rate + (holder.balance / totalBalance) * afterTaxReturn(holder.account),
+    0,
+  );
+}
+
+/**
+ * The super lines of the after-access "projected" working. One person who has
+ * super gets the single line "Super". With several holders each gets their
+ * own line, and a partner whose super is still locked when after access
+ * begins carries `lockedNote` ("locked until {age} ({year})"). `assessBridge`
+ * keeps those out of the total and shows them as a note line below it, so the
+ * total can't look healthier than the early after-access years really are.
+ */
+function superLinesAt(
+  rows: readonly ProjectionRow[],
+  firstAfterIndex: number,
+  inputs: ProjectionInputs,
+  startYear: number,
+  baseRow: ProjectionRow,
+): { label: string; value: number; lockedNote?: string; opensYear?: number; person?: string }[] {
+  const holderIndexes = inputs.people.flatMap((_person, personIndex) =>
+    personHasSuper(rows, personIndex) ? [personIndex] : [],
+  );
+
+  if (holderIndexes.length <= 1) return [{ label: "Super", value: baseRow.superClosing }];
+
+  const firstAfterRow = rows[firstAfterIndex];
+
+  return holderIndexes.flatMap((personIndex) => {
+    const person = inputs.people[personIndex];
+    const balance = baseRow.people[personIndex]?.superClosing;
+    if (person === undefined || balance === undefined) return [];
+
+    const isLocked = firstAfterRow?.people[personIndex]?.superAccessible === false;
+    const accessAge = effectiveSuperAccessAge(person, inputs, startYear);
+
+    return [
+      {
+        label: `${person.label}'s super`,
+        value: balance,
+        ...(isLocked && accessAge !== undefined
+          ? {
+              lockedNote: `locked until ${accessAge} (${startYear + (accessAge - person.currentAge)})`,
+              opensYear: startYear + (accessAge - person.currentAge),
+              person: person.label,
+            }
+          : {}),
+      },
+    ];
+  });
+}
+
+/**
  * Whether the plan has any super to speak of: super holds money in at least one
  * year. The engine always carries a super account (an empty one when nothing
  * was entered), so this is how Results tells "no super" from "super": the
@@ -266,6 +387,19 @@ interface PartDescription {
   readonly discountRateName: string;
   readonly projectedAmount: number;
   readonly projectedLines: readonly { label: string; value: number }[];
+  /** Super still locked at the start of the part: shown below the total, not added into it. */
+  readonly lockedSuperLines?: readonly {
+    label: string;
+    value: number;
+    lockedNote?: string;
+    opensYear?: number;
+    person?: string;
+  }[];
+  /**
+   * True for the bridge: portfolio contributions still paid in the part's years
+   * (while a partner works) are netted off the need, discounted like spending.
+   */
+  readonly netOffContributions?: boolean;
   /** "for the bridge" or "after super is accessible": completes "Need …" and "Projected …" labels. */
   readonly partPhrase: string;
   /** Added as the last line of the projected working, for parts that withdraw super. */
@@ -284,16 +418,41 @@ function describePart(description: PartDescription): BridgePart {
   const lastRow = partRows[partRows.length - 1] as ProjectionRow;
 
   // Each year's spending, as a value at the base row: nominal ÷ (1+rate)^(years after the base row).
+  const discountFactor = (row: ProjectionRow): number =>
+    Math.pow(1 + discountRate, row.yearIndex - baseRow.yearIndex);
+
   const spendingTotal = partRows.reduce((total, row) => total + row.spending, 0);
-  const need = partRows.reduce(
-    (total, row) =>
-      total + row.spending / Math.pow(1 + discountRate, row.yearIndex - baseRow.yearIndex),
+  const discountedSpending = partRows.reduce(
+    (total, row) => total + row.spending / discountFactor(row),
     0,
   );
+
+  // Contributions still paid into the portfolio in these years pay for part of the spending,
+  // so the bridge only has to cover the rest (with none paid, this is exactly 0).
+  const discountedContributions = description.netOffContributions
+    ? partRows.reduce((total, row) => total + row.contribution / discountFactor(row), 0)
+    : 0;
+
+  const rawNeed = discountedSpending - discountedContributions;
+  const need = Math.max(0, rawNeed);
 
   const years = `${firstRow.calendarYear} – ${lastRow.calendarYear}`;
   const percent = `${Number((discountRate * 100).toPrecision(12))}%`;
   const shortYears = partRows.filter((row) => row.shortfall > 0).map((row) => row.calendarYear);
+
+  const contributionLines: ExplanationLine[] =
+    discountedContributions > 0
+      ? [
+          {
+            label: `Less portfolio contributions paid in those years, discounted to ${baseRow.calendarYear}`,
+            // Never more than the spending, so the lines still add up when contributions cover it all.
+            value: rawNeed >= 0 ? discountedContributions : discountedSpending,
+            unit: "dollars",
+            operator: "−",
+            source: "calculated",
+          },
+        ]
+      : [];
 
   const needExplained: Explained = {
     value: need,
@@ -307,11 +466,12 @@ function describePart(description: PartDescription): BridgePart {
       },
       {
         label: `Less discounting to ${baseRow.calendarYear} at ${percent} (${description.discountRateName})`,
-        value: spendingTotal - need,
+        value: spendingTotal - discountedSpending,
         unit: "dollars",
         operator: "−",
         source: "calculated",
       },
+      ...contributionLines,
       {
         label: `Need ${description.partPhrase} at ${baseRow.calendarYear}`,
         value: need,
@@ -340,6 +500,14 @@ function describePart(description: PartDescription): BridgePart {
         operator: "=",
         source: "calculated",
       },
+      // Locked super is not in the total; it is a note below it, with no operator.
+      ...(description.lockedSuperLines ?? []).map((line): ExplanationLine => ({
+        label: `Plus ${line.label}, ${line.lockedNote}`,
+        value: line.value,
+        unit: "dollars",
+        source: "calculated",
+        note: true,
+      })),
       ...(description.taxFreeNote === undefined ? [] : [description.taxFreeNote]),
     ],
   };
@@ -347,11 +515,17 @@ function describePart(description: PartDescription): BridgePart {
   return {
     firstYear: firstRow.calendarYear,
     lastYear: lastRow.calendarYear,
-    firstAge: firstRow.people[0].age,
-    lastAge: lastRow.people[0].age,
+    firstPersonFirstAge: firstRow.people[0].age,
+    firstPersonLastAge: lastRow.people[0].age,
     need: needExplained,
+    needBeforeContributions: discountedSpending,
     projected: projectedExplained,
     status: shortYears.length === 0 ? "met" : "short",
     shortYears,
+    lockedSuper: (description.lockedSuperLines ?? []).flatMap((line) =>
+      line.person === undefined || line.opensYear === undefined
+        ? []
+        : [{ label: line.person, amount: line.value, opensYear: line.opensYear }],
+    ),
   };
 }

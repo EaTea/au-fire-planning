@@ -46,7 +46,9 @@ export function buildCoastChartSeries(coast: CoastFire, dollarsMode: DollarsMode
 
   const points: TimeSeriesPoint[] = coast.path.map((point) => ({
     year: point.calendarYear,
-    age: point.age,
+    age: point.firstPersonAge,
+    // A couple's chart names both ages.
+    ...(point.ages.length > 1 ? { ages: point.ages } : {}),
     values: {
       [YOUR_SAVINGS_KEY]: inChosenDollars(point.investable, point.inflationIndex),
       [NO_CONTRIBUTIONS_KEY]: inChosenDollars(point.withoutContributions, point.inflationIndex),

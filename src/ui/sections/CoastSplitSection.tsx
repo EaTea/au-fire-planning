@@ -1,3 +1,4 @@
+import { formatAges } from "../../engine/projection";
 import type { CoastSplitPart } from "../../engine/coastSplit";
 import { projectionHasSuper } from "../../engine/bridge";
 import type { ProjectionSummary } from "../../engine/fiNumber";
@@ -64,7 +65,11 @@ function CoastSplitMeter({ label, part }: CoastSplitMeterProps) {
       needNote="today"
       projected={{ amount: part.hasToday, text: formatDollars(part.hasToday) }}
       figureWords={{ need: "Needs", projected: "has" }}
-      detail={reachedLater ? `reached at age ${part.reached?.age}` : undefined}
+      detail={
+        reachedLater && part.reached !== undefined
+          ? `reached at ${formatAges(part.reached.ages)}`
+          : undefined
+      }
       explanation={part.needToday}
     />
   );

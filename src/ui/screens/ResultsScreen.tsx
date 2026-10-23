@@ -2,13 +2,17 @@ import { useEffect } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 
 import type { Explained, ExplanationLine } from "../../engine/explained";
-import { usePlanSummary } from "../../plan/PlanProvider";
+import { agesOf, formatAges } from "../../engine/projection";
+import { displayName } from "../../plan/displayName";
+import { defaultInterimSpending } from "../../plan/interimDefault";
+import { usePlan, usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
 import { DollarsModeToggle } from "../dollarsMode";
-import { formatDollars, formatPercent } from "../format";
+import { capitaliseFirst, formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
+import { planEndWords } from "../planEndWords";
 import { BRIDGE_SECTION_ID, BridgeSection, hasBridgeSection } from "../sections/BridgeSection";
 import { COAST_CHART_SECTION_ID, CoastChartSection } from "../sections/CoastChartSection";
 import {
@@ -76,6 +80,7 @@ export function ResultsScreen() {
                 <EarliestRetirementTile projection={summary.projection} />
                 <MoneyLastsTile projection={summary.projection} />
                 <RunsOutBanner projection={summary.projection} />
+                <NothingDrawnBanner projection={summary.projection} />
                 <MilestonesSection projection={summary.projection} />
                 <FireChartSection projection={summary.projection} />
                 <BridgeSection projection={summary.projection} />
@@ -166,7 +171,11 @@ function FiNumberTile({ summary }: { readonly summary: CompleteSummary }) {
     );
   }
 
-  const atRetirementLine = `${formatDollars(projection.fiNumberAtRetirement.value)} at age ${firstPersonAgeAtHouseholdRetirement(projection)} (${projection.householdRetirementYear})`;
+  // One person: "at age 50 (2042)". A couple: "in 2046, when you've both retired".
+  const atRetirementLine =
+    projection.people.length > 1
+      ? `${formatDollars(projection.fiNumberAtRetirement.value)} in ${projection.householdRetirementYear}, when you've both retired`
+      : `${formatDollars(projection.fiNumberAtRetirement.value)} at ${formatAges(agesAtHouseholdRetirement(projection))} (${projection.householdRetirementYear})`;
 
   return (
     <MetricTile
@@ -193,7 +202,7 @@ function FiReachedTile({
     return (
       <MetricTile
         label="FI reached"
-        value={`Not by age ${projection.endAge}`}
+        value={`Not by ${planEndWords(projection)}`}
         subLine="With today's inputs"
       />
     );
@@ -203,7 +212,7 @@ function FiReachedTile({
     <MetricTile
       label="FI reached"
       value={String(fiReached.calendarYear)}
-      subLine={`Age ${fiReached.age}`}
+      subLine={capitaliseFirst(formatAges(fiReached.ages))}
       explanation={fiReached.explanation}
     />
   );
@@ -221,8 +230,40 @@ type CompleteProjection = Extract<CompleteSummary["projection"], { status: "comp
  * years don't follow the dollars toggle.
  */
 function EarliestRetirementTile({ projection }: { readonly projection: CompleteProjection }) {
-  // Until the couple wording (M7 PR B), the tile shows the first person's search.
-  const earliestRetirement = projection.people[0].earliestRetirement;
+  const [firstPerson, ...otherPeople] = projection.people;
+
+  // A couple: each person's own search, with the partner keeping their target.
+  if (otherPeople.length > 0) {
+    const everyone = projection.people;
+    const answers = everyone.map((person) => {
+      const earliest = person.earliestRetirement;
+
+      return {
+        label: person.label,
+        text: earliest.status === "feasible" ? String(earliest.age) : "not feasible",
+        yearText: earliest.status === "feasible" ? String(earliest.year) : "not feasible",
+        targetText: `${person.retirementAge} (${person.retirementYear})`,
+      };
+    });
+    const joined = (pick: (answer: (typeof answers)[number]) => string) =>
+      answers.map((answer) => `${answer.label} ${pick(answer)}`).join(" · ");
+
+    return (
+      <MetricTile
+        label="Earliest retirement"
+        value={joined((answer) => answer.text)}
+        subLine={[
+          joined((answer) => answer.yearText),
+          `Targets: ${joined((answer) => answer.targetText)}`,
+        ]}
+        explanation={combineEarliestExplanations(
+          everyone.map((person) => person.earliestRetirement),
+        )}
+      />
+    );
+  }
+
+  const earliestRetirement = firstPerson.earliestRetirement;
 
   if (earliestRetirement.status === "notFeasible") {
     const lastAgeTried = projection.endAge - 1;
@@ -241,10 +282,27 @@ function EarliestRetirementTile({ projection }: { readonly projection: CompleteP
     <MetricTile
       label="Earliest retirement"
       value={`Age ${earliestRetirement.age}`}
-      subLine={`${earliestRetirement.year} · your target is ${projection.people[0].retirementAge} (${projection.people[0].retirementYear})`}
+      subLine={`${earliestRetirement.year} · your target is ${firstPerson.retirementAge} (${firstPerson.retirementYear})`}
       explanation={earliestRetirement.explanation}
     />
   );
+}
+
+/**
+ * The couple's "Earliest retirement" breakdown: each person's lines one after
+ * the other (they already say whose age is being moved, "Sam retiring at 54").
+ * The value is the first person's answer. Used by EarliestRetirementTile.
+ */
+function combineEarliestExplanations(
+  answers: readonly CompleteProjection["people"][number]["earliestRetirement"][],
+): Explained {
+  const [first] = answers;
+
+  return {
+    value: first?.explanation.value ?? 0,
+    unit: first?.explanation.unit ?? "years",
+    lines: answers.flatMap((answer) => answer.explanation.lines),
+  };
 }
 
 /**
@@ -262,7 +320,7 @@ function MoneyLastsTile({ projection }: { readonly projection: CompleteProjectio
     return (
       <MetricTile
         label="Money lasts"
-        value={`To age ${projection.endAge} ✓`}
+        value={`To ${planEndWords(projection)} ✓`}
         subLine={`${formatDollars(solvency.explanation.value)} left in ${lastRow?.calendarYear} (nominal dollars)`}
         explanation={solvency.explanation}
       />
@@ -274,7 +332,7 @@ function MoneyLastsTile({ projection }: { readonly projection: CompleteProjectio
   return (
     <MetricTile
       label="Money lasts"
-      value={`Runs out at age ${solvency.age}`}
+      value={`Runs out at ${formatAges(solvency.ages)}`}
       subLine={`${solvency.year} · ${yearCount === 1 ? "1 year" : `${yearCount} years`} can't be funded`}
       explanation={solvency.explanation}
     />
@@ -295,7 +353,7 @@ function RunsOutBanner({ projection }: { readonly projection: CompleteProjection
   return (
     <Banner tone="warning">
       <div>
-        Your money runs out at age {solvency.age} ({solvency.year}).{" "}
+        Your money runs out at {formatAges(solvency.ages)} ({solvency.year}).{" "}
         <Link to={`${step.path}?year=${firstShortfallYear}`}>
           See the years that can&apos;t be funded.
         </Link>
@@ -305,18 +363,57 @@ function RunsOutBanner({ projection }: { readonly projection: CompleteProjection
 }
 
 /**
- * The first person's age in the household retirement year (the last year
- * anybody works), which is where the FI number "at retirement" and Coast
- * FIRE's target are stated. With one person it is their retirement age. Used
- * by the FI number and Coast FIRE tiles.
+ * An info note for a couple when $0 is ENTERED as "Drawn from savings while
+ * one of you is retired" yet the partner who retires later has no salary: in
+ * those years nothing pays for spending, which is probably not intended. It
+ * is not shown for the $0 default (which only applies when that partner has a
+ * salary) or when the household retires in the same year. Names come from the
+ * plan's display names, matched to the projection's people by position.
  */
-function firstPersonAgeAtHouseholdRetirement(projection: CompleteProjection): number {
+function NothingDrawnBanner({ projection }: { readonly projection: CompleteProjection }) {
+  const plan = usePlan();
+  const people = plan.household.people;
+
+  const hasOneRetiredYears = projection.rows.some((row) => row.phase === "oneRetired");
+  if (plan.expenses.interimAnnual !== 0 || !hasOneRetiredYears || people.length < 2) return null;
+
+  const { laterPerson, earlierPerson, laterIndex, earlierIndex } = defaultInterimSpending(plan);
+  if (
+    laterPerson === undefined ||
+    earlierPerson === undefined ||
+    laterIndex === undefined ||
+    earlierIndex === undefined ||
+    (laterPerson.salary?.annual ?? 0) > 0
+  ) {
+    return null;
+  }
+
+  const laterName = displayName(laterPerson, laterIndex, people);
+  const earlierName = displayName(earlierPerson, earlierIndex, people);
+
+  return (
+    <Banner tone="info">
+      While {earlierName} is retired, {laterName} has no salary, but nothing is drawn for spending.
+      Check &quot;Drawn from savings while one of you is retired&quot; on Income &amp; expenses.
+    </Banner>
+  );
+}
+
+/**
+ * Everyone's age in the household retirement year (the last year anybody
+ * works), which is where the FI number "at retirement" and Coast FIRE's target
+ * are stated. With one person it is their retirement age. Used by the FI
+ * number and Coast FIRE tiles with `formatAges`.
+ */
+function agesAtHouseholdRetirement(projection: CompleteProjection) {
   const householdRetirementRow = projection.rows.find(
     (row) => row.calendarYear === projection.householdRetirementYear,
   );
 
   // The row always exists (retirement is before the end of the plan); the fallback is the person's own target.
-  return householdRetirementRow?.people[0].age ?? projection.people[0].retirementAge;
+  return householdRetirementRow === undefined
+    ? [{ label: projection.people[0].label, age: projection.people[0].retirementAge }]
+    : agesOf(householdRetirementRow);
 }
 
 /**
@@ -334,10 +431,7 @@ function CoastFireTile({ projection }: { readonly projection: CompleteProjection
   const { coast } = projection;
 
   const inRetirementYearLine = `${formatDollars(coast.numberInRetirementYearDollars)} in ${projection.householdRetirementYear} dollars`;
-  const statusLine = describeCoastFireStatus(
-    coast.reached,
-    firstPersonAgeAtHouseholdRetirement(projection),
-  );
+  const statusLine = describeCoastFireStatus(coast.reached, projection);
 
   return (
     <MetricTile
@@ -355,12 +449,16 @@ function CoastFireTile({ projection }: { readonly projection: CompleteProjection
  */
 function describeCoastFireStatus(
   reached: CompleteProjection["coast"]["reached"],
-  retirementAge: number,
+  projection: CompleteProjection,
 ): string {
-  if (reached === undefined) return `Not before retirement at ${retirementAge}`;
+  if (reached === undefined) {
+    return projection.people.length > 1
+      ? `Not before you've both retired (${projection.householdRetirementYear})`
+      : `Not before retirement at ${projection.people[0].retirementAge}`;
+  }
   if (reached.yearIndex === 0) return "Reached: contributions are now optional";
 
-  return `Reached in ${reached.calendarYear}, at age ${reached.age}`;
+  return `Reached in ${reached.calendarYear}, at ${formatAges(reached.ages)}`;
 }
 
 /**
@@ -379,7 +477,7 @@ function explainCoastFireTile(coast: CompleteProjection["coast"]): Explained {
 
   const retirementRowLines: ExplanationLine[] = [
     {
-      label: `Investable at end of ${retirementPoint.calendarYear} (age ${retirementPoint.age})`,
+      label: `Investable at end of ${retirementPoint.calendarYear} (${formatAges(retirementPoint.ages)})`,
       value: retirementPoint.investable,
       unit: "dollars",
       source: "calculated",

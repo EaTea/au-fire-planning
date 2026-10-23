@@ -60,6 +60,13 @@ export const DEFAULT_SUPER_CONTRIBUTION_ANNUAL = 0;
 /** Cash savings: $0. */
 export const DEFAULT_CASH_BALANCE = 0;
 
+/**
+ * Dollars per year drawn from savings while some but not all of a couple have
+ * retired (EXP-2). $0: the partner still working is assumed to cover spending,
+ * the same assumption as working years until take-home pay arrives in M8.
+ */
+export const DEFAULT_INTERIM_SPENDING = 0;
+
 // The age contributions stop has no constant here: it defaults to the target
 // retirement age, so it depends on another input and is resolved in
 // resolvePlanInputs.ts.

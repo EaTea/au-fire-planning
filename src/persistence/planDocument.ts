@@ -74,6 +74,26 @@ const superContributionSchema = z
 const percentRateSchema = z.number().min(0).max(100);
 
 /**
+ * Who owns a portfolio, as stored (IN-14, part): one person, or a joint split
+ * in percents. The refinement keeps a joint split to at least two shares that
+ * add to 100; a document that breaks it is rejected rather than repaired.
+ */
+const ownershipSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("sole"), personId: z.string() }),
+  z
+    .object({
+      kind: z.literal("joint"),
+      shares: z.array(z.object({ personId: z.string(), percent: percentRateSchema })),
+    })
+    .refine(
+      (joint) =>
+        joint.shares.length >= 2 &&
+        Math.abs(joint.shares.reduce((total, share) => total + share.percent, 0) - 100) < 1e-9,
+      { message: "a joint split needs at least two shares that add to 100%", path: ["shares"] },
+    ),
+]);
+
+/**
  * Zod schema for version 1 of the plan document. It is the single definition:
  * the TypeScript type below is inferred from it, and `parsePlanDocument`
  * (migrations.ts) validates stored data against it.
@@ -85,6 +105,7 @@ export const planDocumentV1Schema = z.object({
       z.object({
         id: z.string(),
         label: z.string().optional(),
+        name: z.string().optional(),
         currentAgeYears: ageYearsSchema.optional(),
         targetRetirementAgeYears: ageYearsSchema.optional(),
         superAccessAgeYears: ageYearsSchema.optional(),
@@ -111,6 +132,7 @@ export const planDocumentV1Schema = z.object({
   cash: z.object({ balanceDollars: z.number().nonnegative().optional() }).optional(),
   expenses: z.object({
     livingAnnualDollars: z.number().nonnegative().optional(),
+    interimAnnualDollars: z.number().nonnegative().optional(),
     retirement: z
       .discriminatedUnion("kind", [
         z.object({ kind: z.literal("amount"), annualDollars: z.number().nonnegative() }),
@@ -133,6 +155,7 @@ export const planDocumentV1Schema = z.object({
       expectedReturnPercent: z.number().nonnegative().optional(),
       annualContributionDollars: z.number().nonnegative().optional(),
       contributionsStopAgeYears: ageYearsSchema.optional(),
+      ownership: ownershipSchema.optional(),
     }),
   ),
 });

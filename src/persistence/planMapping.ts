@@ -12,6 +12,7 @@ import type {
   Person,
   Plan,
   Portfolio,
+  PortfolioOwnership,
   RetirementSpending,
   SuperAccount,
   SuperContribution,
@@ -184,6 +185,35 @@ function superAccountFromWire(wireAccount: WireSuperAccount): SuperAccount {
   };
 }
 
+/** The wire form of a portfolio's ownership, taken from the document type. */
+type WireOwnership = NonNullable<PlanDocumentV1["portfolios"][number]["ownership"]>;
+
+/** Maps ownership to its wire form: a joint split's fractions become percents. */
+function ownershipToWire(ownership: PortfolioOwnership): WireOwnership {
+  if (ownership.kind === "sole") return { kind: "sole", personId: ownership.personId };
+
+  return {
+    kind: "joint",
+    shares: ownership.shares.map((share) => ({
+      personId: share.personId,
+      percent: fractionToPercent(share.fraction),
+    })),
+  };
+}
+
+/** Inverse of `ownershipToWire`: converts stored percents back to fractions. */
+function ownershipFromWire(wireOwnership: WireOwnership): PortfolioOwnership {
+  if (wireOwnership.kind === "sole") return { kind: "sole", personId: wireOwnership.personId };
+
+  return {
+    kind: "joint",
+    shares: wireOwnership.shares.map((share) => ({
+      personId: share.personId,
+      fraction: percentToFraction(share.percent),
+    })),
+  };
+}
+
 /**
  * Converts the in-memory plan to the stored document. Called by the save path
  * just before validation and writing. Only values that are set are written
@@ -196,6 +226,9 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
   }
   if (plan.expenses.retirementSpending !== undefined) {
     expenses.retirement = retirementSpendingToWire(plan.expenses.retirementSpending);
+  }
+  if (plan.expenses.interimAnnual !== undefined) {
+    expenses.interimAnnualDollars = plan.expenses.interimAnnual;
   }
   // An empty list is kept (as []), so a plan with the table emptied round-trips unchanged.
   if (plan.expenses.datedExpenses !== undefined) {
@@ -225,6 +258,9 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
           id: person.id,
           label: person.label,
         };
+        if (person.name !== undefined) {
+          wirePerson.name = person.name;
+        }
         if (person.currentAge !== undefined) {
           wirePerson.currentAgeYears = person.currentAge;
         }
@@ -274,6 +310,9 @@ export function planToWire(plan: Plan): PlanDocumentV1 {
       if (portfolio.contributionsStopAge !== undefined) {
         wirePortfolio.contributionsStopAgeYears = portfolio.contributionsStopAge;
       }
+      if (portfolio.ownership !== undefined) {
+        wirePortfolio.ownership = ownershipToWire(portfolio.ownership);
+      }
       return wirePortfolio;
     }),
   };
@@ -289,6 +328,7 @@ export function planFromWire(document: PlanDocumentV1): Plan {
   const people: Person[] = document.household.people.map((wirePerson, index) => ({
     id: wirePerson.id,
     label: wirePerson.label ?? `Person ${index + 1}`,
+    ...(wirePerson.name !== undefined ? { name: wirePerson.name } : {}),
     ...(wirePerson.currentAgeYears !== undefined ? { currentAge: wirePerson.currentAgeYears } : {}),
     ...(wirePerson.targetRetirementAgeYears !== undefined
       ? { targetRetirementAge: wirePerson.targetRetirementAgeYears }
@@ -326,6 +366,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
     ...(wirePortfolio.contributionsStopAgeYears !== undefined
       ? { contributionsStopAge: wirePortfolio.contributionsStopAgeYears }
       : {}),
+    ...(wirePortfolio.ownership !== undefined
+      ? { ownership: ownershipFromWire(wirePortfolio.ownership) }
+      : {}),
   }));
 
   return {
@@ -344,6 +387,9 @@ export function planFromWire(document: PlanDocumentV1): Plan {
         : {}),
       ...(document.expenses.retirement !== undefined
         ? { retirementSpending: retirementSpendingFromWire(document.expenses.retirement) }
+        : {}),
+      ...(document.expenses.interimAnnualDollars !== undefined
+        ? { interimAnnual: document.expenses.interimAnnualDollars }
         : {}),
       ...(document.expenses.datedExpenses !== undefined
         ? { datedExpenses: document.expenses.datedExpenses.map(datedExpenseFromWire) }

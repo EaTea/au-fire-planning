@@ -366,7 +366,12 @@ describe("effectiveSuperAccessAge", () => {
       currentAge: 55,
       endAge: 70,
       retirementAge,
-      superAccount: { ...emptySuper, ...(accessAge === undefined ? {} : { accessAge }) },
+      // Some money in it: an empty account is never accessible, so it would have no first accessible row.
+      superAccount: {
+        ...emptySuper,
+        opening: 1_000,
+        ...(accessAge === undefined ? {} : { accessAge }),
+      },
     });
 
   it("is the access age when retiring before it", () => {

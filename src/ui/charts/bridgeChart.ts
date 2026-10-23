@@ -13,6 +13,7 @@
 // A pure function, like fireChart.ts, so unit tests check the figures.
 
 import type { ProjectionSummary } from "../../engine/fiNumber";
+import { agesOf } from "../../engine/projection";
 import type {
   TimeSeriesBand,
   TimeSeriesPoint,
@@ -52,6 +53,8 @@ export function buildBridgeChartSeries(
   const points: TimeSeriesPoint[] = projection.rows.map((row) => ({
     year: row.calendarYear,
     age: row.people[0].age,
+    // A couple's chart names both ages.
+    ...(row.people.length > 1 ? { ages: agesOf(row) } : {}),
     values: {
       [OUTSIDE_SUPER_KEY]: inChosenDollars(
         row.portfolioClosing + row.cashClosing,

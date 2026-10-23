@@ -6,11 +6,13 @@
 // returns a new object, so React can detect the change and the engine's
 // derived summary can be recomputed from it.
 
+import { resolveOwnerIds } from "./resolvePlanInputs";
 import type {
   DatedExpense,
   Person,
   Plan,
   Portfolio,
+  PortfolioOwnership,
   RetirementSpending,
   Salary,
   SalaryGrowth,
@@ -78,6 +80,15 @@ export type PlanAction =
     }
   | { readonly type: "duplicateDatedExpense"; readonly id: string; readonly newId: string }
   | { readonly type: "removeDatedExpense"; readonly id: string }
+  | { readonly type: "addPartner"; readonly id: string }
+  | { readonly type: "removePartner" }
+  | { readonly type: "setPersonName"; readonly personId: string; readonly name?: string }
+  | { readonly type: "setInterimSpending"; readonly annual?: number }
+  | {
+      readonly type: "setPortfolioOwnership";
+      readonly portfolioId: string;
+      readonly ownership?: PortfolioOwnership;
+    }
   | { readonly type: "replacePlan"; readonly plan: Plan };
 
 /**
@@ -222,9 +233,203 @@ export function planReducer(plan: Plan, action: PlanAction): Plan {
         (plan.expenses.datedExpenses ?? []).filter((expense) => expense.id !== action.id),
       );
 
+    case "addPartner":
+      return addPartner(plan, action.id);
+
+    case "removePartner":
+      return removePartner(plan);
+
+    case "setPersonName": {
+      // Spaces around a name are dropped, and a name with nothing left is cleared.
+      const trimmed = action.name?.trim();
+
+      return updatePerson(plan, action.personId, {
+        name: trimmed === undefined || trimmed === "" ? undefined : trimmed,
+      });
+    }
+
+    case "setInterimSpending":
+      return { ...plan, expenses: { ...plan.expenses, interimAnnual: action.annual } };
+
+    case "setPortfolioOwnership":
+      if (action.ownership !== undefined && !isValidOwnership(plan, action.ownership)) {
+        return plan;
+      }
+
+      return changePortfolioOwnership(plan, action.portfolioId, action.ownership);
+
     case "replacePlan":
       return action.plan;
   }
+}
+
+/** The most people a household can have (M7: you and one partner). */
+const MAXIMUM_PEOPLE = 2;
+
+/**
+ * Adds "Person 2" with nothing set. Ignored when the household already has
+ * two people, so a repeated click can't create a third. Used by the "A couple"
+ * choice on the Household screen.
+ */
+function addPartner(plan: Plan, id: string): Plan {
+  if (plan.household.people.length >= MAXIMUM_PEOPLE) return plan;
+
+  const partner: Person = { id, label: `Person ${plan.household.people.length + 1}` };
+
+  return {
+    ...plan,
+    household: { ...plan.household, people: [...plan.household.people, partner] },
+  };
+}
+
+/**
+ * Removes Person 2 and everything entered for them (the "Just me" choice).
+ * Any portfolio they owned, alone or in a joint split, goes back to Person 1
+ * as sole owner; portfolios with no stored owner keep following the default.
+ * The interim amount ("Drawn from savings while one of you is retired") is
+ * cleared too, since a single person has no such years and a stale amount
+ * would come back if a partner is added again. Ignored when there is no
+ * second person.
+ */
+function removePartner(plan: Plan): Plan {
+  const [firstPerson, removedPerson] = plan.household.people;
+  if (firstPerson === undefined || removedPerson === undefined) return plan;
+
+  /** True when the ownership names the person being removed. */
+  const namesRemovedPerson = (ownership: PortfolioOwnership): boolean =>
+    ownership.kind === "sole"
+      ? ownership.personId === removedPerson.id
+      : ownership.shares.some((share) => share.personId === removedPerson.id);
+
+  return {
+    ...plan,
+    household: { ...plan.household, people: [firstPerson] },
+    expenses: withoutKey(plan.expenses, "interimAnnual"),
+    portfolios: plan.portfolios.map((portfolio) => {
+      const ownership: PortfolioOwnership | undefined =
+        portfolio.ownership !== undefined && namesRemovedPerson(portfolio.ownership)
+          ? { kind: "sole", personId: firstPerson.id }
+          : portfolio.ownership;
+
+      // The stop age is measured on the first owner, who may have been the person removed.
+      const stopAge = movedStopAge(
+        portfolio.contributionsStopAge,
+        firstOwnerOf(plan.household.people, portfolio.ownership),
+        firstPerson,
+      );
+
+      return {
+        ...withoutKey(withoutKey(portfolio, "ownership"), "contributionsStopAge"),
+        ...(ownership === undefined ? {} : { ownership }),
+        ...(stopAge === undefined ? {} : { contributionsStopAge: stopAge }),
+      };
+    }),
+  };
+}
+
+/**
+ * Sets (or clears) a portfolio's ownership. The contributions stop age is an
+ * age of the first owner, so if the first owner changes (for example from Sam
+ * to Person 1) the stop age is moved to the new person (see `movedStopAge`)
+ * rather than silently meaning a different person's age. Used by the
+ * `setPortfolioOwnership` action.
+ */
+function changePortfolioOwnership(
+  plan: Plan,
+  portfolioId: string,
+  ownership: PortfolioOwnership | undefined,
+): Plan {
+  const people = plan.household.people;
+
+  return {
+    ...plan,
+    portfolios: plan.portfolios.map((portfolio) => {
+      if (portfolio.id !== portfolioId) return portfolio;
+
+      const stopAge = movedStopAge(
+        portfolio.contributionsStopAge,
+        firstOwnerOf(people, portfolio.ownership),
+        firstOwnerOf(people, ownership),
+      );
+
+      return {
+        ...withoutKey(withoutKey(portfolio, "ownership"), "contributionsStopAge"),
+        ...(ownership === undefined ? {} : { ownership }),
+        ...(stopAge === undefined ? {} : { contributionsStopAge: stopAge }),
+      };
+    }),
+  };
+}
+
+/** A copy of the object without one key, so an unset field stays absent rather than being set to `undefined`. */
+function withoutKey<Item extends object, Key extends keyof Item>(
+  item: Item,
+  key: Key,
+): Omit<Item, Key> {
+  const { [key]: removed, ...rest } = item;
+  void removed;
+
+  return rest;
+}
+
+/**
+ * The first owner of a portfolio: the earliest person in the household who
+ * owns it (see `resolveOwnerIds`). The contributions stop age is measured on
+ * them. Used by the ownership changes.
+ */
+function firstOwnerOf(
+  people: readonly Person[],
+  ownership: PortfolioOwnership | undefined,
+): Person | undefined {
+  const firstOwnerId = resolveOwnerIds(ownership, people)[0];
+
+  return people.find((person) => person.id === firstOwnerId);
+}
+
+/**
+ * Moves a contributions stop age from one person to another so it keeps its
+ * meaning: the stop is a calendar year, and both people are a year older each
+ * year, so the new person's age is the old age plus the gap between their
+ * ages today. Returns `undefined` (the stop age is cleared) when it would be
+ * before the new person's age today, or when either age isn't known. With no
+ * stop age, or the same person, it is returned as it was. Used when the first
+ * owner changes (`removePartner`, `changePortfolioOwnership`).
+ */
+function movedStopAge(
+  stopAge: number | undefined,
+  oldOwner: Person | undefined,
+  newOwner: Person | undefined,
+): number | undefined {
+  if (stopAge === undefined) return undefined;
+  if (oldOwner?.id === newOwner?.id) return stopAge;
+
+  const oldAge = oldOwner?.currentAge;
+  const newAge = newOwner?.currentAge;
+  if (oldAge === undefined || newAge === undefined) return undefined;
+
+  const movedAge = stopAge + (newAge - oldAge);
+
+  return movedAge < newAge ? undefined : movedAge;
+}
+
+/**
+ * Whether an ownership can be stored: it names only people in the plan, and a
+ * joint split has at least two shares that are not negative and add to 100%.
+ * Invalid ownership is ignored by the reducer rather than saved, because the
+ * stored document rejects it. Used by the `setPortfolioOwnership` action.
+ */
+function isValidOwnership(plan: Plan, ownership: PortfolioOwnership): boolean {
+  const personIds = new Set(plan.household.people.map((person) => person.id));
+
+  if (ownership.kind === "sole") return personIds.has(ownership.personId);
+
+  const total = ownership.shares.reduce((sum, share) => sum + share.fraction, 0);
+
+  return (
+    ownership.shares.length >= 2 &&
+    ownership.shares.every((share) => personIds.has(share.personId) && share.fraction >= 0) &&
+    Math.abs(total - 1) < 1e-9
+  );
 }
 
 /** Returns the plan with its dated expenses list replaced. Used by the dated-expense actions. */

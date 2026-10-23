@@ -87,6 +87,17 @@ function BridgeMeter({ label, part, baseInflationIndex, baseYear }: BridgeMeterP
   const projectedAmount =
     mode === "today" ? part.projected.value / baseInflationIndex : part.projected.value;
 
+  // Locked super isn't in the projected figure, so the summary says where it comes in
+  // ("plus Alex's $150,000 from 2036"), in the same dollars as the other figures.
+  const lockedWords = part.lockedSuper.map(
+    (locked) =>
+      `${locked.label}'s ${formatMoney(locked.amount, baseInflationIndex)} from ${locked.opensYear}`,
+  );
+  const lockedDetail = lockedWords.length === 0 ? undefined : `plus ${lockedWords.join(" and ")}`;
+  const shortDetail =
+    part.shortYears.length > 0 ? `short in ${formatYearRuns(part.shortYears)}` : undefined;
+  const detail = [lockedDetail, shortDetail].filter((piece) => piece !== undefined).join(" · ");
+
   return (
     <StatusMeter
       label={label}
@@ -98,9 +109,7 @@ function BridgeMeter({ label, part, baseInflationIndex, baseYear }: BridgeMeterP
         amount: projectedAmount,
         text: formatMoney(part.projected.value, baseInflationIndex),
       }}
-      detail={
-        part.shortYears.length > 0 ? `short in ${formatYearRuns(part.shortYears)}` : undefined
-      }
+      detail={detail === "" ? undefined : detail}
       explanation={explainPart(part, mode, baseInflationIndex)}
     />
   );
@@ -135,7 +144,10 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
   const { bridge, afterAccess } = projection.bridge;
   // `hasBridgeSection` guarantees the access exists. The age is that of the person it names.
-  const { age: accessAge } = projection.bridge.effectiveAccess as EffectiveAccess;
+  const { age: accessAge, personIndex: accessPersonIndex } = projection.bridge
+    .effectiveAccess as EffectiveAccess;
+  const isCouple = projection.people.length > 1;
+  const accessPersonLabel = projection.people[accessPersonIndex]?.label;
 
   // The row a part's figures are stated at is the one before its first year.
   const inflationIndexBefore = (part: BridgePart): number =>
@@ -146,7 +158,11 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
   return (
     <Card title="Can you bridge to super?" id={BRIDGE_SECTION_ID}>
       {bridge === undefined && (
-        <p className="section-intro">No bridge needed: super is accessible when you retire.</p>
+        <p className="section-intro">
+          {isCouple
+            ? "No bridge needed: super is accessible when the first of you retires."
+            : "No bridge needed: super is accessible when you retire."}
+        </p>
       )}
 
       {bridge !== undefined && (
@@ -160,7 +176,11 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
       {afterAccess !== undefined && (
         <BridgeMeter
-          label={`After super is accessible, ${formatPartYears(afterAccess)}`}
+          label={
+            isCouple && accessPersonLabel !== undefined
+              ? `After ${accessPersonLabel}'s super opens, ${formatPartYears(afterAccess)}`
+              : `After super is accessible, ${formatPartYears(afterAccess)}`
+          }
           part={afterAccess}
           baseInflationIndex={inflationIndexBefore(afterAccess)}
           baseYear={afterAccess.firstYear - 1}
@@ -169,7 +189,9 @@ export function BridgeSection({ projection, chartSize }: BridgeSectionProps) {
 
       {afterAccess === undefined && (
         <p className="section-intro">
-          Super isn&apos;t accessible until age {accessAge}, after your plan ends
+          {isCouple && accessPersonLabel !== undefined
+            ? `${accessPersonLabel}'s super isn't accessible until age ${accessAge}, after the plan ends`
+            : `Super isn't accessible until age ${accessAge}, after your plan ends`}
           {lastRow === undefined ? "" : ` in ${lastRow.calendarYear}`}.
         </p>
       )}

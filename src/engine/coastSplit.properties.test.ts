@@ -110,8 +110,11 @@ test.prop([settingsArbitrary], { numRuns: 150 })(
       inputsFrom(settings, { superOpening: settings.superOpening + settings.extra }),
     ).super;
 
-    expect(larger === undefined).toBe(smaller === undefined);
-    if (smaller === undefined || larger === undefined) return;
+    // With no super at all (nothing in it and no contributions) there is no super test; adding
+    // money then creates one, so there is nothing to compare. Otherwise both sides have one.
+    if (smaller === undefined) return;
+    expect(larger).toBeDefined();
+    if (larger === undefined) return;
 
     expect(yearOrNever(larger.reached)).toBeLessThanOrEqual(yearOrNever(smaller.reached));
   },

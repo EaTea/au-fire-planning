@@ -402,6 +402,7 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     people: [
       {
         personId: "person-1",
+        label: "Person 1",
         age: 40 + yearIndex,
         phase: "working",
         salary: 0,
@@ -475,7 +476,7 @@ describe("findFiReached", () => {
   it("explains with the balance, the FI number and the result", () => {
     const milestone = findFiReached([row(0, 100, 400), row(1, 450, 410)]);
 
-    expect(milestone).toMatchObject({ calendarYear: 2027, age: 41 });
+    expect(milestone).toMatchObject({ calendarYear: 2027, firstPersonAge: 41 });
     expect(milestone?.explanation.lines.map((line) => line.label)).toEqual([
       "Balance at end of 2027 (age 41)",
       "FI number in 2027",

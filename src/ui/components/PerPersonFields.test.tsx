@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { Person } from "../../plan/types";
 import { PerPersonFields } from "./PerPersonFields";
 
-const alex: Person = { id: "a", label: "Alex" };
-const sam: Person = { id: "s", label: "Sam" };
+const alex: Person = { id: "a", label: "Person 1", name: "Alex" };
+const sam: Person = { id: "s", label: "Person 2", name: "Sam" };
 
 /** Renders one field per person using the fieldLabel helper. */
 function renderFields(people: readonly Person[]) {

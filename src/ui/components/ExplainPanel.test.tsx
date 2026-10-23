@@ -136,3 +136,34 @@ describe("ExplainPanel with a trailing law note", () => {
     expect(screen.getByText("Tax-free from age").closest("b")).toBeNull();
   });
 });
+
+describe("ExplainPanel with a note below the result", () => {
+  it("keeps the result bold, and the note and the law line plain, when notes follow it", () => {
+    render(
+      <ExplainPanel
+        explained={{
+          value: 10,
+          unit: "dollars",
+          lines: [
+            { label: "Portfolio", value: 10, unit: "dollars", source: "calculated" },
+            { label: "Projected", value: 10, unit: "dollars", operator: "=", source: "calculated" },
+            {
+              label: "Plus Alex's super",
+              value: 5,
+              unit: "dollars",
+              source: "calculated",
+              note: true,
+            },
+            { label: "Tax-free from age", value: 60, unit: "years", source: "rule" },
+          ],
+        }}
+      />,
+    );
+
+    const rows = screen.getAllByRole("row");
+
+    expect(rows[1]?.querySelector("b")).not.toBeNull();
+    expect(rows[2]?.querySelector("b")).toBeNull();
+    expect(rows[3]?.querySelector("b")).toBeNull();
+  });
+});

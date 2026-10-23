@@ -160,6 +160,58 @@ describe("parsePlanDocument", () => {
     expect(planFromWire(older.document).household.people[0]?.superAccessAge).toBeUndefined();
   });
 
+  // Couples (M7) were added without a new schema version: the new fields are optional.
+  it("parses a couple document and maps it to a plan", () => {
+    const result = parsePlanDocument(readFixture("v1-couple.json"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const plan = planFromWire(result.document);
+
+    expect(plan.household.people.map((person) => [person.name, person.currentAge])).toEqual([
+      ["Alex", 55],
+      ["Sam", 53],
+    ]);
+    expect(plan.expenses.interimAnnual).toBe(20000);
+    expect(plan.portfolios[0]?.ownership).toStrictEqual({
+      kind: "joint",
+      shares: [
+        { personId: "person-1", fraction: 0.5 },
+        { personId: "person-2", fraction: 0.5 },
+      ],
+    });
+  });
+
+  it("loads documents saved before couples with none of the couple fields", () => {
+    const result = parsePlanDocument(readFixture("v1-access-age.json"));
+    if (!result.ok) throw new Error("expected the older fixture to parse");
+
+    const plan = planFromWire(result.document);
+
+    expect(plan.household.people[0]).not.toHaveProperty("name");
+    expect(plan.expenses).not.toHaveProperty("interimAnnual");
+    expect(plan.portfolios[0]).not.toHaveProperty("ownership");
+  });
+
+  it.each([
+    [
+      "shares that don't add to 100",
+      [
+        { personId: "a", percent: 60 },
+        { personId: "b", percent: 50 },
+      ],
+    ],
+    ["a single share", [{ personId: "a", percent: 100 }]],
+  ])("rejects a joint portfolio with %s", (_description, shares) => {
+    const document = readFixture("v1-couple.json") as {
+      portfolios: { ownership: unknown }[];
+    };
+    document.portfolios[0]!.ownership = { kind: "joint", shares };
+
+    expect(parsePlanDocument(document).ok).toBe(false);
+  });
+
   it.each([60.5, -1, 121])("rejects a super access age of %s", (age) => {
     const document = readFixture("v1-access-age.json") as {
       household: { people: { superAccessAgeYears?: number }[] };

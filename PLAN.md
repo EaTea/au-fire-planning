@@ -4,13 +4,13 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. The M7 (couples) step-by-step plan is in review.
+**Current status:** M0 to M6, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. M7 (couples) is implemented: the household refactor (PR A) is merged and the couples change (PR B) is in review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
 | 1 | Order in which the requirements are delivered | Agreed |
 | 2 | Tech stack, architecture and testing approach | Agreed |
-| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M6 and the side plans done. M7 plan in review |
+| 3 | Milestone plans: how each milestone is delivered, then a step-by-step plan per milestone | M0–M6 and the side plans done. M7 implemented; PR B in review |
 
 ## 1. Requirement ordering
 
@@ -1521,10 +1521,10 @@ Conventions settled while building M6, which later milestones rely on:
 
 ### M7 · Couples: step-by-step plan
 
-**Status:** plan, awaiting the owner's approval. As with M6, the owner
-asked for the plan PR and the implementation to be opened stacked on each
-other. The plan is still reviewed first, and the implementation follows
-any change to it.
+**Status:** plan approved (PR #35); PR A merged (#37); PR B in review. As
+with M6, the owner asked for the plan PR and the implementation to be opened
+stacked on each other. The plan was reviewed first, and the implementation
+follows any change to it.
 
 **Goal:** a plan can be for one person or a couple. Each partner has
 their own age, retirement age, salary, super and super access age. Every
@@ -1619,9 +1619,13 @@ delivered") before it's opened.
 - **Retired** years draw retirement spending, as now.
 - **oneRetired** years draw the **interim amount**: "Drawn from savings
   while one of you is retired", in today's dollars, grown by inflation.
-  **Default $0**: the working partner's pay is assumed to cover spending,
-  the same assumption as working years until M8. **Owner decision 1**
-  below.
+  **Default:** $0 if the partner who retires later has a salary above $0
+  (their pay is assumed to cover spending, the same assumption as working
+  years until M8); otherwise the household's retirement spending, because
+  nothing else would pay for it. If both retire in the same year there are
+  no such years and the default doesn't matter. Entering $0 is respected,
+  and Results then shows an info note when the later partner has no salary.
+  **Owner decision 1** below.
 - **Dated expenses** are added in every phase.
 
 **Super per person** (IN-6, SUPER-1, IN-5): each person's super runs
@@ -1674,11 +1678,17 @@ accessible, each pays in proportion to its available balance that year.
 - **After access:**
   - **need:** discounted at the partners' after-tax super returns,
     weighted by their super balances at the row before access;
-  - **projected:** both partners' super, plus portfolio and cash. When a
-    partner's super is still locked at the start of after access, the
-    breakdown shows that balance on its own line, marked "locked until
-    {age} ({year})". The meter then can't look healthier than the early
-    after-access years really are.
+  - **projected:** the super that is open at the start of after access
+    (the first partner's), plus portfolio and cash. A partner's super that
+    is still locked at that point is **not** counted; the breakdown shows
+    it as a note line below the total, with no operator: "Plus Alex's
+    super, locked until 65 (2036): $150,000". The meter then can't look
+    healthier than the early after-access years really are. **The owner
+    chose this on 2026-10-23** (the first draft added locked super into
+    the total). The discount rate still weights all super balances, and
+    the status stays exact. The summary line under the
+    meter names it too: "Need $280,000 in 2032 · projected $180,000 · plus Alex's
+    $150,000 from 2036" (`BridgePart.lockedSuper`).
 - **The status stays exact,** from shortfalls.
 - **"Super locked" wording for a couple** names each person whose super
   has a balance but can't be drawn yet, e.g. "Alex's super locked until
@@ -1742,12 +1752,16 @@ projection inputs, so this is done once.
 
 #### Owner decisions to confirm in review
 
-1. **The interim amount defaults to $0,** meaning the working partner's
-   pay covers spending while one of you is retired.
-   - **Why:** it matches how working years are treated until M8 brings
-     take-home pay.
-   - **The alternative:** default it to the full retirement spending.
-     That's more cautious, but double-counts the working partner's pay.
+1. **The interim amount defaults to $0 if the partner who retires later
+   has a salary, otherwise to the retirement spending.** The owner chose
+   this rule on 2026-10-23, after the PR B review (the first draft always
+   defaulted to $0).
+   - **Why:** a working partner's pay covers spending, as in working years
+     until M8 brings take-home pay; with no salary nothing would pay, and
+     $0 would quietly under-state the need.
+   - **The field and Results:** the field's default text and hint show which
+     applies; Results shows an info note only when $0 is *entered* and the
+     later partner has no salary.
    - **In M8:** this becomes a spending level that take-home pay helps
      fund.
 2. **Super is drawn in proportion to each accessible balance.**
@@ -1793,8 +1807,9 @@ $2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
   - **MET**.
 - **After access** is 2033–2039:
   - **need** $280,000;
-  - **projected** $330,000 ($80,000 portfolio + $150,000 + $100,000
-    super);
+  - **projected** $180,000 at the end of 2032 ($80,000 portfolio +
+    Sam's $100,000 super), with Alex's $150,000 locked until 2036 as a
+    note;
   - **MET**.
 - **The portfolio** pays until 2034.
 - **Sam's super** pays 2035 ($40,000, leaving $60,000).
@@ -1806,8 +1821,9 @@ $2,999,659.13 projected. All of M2–M6's worked examples are unchanged.
 - **Earliest retirement:**
   - **Alex:** 55 (2026), with Sam retiring at 58;
   - **Sam:** 56 (2029), with Alex retiring at 56.
-- **Interim amount at the default $0:** the bridge need is $40,000, and
-  after access is projected at $410,000.
+- **Interim amount with $0 entered:** the bridge need is $40,000, and
+  after access is projected at $260,000 (Alex's $150,000 is
+  locked until 2036, shown as a note).
 
 **D2: bridge short, with both partners' super locked.** D with Sam's
 access at the default 65.
@@ -1821,11 +1837,15 @@ access at the default 65.
     65".
 - **After access** is 2036–2039:
   - **need** $160,000;
-  - **projected** $250,000;
+  - **projected** $150,000 at the end of 2035 (Alex's super), with Sam's
+    $100,000 locked until 2038 as a note;
   - **MET**.
 - **Earliest retirement:**
   - **Alex:** 58 (2029), with Sam retiring at 58;
   - **Sam:** 60 (2033), with Alex retiring at 56.
+- **Interim amount with $0 entered:** after access is projected at $190,000
+  ($40,000 portfolio + Alex's $150,000), with Sam's $100,000 locked until
+  2038 as a note.
 
 **E: realistic.**
 - **Inputs:**
@@ -1850,7 +1870,8 @@ access at the default 65.
   - **MET**.
 - **After access** is 2054–2089:
   - **need** $3,626,576.69;
-  - **projected** $3,439,371.73;
+  - **projected** $1,219,220.01 at the end of 2053, with Alex's
+    $2,220,151.72 locked until 2057 as a note;
   - **SHORT** 2086–2089.
 - **Money runs out** in 2086 (Alex 94, Sam 92).
 - **Earliest retirement:** Alex 52 (2044), Sam 54 (2048).
@@ -1991,7 +2012,7 @@ example changes.
   `contributionsStopAge` resolves to `Sourced<number | undefined>`
   (`undefined` with source "default" means while the owners work);
   `findEarliestRetirementAge` throws a `RangeError` for a person that isn't
-  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0).
+  there. `src/engine/couple.test.ts` pins examples D and D2 (interim $0 entered).
 - Checks: `npm run check` (779 unit tests) and `npm run test:e2e` (38) pass.
 
 1. **Resolve every person.** `resolvePlanInputs` resolves every person
@@ -2043,9 +2064,35 @@ there are two-person engine tests for D and D2.
 
 #### Step 4 · Couples in the plan, reducer and wire format (PR B)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** behavior change, from here on.
+
+**As built:**
+- `Person.name?`, `Plan.expenses.interimAnnual?` and `Portfolio.ownership?`
+  (`PortfolioOwnership`: `sole { personId }` or `joint { shares: [{ personId,
+  fraction }] }`). In memory the shares are fractions; on the wire they are
+  `percent`, converted by `ownershipToWire` / `ownershipFromWire`.
+- Wire: `people[].name`, `expenses.interimAnnualDollars` and
+  `portfolios[].ownership`, all optional, so the document stays at version 1.
+  The schema rejects a joint split with fewer than two shares or shares that
+  don't add to 100 (within 1e-9), rather than repairing it. Plans saved before
+  M7 load with none of the new fields. Fixture:
+  `tests/fixtures/plan-documents/v1-couple.json`. The mapping property test
+  now generates names, a partner, the interim amount and ownership.
+- Reducer: `addPartner { id }` (label "Person 2", ignored at two people),
+  `removePartner` (drops Person 2; sole-Person-2 and joint ownership go to
+  sole Person 1, other ownership is untouched; ignored with one person),
+  `setPersonName` (trimmed; empty clears), `setInterimSpending`,
+  `setPortfolioOwnership`.
+- Decision not in the plan: `setPortfolioOwnership` **ignores invalid
+  ownership** (a person not in the plan, a joint split with fewer than two
+  shares, a negative share, or shares not adding to 100%), because the stored
+  document would reject it and a save would then fail. The Household screen
+  (step 6) must show the error and not dispatch until the split is valid.
+- `displayName(person, index)` is in `src/plan/displayName.ts`; an empty or
+  spaces-only name counts as unnamed.
+- Resolution does not read the new fields yet; that is step 5.
 
 1. **Plan types:**
    - `Person.name?`;
@@ -2068,7 +2115,46 @@ there are two-person engine tests for D and D2.
 
 #### Step 5 · The engine for couples (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- Resolution: `ResolvedPerson.label` is the display name; `interimAnnual`
+  (default per owner decision 1, `defaultInterimSpending`; $0 for one person) and `portfolioOwnerIds` come from
+  the plan. Ownership resolves to person ids in the plan's order: sole is that
+  person, joint is everyone in the split, nothing stored is Person 1 for one
+  person and both for a couple, and an id not in the plan counts as Person 1.
+  The first owner measures an entered stop age. One-person messages are word
+  for word as before; a couple's read "Sam: Target retirement age must be at
+  or after Sam's current age", "Plan until age must be after the younger
+  person's current age" and "Sam: Target retirement age must be before the end
+  of the plan, when Sam is 95".
+- Engine: `ProjectionInputs.interimSpendingAnnual?` (absent is $0) is drawn,
+  indexed, in `oneRetired` years. `PersonYear.label` carries the display name;
+  `describeAges(row)` / `formatAges` give "age 52" for one person and
+  "Alex 52 · Sam 50" for a couple, used by every engine line that quotes an
+  age (FI reached, solvency, Coast FIRE, coast split, earliest retirement).
+  `Solvency.runsOut` has `ages` (label and age for each person).
+- Bridge: the need is net of portfolio contributions paid in the bridge years
+  (a "Less portfolio contributions paid in those years, discounted" line, only
+  when there are some, so one-person lines are unchanged; the need is never
+  below $0). The after-access discount rate is each holder's after-tax super
+  return weighted by balance at the row before access (one person's rate
+  exactly). With two or more people who have super, the projected working has
+  one line each; a partner still locked at the start of after access is left
+  out of the total and shown as a note line below it ("Plus Alex's super,
+  locked until 65 (2036)", `ExplanationLine.note`, never bolded as the result). `assessSolvency` takes one access age
+  or one per person, and names each locked partner.
+- Coast FIRE and the coast split zero interim spending in their super-only
+  runs. Earliest retirement runs per person; a couple's lines say "Sam
+  retiring at 54".
+- Fixture `tests/worked-examples/m7-couples.json` has D and D2 (with interim
+  $20,000 and with $0 entered) and E. **Every worked figure matched on the
+  first run**, including E's FI number $3,686,886.99, bridge need $864,875.22
+  and after-access need $3,626,576.69. The test harness reads a partner, the
+  interim amount, per-person earliest retirement and per-row super figures.
+- Property tests (`couple.properties.test.ts`): an empty partner with the same
+  ages gives the first person's projection exactly; swapping the people
+  doesn't change household totals; money is conserved each year.
 
 1. **Resolving a couple:**
    - Person 2's ages become required ("Sam: current age").
@@ -2110,7 +2196,37 @@ there are two-person engine tests for D and D2.
 
 #### Step 6 · Household screen (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- New `HouseholdSection` (the "Household" card): a `SegmentedToggle`
+  "Just me / A couple" with a hint. "A couple" dispatches `addPartner` with an
+  id from `usePlanIdGenerator()` (new; `PlanProvider` takes an optional
+  `generateId`, default `crypto.randomUUID`, and `renderSection` passes one in
+  tests). "Just me" dispatches `removePartner`; the hint then says it removes
+  Person 2 and their data, that a shared portfolio goes back to Person 1, and
+  that there is no undo yet.
+- `PersonAgesSection` now covers both cases. One person: the same single
+  "About you" card as before (labels word for word), plus a "Name (optional)"
+  field with the hint "Used for labels only." A couple: a card for each person
+  (titled by name or "Person N") in a `.person-cards` grid (two columns when
+  there is room, one on a narrow screen), then a "Planning horizon" card with
+  "Plan until age" and the note "The plan runs until {younger} reaches this age:
+  {N} years, to {year}." (year from `usePlanStartYear`; left out until someone
+  has an age). A couple's age labels are prefixed with the display name
+  ("Alex: Current age"); the name field uses the fixed "Person 1: Name
+  (optional)" so its label doesn't change as the name is typed. Names are
+  saved trimmed through `setPersonName`. The couple's hints say "Only age is
+  stored..." and "...if they will have retired by then".
+- `PerPersonFields` now prefixes with `displayName(person, index)` (the name,
+  or "Person N") instead of the plan's `label`; the three existing tests that
+  named people through `label` now set `name` too.
+- The cards sit in a `.household-stack` grid with a gap, which also puts a gap
+  between the toggle card and "About you" for one person.
+- Screenshots (desktop and 375px, no horizontal scroll) were checked by eye
+  against mockup 01; the planning-horizon card shows the note under the field
+  rather than beside it, and the mockup's "Find my earliest feasible age" and
+  "What is preservation age?" extras are not built (follow-ups).
 
 1. **`HouseholdScreen`:**
    - a "Household" card with a `SegmentedToggle`, "Just me / A couple",
@@ -2128,7 +2244,37 @@ there are two-person engine tests for D and D2.
 
 #### Step 7 · Income, expenses and assets (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `InterimSpendingSection` (own card, "Spending while one of you has
+  retired", after "Spending in retirement", couple only) holds "Drawn from
+  savings while one of you is retired". Its default depends on the later
+  partner's salary (owner decision 1, `defaultInterimSpending` in
+  `src/plan/interimDefault.ts`, shared with resolution): "$0", or for no
+  salary "$40,000, the same as retirement spending, because Sam has no
+  salary"; the hint explains both. `ResultsScreen` shows an info note only
+  when $0 is entered, one-retired years exist and the later partner has no
+  salary. Tests that expect the $0 figures enter $0 (D and D2 "with $0
+  entered").
+- New shared `OwnershipField` (`src/ui/components/OwnershipField.tsx`): a
+  `SegmentedToggle` with each person's display name and "Joint"; Joint shows
+  a `PercentField` "{Person 1}'s share" (0 to 100%, an out-of-range value
+  shows the field's inline error and is never reported) and the other share
+  as calculated text ("Sam 40%"; the second share is `1 − first`, rounded so
+  the two add to exactly 1). Unset shows joint 50/50 as a default; clearing
+  the share goes back to unset. It renders nothing for one person.
+- `PortfolioSection` shows it for a couple. "Contributions stop at age" becomes
+  "Contributions stop at {first owner}'s age" for a couple (the first owner is
+  Person 1 for joint) and its default reads "when you've both retired" (joint)
+  or "when {name} retires" (sole), via a new `defaultText` on `AgeField` and
+  the now exported `resolveOwnerIds`. The default text only shows once that
+  owner's target retirement age is set (the field has no default before then,
+  as before). One-person wording is unchanged.
+- Salary and super already used `PerPersonFields`, which has used display
+  names since step 6; labels are "Alex: Gross salary per year" and so on for a
+  couple, and plain for one person (existing tests cover both).
+- Screenshots: couple Income & expenses and Assets, checked by eye.
 
 1. **Income & expenses:**
    - salary per person already uses `PerPersonFields`; check that the
@@ -2150,7 +2296,42 @@ there are two-person engine tests for D and D2.
 
 #### Step 8 · Results for a couple (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- No UI copy of the formatter: the engine's `formatAges` / `describeAges`
+  are used, and the engine now carries `ages` (`PersonAge[]`: label and age)
+  on `FiMilestone`, `CoastPathPoint`, `CoastMilestone`, `CoastSplitMilestone`
+  and `Solvency.runsOut`, with `agesOf(row)` to build them. The UI only adds
+  `capitaliseFirst` to start a line with "Age 46".
+- Tiles: FI number "$3,686,887 in 2046, when you've both retired"; Earliest
+  retirement "Alex 52 · Sam 54" with "Alex 2044 · Sam 2048" and "Targets: Alex 50
+  (2042) · Sam 52 (2046)" (the breakdown joins each person's lines); Coast FIRE
+  "Not before you've both retired (2046)" or "Reached in {year}, at {ages}";
+  Money lasts "Runs out at Alex 94 · Sam 92" and, when it lasts, "To Sam 95 ✓"
+  (the younger person's name); the runs-out banner names both ages.
+- Milestones: a couple has "{name} retires (target)" and "{name}'s super
+  accessible" for each person (access only for people who hold super), each
+  with both ages in that year; FI, Coast and money lasting use both ages.
+- Year by year: the Age column is headed "Alex · Sam" and reads "52 · 50"; the
+  band "One retired · Sam working" starts the oneRetired years; the bridge band
+  for a couple reads "Bridge · super locked: Alex until 65 (2036), Sam until 65
+  (2038)"; a shortfall year with locked super says "Alex's super locked until
+  65 (2036), Sam's until 65 (2038)" (the first names what is locked, the rest
+  just whose).
+- Bridge section: "No bridge needed: super is accessible when the first of you
+  retires" and "{name}'s super isn't accessible until age N, after the plan
+  ends in {year}" for a couple. The after-access working lists each partner's
+  super, marking a locked one (step 5). The chart tooltips and data tables show
+  both ages ("Alex 52 · Sam 50") through an optional `ages` on the chart point,
+  set only for a couple.
+- Tests: `ResultsCouple.test.tsx` (examples D2 and E: names and both ages in the
+  tiles, banner, milestones, bands and the after-access lines; one person
+  unchanged). The earlier step 7 test for the FI line was reworded for the
+  couple wording. Screenshots of D2 and E (top, bridge, Year by year) were
+  checked by eye; E's bridge shows need $864,875, projected $890,437, after
+  access need $3,626,577 against $1,219,220 (Alex's $2,220,152 is locked
+  until 2057), SHORT 2086 to 2089.
 
 1. **A shared formatter** `formatAges(ages, people)`: "Age 52" for one
    person, "Alex 52 · Sam 50" for a couple. Use it everywhere an age is
@@ -2176,7 +2357,27 @@ there are two-person engine tests for D and D2.
 
 #### Step 9 · E2E, contrast, README and wrap-up (PR B)
 
-- [ ] Done
+- [x] Done
+
+**As built:**
+- `tests/e2e/couple.spec.ts` (clock fixed in 2026): chooses "A couple", enters
+  D2 (interim $20,000) through the screens; Results shows the bridge SHORT in
+  2035 with both names in the tile, banner, Year by year bands and the shortfall
+  note; Sam's access at 60 makes it D (both parts MET); a reload keeps Person 2;
+  "Just me" removes them and Results is the one-person plan (column "Age", no
+  one-retired band). The reload waits for the autosave of the latest edit
+  (Sam's access age), not just for a save with two people; the first version
+  waited only for the person count and failed 6 of 10 repeats. 10 of 10
+  repeats pass.
+- `tests/e2e/contrast.spec.ts` gains two sweeps: the couple Household screen
+  (names, values, and an inline error) and D2: Income & expenses and Assets for
+  a couple, then Results with the one-retired and bridge bands and every
+  breakdown open, in both dollar modes.
+- README "What it does": the Household choice, names, couples (per-person
+  salary and super, interim spending, ownership, pro rata drawing, the couple
+  bridge, both ages and earliest retirement for each person, the plan running to
+  the younger partner's end age). PLAN.md status and Next steps updated; M7 PR B
+  stays open until its review.
 
 1. **`tests/e2e/couple.spec.ts`,** with the clock fixed in 2026:
    - choose "A couple" and enter D2 through the screens;
@@ -2196,7 +2397,26 @@ there are two-person engine tests for D and D2.
 
 #### Step 10 · Challenger review of PR B, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer checked three new cases against the
+independent model (one partner already retired, both retiring in the
+same year, and a dated expense with a super return). All matched to the
+cent. Its findings were fixed in their own commits:
+- an empty super account never counts as accessible;
+- "super accessible: now" for a partner past their access age;
+- a stop age keeps its calendar year when its person changes;
+- the dated-expense limit follows the younger partner;
+- the outside-super coast target ignores contributions;
+- Year by year's Status column wraps;
+- the last first-person-only lines name both partners;
+- the "Owned by" label, duplicate names and the name length limit;
+- a one-person netting regression test;
+- tidy-ups.
+
+The owner decided the two plan challenges (2026-10-23): the interim
+default follows the later partner's pay, and locked super stays out of
+the after-access total. Both are recorded above.
 
 1. **Review:** the reviewer subagent checks PR B's diff against this plan
    and the worked examples.
@@ -2369,10 +2589,10 @@ depend on any other work in progress, so it can merge at any time.
 - [x] Owner verifies and merges the start over PR.
 - [ ] Owner verifies the two M6 rule values (preservation age 60 and
       unconditional release at 65) against the ATO.
-- [ ] Approve the M7 step-by-step plan (plan PR), including the four owner
-      decisions.
-- [ ] Implement M7 PR A, the household refactor (steps 1 to 3): challenger
-      review, then open it stacked on the plan PR.
+- [x] Approve the M7 step-by-step plan (plan PR), including the four owner
+      decisions, and merge it.
+- [x] Implement M7 PR A, the household refactor (steps 1 to 3): challenger
+      review, then open it stacked on the plan PR (merged as #35 and #37).
 - [ ] Implement M7 PR B, couples (steps 4 to 10): challenger review, then
       open it stacked on PR A.
 - [ ] Owner verifies and merges the M7 PRs.

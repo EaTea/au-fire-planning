@@ -4,6 +4,7 @@
 //     ├─ useReducer(planReducer) ──► plan      ──► usePlan()
 //     ├─ useMemo(summarisePlan)  ──► summary   ──► usePlanSummary()
 //     ├─ startYear (from the Clock)            ──► usePlanStartYear()
+//     ├─ generateId (crypto.randomUUID)        ──► usePlanIdGenerator()
 //     └─ dispatch                              ──► usePlanDispatch()
 //
 // Separate contexts are used so a component that only dispatches (for
@@ -28,6 +29,7 @@ import type { Plan } from "./types";
 const PlanContext = createContext<Plan | null>(null);
 const PlanSummaryContext = createContext<PlanSummary | null>(null);
 const StartYearContext = createContext<number | null>(null);
+const IdGeneratorContext = createContext<(() => string) | null>(null);
 const PlanDispatchContext = createContext<Dispatch<PlanAction> | null>(null);
 
 interface PlanProviderProps {
@@ -39,6 +41,12 @@ interface PlanProviderProps {
    * depend on today's date.
    */
   readonly startYear?: number;
+  /**
+   * Makes the ids of things the user adds (a partner). Defaults to
+   * `crypto.randomUUID`; tests pass a counter so ids are predictable, the same
+   * way `createNewPlan` takes its generator.
+   */
+  readonly generateId?: () => string;
   readonly children: ReactNode;
 }
 
@@ -48,7 +56,12 @@ interface PlanProviderProps {
  * The plan lives in memory only for now; saving to the browser arrives in
  * step 7. The summary is recomputed by the engine only when the plan changes.
  */
-export function PlanProvider({ initialPlan, startYear, children }: PlanProviderProps) {
+export function PlanProvider({
+  initialPlan,
+  startYear,
+  generateId = () => crypto.randomUUID(),
+  children,
+}: PlanProviderProps) {
   // The third argument makes React build the blank plan once, not on every render.
   const [plan, dispatch] = useReducer(
     planReducer,
@@ -68,7 +81,7 @@ export function PlanProvider({ initialPlan, startYear, children }: PlanProviderP
       <PlanContext.Provider value={plan}>
         <PlanSummaryContext.Provider value={summary}>
           <StartYearContext.Provider value={resolvedStartYear}>
-            {children}
+            <IdGeneratorContext.Provider value={generateId}>{children}</IdGeneratorContext.Provider>
           </StartYearContext.Provider>
         </PlanSummaryContext.Provider>
       </PlanContext.Provider>
@@ -94,6 +107,15 @@ export function usePlanSummary(): PlanSummary {
  */
 export function usePlanStartYear(): number {
   return requireContextValue(useContext(StartYearContext), "usePlanStartYear");
+}
+
+/**
+ * Returns the function that makes a new id, for an action that adds something
+ * (`addPartner`). Production ids are random UUIDs; tests inject their own via
+ * `PlanProvider`'s `generateId`.
+ */
+export function usePlanIdGenerator(): () => string {
+  return requireContextValue(useContext(IdGeneratorContext), "usePlanIdGenerator");
 }
 
 /** Returns the function that applies a `PlanAction`. Used by input screens when the user edits a field. */

@@ -583,3 +583,99 @@ test("the Start over dialog has readable text, including while hovering and focu
   }
   expect(failures).toEqual([]);
 });
+
+test("the couple Household screen has readable text, with names, values and an error", async ({
+  page,
+}) => {
+  await startFresh(page);
+
+  await page.getByRole("button", { name: "A couple" }).click();
+  await expect(page.getByLabel("Person 2: Name (optional)", { exact: true })).toBeVisible();
+
+  const entries: [string, string][] = [
+    ["Person 1: Name (optional)", "Alex"],
+    ["Person 2: Name (optional)", "Sam"],
+    ["Alex: Current age", "34"],
+    ["Alex: Target retirement age", "50"],
+    ["Sam: Current age", "32"],
+    ["Sam: Target retirement age", "52"],
+    ["Sam: Super accessible at", "60"],
+  ];
+  for (const [label, value] of entries) {
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  // The couple note under "Plan until age" is shown once ages are in.
+  await expect(page.getByText(/The plan runs until Sam reaches this age/)).toBeVisible();
+
+  expect(await findLowContrastText(page), "couple household").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "couple household").toEqual([]);
+
+  // An invalid age shows an inline error on one person's card.
+  await page.getByLabel("Sam: Current age", { exact: true }).fill("100");
+  await page.getByLabel("Sam: Current age", { exact: true }).press("Tab");
+  await expect(page.locator(".field-error").first()).toBeVisible();
+
+  expect(await findLowContrastText(page), "couple household with an error").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "couple household with an error").toEqual([]);
+});
+
+test("results for a couple (D2) has readable text, with the bands and every breakdown open", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page, "./#/household");
+
+  // Worked example D2 (tests/worked-examples/m7-couples.json): the bridge is SHORT in 2035.
+  await page.getByRole("button", { name: "A couple" }).click();
+  const entries: [string, string, string][] = [
+    ["#/household", "Person 1: Name (optional)", "Alex"],
+    ["#/household", "Person 2: Name (optional)", "Sam"],
+    ["#/household", "Alex: Current age", "55"],
+    ["#/household", "Alex: Target retirement age", "56"],
+    ["#/household", "Sam: Current age", "53"],
+    ["#/household", "Sam: Target retirement age", "58"],
+    ["#/household", "Plan until age", "66"],
+    ["#/income-expenses", "Per year, after tax", "40000"],
+    ["#/income-expenses", "Drawn from savings while one of you is retired", "20000"],
+    ["#/assets", "Alex: Super balance", "150000"],
+    ["#/assets", "Alex: Return, net of fees", "0"],
+    ["#/assets", "Sam: Super balance", "100000"],
+    ["#/assets", "Sam: Return, net of fees", "0"],
+    ["#/assets", "Current value", "200000"],
+    ["#/assets", "Expected return per year", "0"],
+    ["#/assumptions", "Inflation per year", "0"],
+    ["#/assumptions", "General interest rate", "0"],
+  ];
+  for (const [route, label, value] of entries) {
+    await page.goto(route);
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+
+  // The Assets and Income screens for a couple (ownership toggle, interim field) are readable too.
+  for (const coupleScreen of ["#/income-expenses", "#/assets"]) {
+    await page.goto(coupleScreen);
+    expect(await findLowContrastText(page), coupleScreen).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), coupleScreen).toEqual([]);
+  }
+
+  await page.goto("#/results");
+  await expect(page.locator("#bridge").getByText("SHORT", { exact: true })).toBeVisible();
+  await expect(page.locator(".projection-band td").filter({ hasText: "One retired" })).toHaveCount(
+    1,
+  );
+  await expect(page.locator(".projection-band td").filter({ hasText: "Bridge" })).toHaveCount(1);
+
+  // Open every breakdown, so the couple's working text (names, locked lines) is checked.
+  for (const explainToggle of await page.getByRole("button", { name: /How is this/ }).all()) {
+    await explainToggle.click();
+  }
+
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), mode).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), mode).toEqual([]);
+  }
+});

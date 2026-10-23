@@ -328,6 +328,76 @@ describe("summarisePlan: projection", () => {
     ]);
   });
 
+  // Ownership decides whose work keeps the contributions going (IN-14, part).
+  describe("a couple's portfolio contributions", () => {
+    /** Alex 34 retiring at 50 (row 16) and Sam 32 retiring at 55 (row 23), $30,000 a year into the portfolio. */
+    function couplePlan(
+      ownership?: NonNullable<Plan["portfolios"][number]["ownership"]>,
+      contributionsStopAge?: number,
+    ): Plan {
+      const plan = exampleAPlan({ currentAge: 34, targetRetirementAge: 50 });
+      const [person] = plan.household.people;
+      const [portfolio] = plan.portfolios;
+      if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+      return {
+        ...plan,
+        household: {
+          people: [
+            person,
+            { id: "person-2", label: "Person 2", currentAge: 32, targetRetirementAge: 55 },
+          ],
+        },
+        portfolios: [
+          {
+            ...portfolio,
+            ...(ownership === undefined ? {} : { ownership }),
+            ...(contributionsStopAge === undefined ? {} : { contributionsStopAge }),
+          },
+        ],
+      };
+    }
+
+    /** The contribution in each row of the complete projection. */
+    function contributions(plan: Plan): number[] {
+      const summary = summarisePlan(plan);
+      if (summary.status !== "complete" || summary.projection.status !== "complete") {
+        throw new Error("expected a complete projection");
+      }
+
+      return summary.projection.rows.map((row) => row.contribution);
+    }
+
+    const soleFirst = { kind: "sole", personId: "id-1" } as const;
+    const soleSecond = { kind: "sole", personId: "person-2" } as const;
+
+    it("go on while either owner works when the portfolio is joint, which is the default for a couple", () => {
+      const byDefault = contributions(couplePlan());
+
+      expect(byDefault[23]).toBe(30000);
+      expect(byDefault[24]).toBe(0);
+      expect(contributions(couplePlan({ kind: "sole", personId: "gone" }))[17]).toBe(0);
+    });
+
+    it("stop when the sole owner retires", () => {
+      const first = contributions(couplePlan(soleFirst));
+      const second = contributions(couplePlan(soleSecond));
+
+      expect([first[16], first[17]]).toEqual([30000, 0]);
+      expect([second[23], second[24]]).toEqual([30000, 0]);
+    });
+
+    // An entered stop age is the first owner's age: Alex's for a joint portfolio, Sam's if Sam owns it.
+    it("measures a stop age on the first owner", () => {
+      const joint = contributions(couplePlan(undefined, 45));
+      const second = contributions(couplePlan(soleSecond, 45));
+
+      // Alex is 45 in row 11; Sam is 45 in row 13.
+      expect([joint[11], joint[12]]).toEqual([30000, 0]);
+      expect([second[13], second[14]]).toEqual([30000, 0]);
+    });
+  });
+
   // Missing ages must not hide the FI number.
   it("is incomplete on the projection only when ages are missing", () => {
     const summary = summarisePlan(exampleAPlan({}));
@@ -344,7 +414,7 @@ describe("summarisePlan: projection", () => {
 
     expect(summary.status).toBe("complete");
     if (summary.status !== "complete" || summary.projection.status !== "complete") return;
-    expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, age: 46 });
+    expect(summary.projection.fiReached).toMatchObject({ calendarYear: 2038, firstPersonAge: 46 });
     expect(summary.projection.fiNumberAtRetirement.value).toBeCloseTo(2375208.99, 2);
     expect(summary.projection.people[0].retirementAge).toBe(50);
     expect(summary.projection.people[0].retirementYear).toBe(2042);
@@ -445,6 +515,10 @@ describe("summarisePlan: cash and solvency", () => {
     const summary = summaryWithAges({ livingAnnual: 64000, portfolioValue: 1000 });
 
     if (summary.projection.status !== "complete") throw new Error("expected complete projection");
-    expect(summary.projection.solvency).toMatchObject({ status: "runsOut", age: 51, year: 2043 });
+    expect(summary.projection.solvency).toMatchObject({
+      status: "runsOut",
+      firstPersonAge: 51,
+      year: 2043,
+    });
   });
 });

@@ -25,6 +25,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { formatAges } from "../../engine/projection";
 import { formatDollars } from "../format";
 import {
   ChartTooltip,
@@ -236,7 +237,7 @@ export function StackedAreaChart({
           {points.map((point) => (
             <tr key={point.year}>
               <th scope="row">{point.year}</th>
-              <td>{point.age}</td>
+              <td>{point.ages === undefined ? point.age : formatAges(point.ages)}</td>
               {series.map((oneSeries) => (
                 <td key={oneSeries.key}>{formatValue(point.values[oneSeries.key] ?? 0)}</td>
               ))}

@@ -324,8 +324,8 @@ test.prop([likelyToCoastArbitrary], { numRuns: 300 })(
       );
     }
 
-    expect(stoppingWorks(reached.age)).toBe(true);
-    expect(stoppingWorks(reached.age - 1)).toBe(false);
+    expect(stoppingWorks(reached.firstPersonAge)).toBe(true);
+    expect(stoppingWorks(reached.firstPersonAge - 1)).toBe(false);
   },
 );
 
