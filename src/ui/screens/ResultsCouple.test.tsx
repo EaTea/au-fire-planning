@@ -290,3 +290,50 @@ describe("Results for one person", () => {
     expect(within(table).queryByText(/One retired/)).not.toBeInTheDocument();
   });
 });
+
+describe("Results for a couple where one partner has no super", () => {
+  // Old (60, retires at 61) has no super; Young (40, retires at 45) has $300,000. The bridge runs to 2050.
+  const plan: Plan = {
+    ...blankPlan,
+    household: {
+      people: [
+        {
+          id: "person-1",
+          label: "Person 1",
+          name: "Old",
+          currentAge: 60,
+          targetRetirementAge: 61,
+        },
+        {
+          id: "person-2",
+          label: "Person 2",
+          name: "Young",
+          currentAge: 40,
+          targetRetirementAge: 45,
+          superAccount: { balance: 300000, returnRate: 0 },
+        },
+      ],
+      projectionEndAge: 70,
+    },
+    expenses: { livingAnnual: 30000, retirementSpending: { kind: "amount", annual: 30000 } },
+    assumptions: { inflationRate: 0 },
+    portfolios: [{ id: "portfolio-1", name: "Share portfolio", value: 400000, expectedReturn: 0 }],
+  };
+
+  it("keeps the Super accessible band for the year the person who has super reaches 65", () => {
+    renderResults(plan);
+
+    const table = screen.getByRole("table", { name: "Year by year projection" });
+    const bands = within(table)
+      .getAllByRole("row")
+      .filter((row) => row.classList.contains("projection-band"))
+      .map((row) => row.textContent);
+
+    expect(bands).toEqual([
+      "Working · contributing",
+      "One retired · Young working",
+      "Bridge · super locked: Young until 65 (2051)",
+      "Super accessible",
+    ]);
+  });
+});

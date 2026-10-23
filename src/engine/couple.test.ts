@@ -416,3 +416,46 @@ describe("Coast FIRE's super run with an interim amount", () => {
     expect(superNeed(withInterim)).toBe(superNeed(withoutInterim));
   });
 });
+
+describe("an older partner with no super", () => {
+  // Old is 60 and retires at 61 with the empty account the app carries; Young is 40, retires at 45
+  // with $300,000 of super. Old's empty account must not make the household's super look open.
+  const old = {
+    id: "old",
+    label: "Old",
+    currentAge: 60,
+    retirementAge: 61,
+    salary: { annual: 0, growth: { kind: "none" as const } },
+    superAccount: { ...superAccount(0, 65), accessAge: undefined },
+  };
+  const young = {
+    id: "young",
+    label: "Young",
+    currentAge: 40,
+    retirementAge: 45,
+    superAccount: { ...superAccount(300_000, 65), accessAge: undefined },
+  };
+  const inputs: ProjectionInputs = {
+    ...exampleD(),
+    people: [old, young],
+    endAge: 70,
+    portfolioOpening: 500_000,
+    contributionsStop: { kind: "whileWorking", personIds: [] },
+  };
+  const rows = projectPortfolio(inputs, START_YEAR);
+
+  it("never counts the empty account as accessible, for the person or the household", () => {
+    expect(rows.every((row) => row.people[0].superAccessible === false)).toBe(true);
+
+    // Young is 65 in 2051 (row 25); before that nobody's super is open.
+    for (const row of rows.slice(0, 25)) expect(row.superAccessible).toBe(false);
+    expect(rows[25]?.superAccessible).toBe(true);
+  });
+
+  it("ends the bridge when the person who has super opens, not when the empty account would", () => {
+    const result = bridgeFor(inputs);
+
+    expect(result.effectiveAccess).toMatchObject({ personId: "young", age: 65 });
+    expect(result.bridge).toMatchObject({ firstYear: 2028, lastYear: 2050 });
+  });
+});

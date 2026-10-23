@@ -20,7 +20,8 @@ const dollars = (maximum: number) =>
 
 /** One generated person: ages, pay and a super account. */
 const personArbitrary = fc.record({
-  currentAge: fc.integer({ min: 30, max: 64 }),
+  // Past 65 on purpose: super opens by age alone there, which is where an empty account matters.
+  currentAge: fc.integer({ min: 30, max: 75 }),
   yearsToRetirement: fc.integer({ min: 0, max: 15 }),
   salary: dollars(300_000),
   superOpening: dollars(800_000),
@@ -96,11 +97,20 @@ test.prop([personArbitrary, moneyArbitrary], { numRuns: 100 })(
   "a second person with no money and the same ages gives the first person's projection",
   (generated, money) => {
     const alex = personFrom(generated, "alex");
+    // The empty account the app carries for someone who entered nothing (not "no account").
     const emptyPartner: ProjectionPerson = {
       id: "sam",
       label: "sam",
       currentAge: alex.currentAge,
       retirementAge: alex.retirementAge,
+      salary: { annual: 0, growth: { kind: "none" } },
+      superAccount: {
+        opening: 0,
+        returnRate: 0.07,
+        salarySacrifice: { annual: 0 },
+        nonConcessional: { annual: 0 },
+        ruleSet: bundledRuleSet,
+      },
     };
 
     const alone = projectPortfolio(householdFrom([alex], money), START_YEAR);

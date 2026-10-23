@@ -839,6 +839,29 @@ export function drawSuperProRata<Candidate extends { available: number; accessib
 }
 
 /**
+ * Whether a person has any super to speak of, judged from their inputs: a
+ * balance today, a voluntary contribution, or employer contributions (a salary
+ * with an employer rate that isn't 0). The app carries an empty account for a
+ * person who entered nothing, and that account is never "accessible": there is
+ * nothing to draw, and it must not make a household look like its super is
+ * open (Year by year bands, the household flag). Called by
+ * `isSuperAccessibleInYear`.
+ */
+function personHoldsSuper(person: ProjectionPerson): boolean {
+  const account = person.superAccount;
+  if (account === undefined) return false;
+
+  const hasEmployerContributions = (person.salary?.annual ?? 0) > 0 && account.employerRate !== 0;
+
+  return (
+    account.opening > 0 ||
+    account.salarySacrifice.annual > 0 ||
+    account.nonConcessional.annual > 0 ||
+    hasEmployerContributions
+  );
+}
+
+/**
  * Whether a person's super can be drawn in row `yearIndex` (calendar year
  * `calendarYear`), using that year's rules. False when they have no super
  * account. Called by `projectPortfolio` for each person in each row.
@@ -850,7 +873,7 @@ function isSuperAccessibleInYear(
   calendarYear: number,
 ): boolean {
   const account = person.superAccount;
-  if (account === undefined) return false;
+  if (account === undefined || !personHoldsSuper(person)) return false;
 
   const rules = rulesForYear(account.ruleSet, calendarYear, inputs.inflationRate).superannuation;
 
