@@ -2314,6 +2314,122 @@ the persistence layer don't change.
 **Merge point:** after step 1. It only touches the header and doesn't
 depend on any other work in progress, so it can merge at any time.
 
+### Inflation in the views: step-by-step plan
+
+**Kind:** behavior change (view only). **Status:** plan, awaiting the
+owner's approval.
+
+**Why.** The owner found the app's handling of inflation surprising: a
+$50,000 yearly contribution reads as if it were being discounted. The owner's
+model of a plan is:
+
+1. inputs and budgets (contributions, salary, super contributions) are fixed
+   dollars, as typed;
+2. spending, which depends on prices, rises with inflation;
+3. the FIRE targets (the FI number and what follows from it) rise with
+   inflation too.
+
+The engine and the plan model already work exactly this way
+(`src/engine/projection.ts`): contributions and salary sacrifice are the same
+nominal dollars every year, salary grows only by the chosen rule (default no
+growth), and spending, dated expenses and the FI number are entered at
+today's prices and multiplied by each row's inflation index. So **the engine,
+the reducer and the saved plan don't change.** The views are what disagree
+with the model.
+
+**Audit of the views against the model:**
+
+| View | What it does today | Matches the model? |
+| --- | --- | --- |
+| FI number tile | Headline is today's FI number; the inflated figure at retirement is only a sub-line | No: the target should lead with the inflated figure (rule 3) |
+| Progress to FI tile | "$X invested of $Y", with Y today's FI number | Yes (today against today), but Y will no longer match the FI tile's headline, so it must say it is today's |
+| Coast FIRE tile | Headline is what you need today (row 0), sub-line in the retirement year's dollars | Yes: it is a "needed now" amount, the same in both modes |
+| FI reached, Earliest retirement, Money lasts, Milestones | Years and ages; money left is nominal and says so | Yes |
+| Year by year table, FIRE chart, Coast chart, Bridge chart and meters | Follow the toggle, nominal by default (PR #17) | Yes in nominal. In today's dollars, fixed inputs (a $50,000 contribution) shrink each year with nothing saying why |
+| Contributions per year (Portfolio) | "The same dollar amount every year" | Ambiguous: doesn't say it isn't raised with inflation |
+| Salary sacrifice, Non-concessional (Super) | No word on whether they grow | No |
+| Living expenses, Retirement spending ($ amount) | No word on growth | No: doesn't say the plan raises them with inflation |
+| Dated expenses | "In today's dollars, grown with inflation" | Yes |
+| Inflation (Assumptions) | "Grows your spending and FI number, and converts results to today's dollars" | Partly: results are nominal by default now, and it doesn't say what inflation leaves alone |
+| Cash savings | "Spent before the portfolio in retirement" | No, and not about inflation: cash has been drawn last since PR #30 |
+
+**What changes for the user:**
+
+- **FI number tile.** The headline is the FI number at the household
+  retirement year, in that year's dollars (`fiNumberAtRetirement`), labelled
+  e.g. "at age 55 (2046)". The sub-line gives today's figure and its working:
+  "$1,600,000 in today's money · $64,000/yr ÷ 4%". While the projection is
+  incomplete (no retirement year yet) the tile shows today's figure as now,
+  with "in today's money" added. The tile stays fixed: it doesn't follow the
+  toggle, like Money lasts.
+- **Progress to FI.** The sub-line names its comparison: "$X invested of
+  today's FI number, $Y". The percentage doesn't change.
+- **Input hints say which numbers are fixed and which grow:**
+  - Contributions per year: "Fixed: the same dollars every year, not raised
+    with inflation. Paid until the age below."
+  - Salary sacrifice and Non-concessional: "Fixed: the same dollars every
+    year." added to their current hints.
+  - Living expenses: "At today's prices: the plan raises it with inflation
+    each year." added to its hint.
+  - Retirement spending as a $ amount: "At today's prices: the plan raises it
+    with inflation each year."
+  - Salary "Grows at": "No growth keeps the same dollars every year."
+- **Inflation hint:** "Raises your spending and FI number each year.
+  Contributions and salary stay as you enter them unless you choose growth."
+- **Today's dollars as an explicit lens.** The toggle stays, nominal by
+  default. When "Today's dollars" is chosen, a one-line note sits under the
+  page header: "Shown in today's money. Fixed amounts, like your
+  contributions, look smaller each year because inflation erodes them." The
+  note goes away in nominal.
+- **Cash hint fix:** "Earns the general interest rate (Assumptions). Drawn
+  last in retirement, after the portfolio and super."
+
+**Alternatives considered.** Indexing contributions to inflation by default
+(so every input means today's money) was rejected by the owner: it breaks
+rule 1 and would move saved plans' results. Removing the today's-dollars
+toggle was also considered, but OUT-2 requires it and it answers "what is
+this worth now?"; the note keeps it from surprising.
+
+**Requirements wording.** FIRE-1 already asks for both figures, so no
+requirement changes. IN-11's wording ("applies to expenses, salary growth
+(when the user chooses it) and the display of today's-dollar values") is
+still accurate.
+
+**Files touched:** `src/ui/screens/ResultsScreen.tsx` (FI and progress
+tiles, the today's note), `src/ui/sections/PortfolioSection.tsx`,
+`SuperSection.tsx`, `LivingExpensesSection.tsx`,
+`RetirementSpendingSection.tsx`, `SalarySection.tsx`,
+`InflationSection.tsx`, `CashSection.tsx` (hints), their tests, and the E2E
+specs that read the FI tile (`tests/e2e/fiNumber.spec.ts` and any others
+that assert its headline). No engine, reducer or persistence changes.
+
+#### Step 1 · Results tiles and the today's note
+
+1. `FiNumberTile`: headline at retirement, today's figure and working in the
+   sub-line; the incomplete-projection variant adds "in today's money".
+   Unit tests: the worked M2 example shows the retirement-year figure as the
+   headline and $1,600,000 in the sub-line; an incomplete plan shows today's
+   figure; neither changes with the toggle.
+2. Progress to FI sub-line names today's FI number. Unit test on the text.
+3. The today's-money note under the header, shown only in today's mode.
+   Unit test: absent by default, present after choosing Today's dollars,
+   gone again on Nominal.
+4. E2E: update the specs that read the FI tile's headline, and assert the
+   note appears with the toggle.
+
+#### Step 2 · Input hints
+
+5. The hint wording above on Portfolio, Super, Living expenses, Retirement
+   spending, Salary, Inflation and Cash. Component tests assert each hint.
+6. This section marked done.
+
+**Checks:** `npm run check` and the E2E suite all pass.
+
+**Merge point:** one implementation PR with both steps (two or more commits).
+It touches only the view layer, so it doesn't conflict with the M7 engine
+work beyond the Results tiles, which M7 PR B also edits for couples
+wording; whichever lands second rebases.
+
 ## Next steps
 
 - [x] Part 1: agree the requirement ordering.
@@ -2376,3 +2492,6 @@ depend on any other work in progress, so it can merge at any time.
 - [ ] Implement M7 PR B, couples (steps 4 to 10): challenger review, then
       open it stacked on PR A.
 - [ ] Owner verifies and merges the M7 PRs.
+- [ ] Approve the inflation in the views plan.
+- [ ] Implement inflation in the views (steps 1 and 2), then open it for
+      verification.
