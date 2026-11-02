@@ -103,9 +103,12 @@ export function ResultsScreen() {
         )}
 
         {/* This banner goes in M8 PR B, when tax is taken from savings. */}
-        <Banner tone="info">
-          Tax is shown but isn&apos;t yet taken from your savings. That comes next.
-        </Banner>
+        {projection?.status === "complete" && projection.rows.some((row) => row.tax > 0) && (
+          <Banner tone="info">
+            Tax is shown in Year by year but isn&apos;t yet taken from your savings, so balances are
+            higher than they will be.
+          </Banner>
+        )}
         <Banner tone="info">
           Not yet modelled: tax on portfolio income and gains (M9), property (M12) and more.
         </Banner>

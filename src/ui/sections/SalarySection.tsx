@@ -36,11 +36,14 @@ export function SalarySection() {
   const startYear = usePlanStartYear();
 
   // The tax rules for the plan's start year; today's salary is taxed on them.
-  const incomeTaxRules = rulesForYear(
+  const yearRules = rulesForYear(
     bundledRuleSet,
     startYear,
     plan.assumptions.inflationRate ?? DEFAULT_INFLATION_RATE,
-  ).incomeTax;
+  );
+  const incomeTaxRules = yearRules.incomeTax;
+  // "2025-26" is shown with an en dash, like the other year ranges on screen.
+  const ratesYearText = yearRules.incomeTaxFinancialYear.replace("-", "–");
 
   return (
     <Card title="Salary">
@@ -71,6 +74,7 @@ export function SalarySection() {
                 label={fieldLabel}
                 salary={person.salary?.annual ?? 0}
                 incomeTaxRules={incomeTaxRules}
+                ratesYearText={ratesYearText}
               />
             )}
           </>
@@ -87,6 +91,8 @@ interface TaxEstimateProps {
   /** Today's gross salary per year; above $0 (the caller hides the estimate otherwise). */
   readonly salary: number;
   readonly incomeTaxRules: Parameters<typeof calculateIncomeTax>[1];
+  /** The financial year of the rules used, e.g. "2025–26", for the caption. */
+  readonly ratesYearText: string;
 }
 
 /**
@@ -96,7 +102,7 @@ interface TaxEstimateProps {
  * today's dollars whatever the dollars toggle says. Used by SalarySection
  * under each salary above $0.
  */
-function TaxEstimate({ label, salary, incomeTaxRules }: TaxEstimateProps) {
+function TaxEstimate({ label, salary, incomeTaxRules, ratesYearText }: TaxEstimateProps) {
   const panelId = useId();
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
@@ -109,6 +115,9 @@ function TaxEstimate({ label, salary, incomeTaxRules }: TaxEstimateProps) {
         {label(
           `Estimated tax ${formatDollars(tax.value)} · take-home ${formatDollars(takeHome)} a year`,
         )}
+      </p>
+      <p className="hint">
+        {`On today's salary at ${ratesYearText} rates, before salary sacrifice and interest.`}
       </p>
 
       <button

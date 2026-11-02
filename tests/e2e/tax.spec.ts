@@ -51,7 +51,9 @@ test("a $100,000 salary shows its tax and take-home with the working, and the Ta
 
   // Both Results banners.
   await expect(
-    page.getByText("Tax is shown but isn't yet taken from your savings. That comes next."),
+    page.getByText(
+      "Tax is shown in Year by year but isn't yet taken from your savings, so balances are higher than they will be.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByText(

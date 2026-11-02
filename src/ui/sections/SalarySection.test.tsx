@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { Plan } from "../../plan/types";
+import { DollarsModeProvider, DollarsModeToggle } from "../dollarsMode";
 import { blankPlan, renderSection } from "./sectionTestHelpers";
 import { SalarySection } from "./SalarySection";
 
@@ -127,6 +128,66 @@ describe("SalarySection", () => {
       expect(screen.getByText("Low income tax offset")).toBeInTheDocument();
       expect(screen.getByText(/Medicare levy/)).toBeInTheDocument();
       expect(screen.getByText("Tax payable")).toBeInTheDocument();
+    });
+
+    it("ignores the dollars toggle, since it is today's salary", async () => {
+      const user = userEvent.setup();
+      renderSection(
+        <DollarsModeProvider>
+          <DollarsModeToggle />
+          <SalarySection />
+        </DollarsModeProvider>,
+        planWithSalary(100000),
+      );
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+      expect(
+        screen.getByText("Estimated tax $22,788 · take-home $77,212 a year"),
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Nominal" }));
+      expect(
+        screen.getByText("Estimated tax $22,788 · take-home $77,212 a year"),
+      ).toBeInTheDocument();
+    });
+
+    it("names the rules year and what is left out, under each estimate", () => {
+      renderSection(<SalarySection />, planWithSalary(100000));
+
+      expect(
+        screen.getByText(
+          "On today's salary at 2025–26 rates, before salary sacrifice and interest.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("gives each person in a couple the caption too", () => {
+      renderSection(<SalarySection />, {
+        ...blankPlan,
+        household: {
+          people: [
+            { id: "a", label: "Person 1", name: "Alex", salary: { annual: 100000 } },
+            { id: "s", label: "Person 2", name: "Sam", salary: { annual: 40000 } },
+          ],
+        },
+      });
+
+      expect(screen.getAllByText(/^On today's salary at 2025–26 rates/)).toHaveLength(2);
+    });
+
+    it("flips the working's aria-expanded when its button is clicked", async () => {
+      const user = userEvent.setup();
+      renderSection(<SalarySection />, planWithSalary(100000));
+
+      const toggle = screen.getByRole("button", { name: "How is this calculated?" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+      await user.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+      await user.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByText("Tax payable")).not.toBeInTheDocument();
     });
 
     it("shows one estimate for each person, with names, when there are two", () => {
