@@ -90,3 +90,16 @@ describe("InflationSection", () => {
     expect(readPlan().assumptions.interestRate).toBe(0);
   });
 });
+
+// The hint says what inflation changes and what it leaves as entered.
+describe("InflationSection hint", () => {
+  it("says inflation raises spending but leaves contributions as entered", () => {
+    renderSection(<InflationSection />);
+
+    expect(
+      screen.getByText(
+        "Raises your spending and FI number each year, and converts to today's money. Contributions stay as you enter them; salary grows only if you choose.",
+      ),
+    ).toBeVisible();
+  });
+});

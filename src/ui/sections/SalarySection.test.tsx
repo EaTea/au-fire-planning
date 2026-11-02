@@ -180,3 +180,12 @@ describe("SalarySection", () => {
     expect(screen.getByLabelText("Sam: Grows at")).toBeInTheDocument();
   });
 });
+
+// With no growth a salary stays the same dollars; the hint says so.
+describe("SalarySection growth hint", () => {
+  it("says no growth keeps the same dollars every year", () => {
+    renderSection(<SalarySection />);
+
+    expect(screen.getByText("No growth keeps the same dollars every year.")).toBeVisible();
+  });
+});

@@ -121,6 +121,13 @@ body {
   color: var(--colour-text-muted);
 }
 
+/* The note under the Results header while "Today's dollars" is chosen. */
+.todays-money-note {
+  margin: 0 0 var(--space-medium);
+  font-size: 14px;
+  color: var(--colour-text-muted);
+}
+
 .page-jump-links a {
   color: var(--colour-text);
 }

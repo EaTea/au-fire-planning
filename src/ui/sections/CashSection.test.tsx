@@ -14,7 +14,7 @@ describe("CashSection", () => {
     expect(container.querySelector(".input.default")).not.toBeNull();
     expect(
       screen.getByText(
-        "Earns the general interest rate (Assumptions). Spent before the portfolio in retirement.",
+        "Earns the general interest rate (Assumptions). Drawn last in retirement, after the portfolio and super.",
       ),
     ).toBeInTheDocument();
   });

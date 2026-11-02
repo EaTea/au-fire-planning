@@ -59,6 +59,7 @@ export function SalarySection() {
               options={SALARY_GROWTH_OPTIONS}
               value={person.salary?.growth}
               defaultValue={DEFAULT_SALARY_GROWTH}
+              hint="No growth keeps the same dollars every year."
               numberLabel={fieldLabel}
               onChange={(growth) =>
                 dispatch({ type: "setSalaryGrowth", personId: person.id, growth })
