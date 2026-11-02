@@ -458,7 +458,8 @@
       "arithmetic": [
         "2027: salary 145,000 x 1.035 = $150,075; less salary sacrifice $10,000; plus interest 4% x 20,000 = $800: taxable income $140,875.",
         "Bracket tax at the 15% bottom rate: 0.15 x 26,800 + 0.30 x 90,000 + 0.37 x 5,875 = 4,020 + 27,000 + 2,173.75 = $33,193.75. Medicare 2% = $2,817.50. Tax $36,011.25.",
-        "Only tax fields are checked."
+        "Only tax fields are checked.",
+        "2031 (row 5, age 39, an indexed year: three years past the FY2027-28 file, so every dollar amount is x 1.025^3): salary 145,000 x 1.035^5 = $172,214.51; salary sacrifice $10,000; cash interest this step (tax not yet paid from cash, so cash grows only by interest) = 4% x 20,000 x 1.04^4 = $935.89. Taxable income $163,150.40. Taken through the independent reference model's tax_parts(x, 2031, 0.025): bracket tax $39,691.50, no offset, Medicare $3,263.01, tax $42,954.51. In PR B the saved surplus makes cash and interest larger, so this figure rises (the full model gives $43,690.07)."
       ],
       "expected": {
         "taxRows": [
@@ -467,6 +468,12 @@
             "tax": 36011.25,
             "personTax": [36011.25],
             "personTaxableIncome": [140875]
+          },
+          {
+            "yearIndex": 5,
+            "tax": 42954.51,
+            "personTax": [42954.51],
+            "personTaxableIncome": [163150.4]
           }
         ]
       }

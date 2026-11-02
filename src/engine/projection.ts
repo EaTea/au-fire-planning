@@ -656,7 +656,9 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
 
     const people = mapNonEmpty(drawings, ({ person, superYear, accessible, drawn }): PersonYear => {
       const salary = salaryInYear(person, inputs, yearIndex);
-      const taxableIncome = salary - superYear.salarySacrifice + cashInterestShare;
+      // Salary sacrifice can't take pay below $0 (or cancel the tax on the
+      // interest share), so the sacrificed pay is floored before interest is added.
+      const taxableIncome = Math.max(0, salary - superYear.salarySacrifice) + cashInterestShare;
       const taxResult = calculateIncomeTaxFigures(taxableIncome, incomeTaxRules);
 
       return {
@@ -669,7 +671,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
         salarySacrifice: superYear.salarySacrifice,
         nonConcessional: superYear.nonConcessional,
         contributionsTax: superYear.contributionsTax,
-        taxableIncome: Math.max(0, taxableIncome),
+        taxableIncome,
         incomeTax: taxResult.incomeTax,
         medicareLevy: taxResult.medicareLevy,
         tax: taxResult.tax,

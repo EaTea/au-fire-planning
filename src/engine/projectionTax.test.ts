@@ -122,3 +122,76 @@ describe("tax in the projection rows", () => {
     expect(row?.fromPortfolio).toBe(0);
   });
 });
+
+describe("salary sacrifice and taxable income", () => {
+  /** A person aged 60 retiring at 65 with a salary sacrifice and cash earning 4%. */
+  function sacrificeInputs(salaryAnnual: number | undefined, sacrificeAnnual: number) {
+    const inputs = onePersonInputs({
+      currentAge: 60,
+      endAge: 66,
+      retirementAge: 65,
+      expectedReturn: 0,
+      interestRate: 0.04,
+      inflationRate: 0,
+      annualContribution: 0,
+      portfolioOpening: 0,
+      cashOpening: 600_000,
+      livingAnnual: 40_000,
+      retirementSpendingAnnual: 40_000,
+      datedExpenses: [],
+      fiNumberToday: 1_000_000,
+      ...(salaryAnnual === undefined
+        ? {}
+        : { salary: { annual: salaryAnnual, growth: { kind: "none" as const } } }),
+    });
+
+    return {
+      ...inputs,
+      people: [
+        {
+          ...(inputs.people[0] as ProjectionPerson),
+          superAccount: {
+            opening: 0,
+            returnRate: 0,
+            salarySacrifice: { annual: sacrificeAnnual },
+            nonConcessional: { annual: 0 },
+            ruleSet: bundledRuleSet,
+          },
+        },
+      ],
+    } satisfies ProjectionInputs;
+  }
+
+  it("taxes only the interest when there is no salary to sacrifice from", () => {
+    const row = projectPortfolio(sacrificeInputs(undefined, 10_000), START_YEAR)[1];
+
+    // $24,000 of interest: the same $170 as with no sacrifice (example H, 2027).
+    expect(row?.people[0].taxableIncome).toBeCloseTo(24_000);
+    expect(row?.tax).toBeCloseTo(170);
+  });
+
+  it("floors the sacrificed pay at $0 when the sacrifice is bigger than the salary", () => {
+    const row = projectPortfolio(sacrificeInputs(5_000, 30_000), START_YEAR)[1];
+
+    expect(row?.people[0].taxableIncome).toBeCloseTo(24_000);
+    expect(row?.tax).toBeCloseTo(170);
+  });
+
+  it("keeps each partner's share of the interest when one has no salary but a sacrifice", () => {
+    const [first] = sacrificeInputs(100_000, 0).people;
+    const [sacrificer] = sacrificeInputs(undefined, 20_000).people;
+    const couple: ProjectionInputs = {
+      ...sacrificeInputs(undefined, 0),
+      people: [
+        { ...(first as ProjectionPerson), id: "a", label: "A" },
+        { ...(sacrificer as ProjectionPerson), id: "b", label: "B" },
+      ],
+    };
+
+    const row = projectPortfolio(couple, START_YEAR)[1];
+
+    // $24,000 of interest split two ways, whatever the sacrifice.
+    expect(row?.people[1]?.taxableIncome).toBeCloseTo(12_000);
+    expect(row?.people[0].taxableIncome).toBeCloseTo(112_000);
+  });
+});
