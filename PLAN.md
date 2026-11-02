@@ -4,7 +4,7 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M7, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. The M8 (personal income tax) step-by-step plan is in review. The plan for inflation in the views is merged and its implementation is still to do.
+**Current status:** M0 to M7, the colour scheme, the one-page Results, cash drawn last, the salary growth default, Start over from the logo and inflation in the views are done. The M8 (personal income tax) plan is approved (PR #40), and M8 PR A (tax as data and take-home pay shown) is open for review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
@@ -1567,7 +1567,7 @@ Conventions settled while building M7, which later milestones rely on:
 
 ### M8 · Personal income tax: step-by-step plan
 
-**Status:** plan approved (PR #40). PR A (steps 1 to 5) is implemented and awaiting its challenger review (step 6); PR B is not started.
+**Status:** plan approved (PR #40). PR A (steps 1 to 6) is implemented and open for review; PR B is not started.
 
 **Kind:** behavior change.
 
@@ -2162,7 +2162,25 @@ Year by year.
 
 #### Step 6 · Challenger review of PR A, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer compared `calculateIncomeTax` with the
+independent model on 30,795 income, year and inflation combinations (the
+largest difference was 0.000000), and `summarisePlan` with the base branch
+on 1,000 random one-person and couple plans (identical apart from the new
+tax fields). Its findings were fixed in their own commits:
+- salary sacrifice larger than salary cancelled tax on cash interest;
+- `rulesForYear` made `summarisePlan` twice as slow, so it is cached;
+- adding a later rules file switched off indexation for earlier years;
+- the Results banner showed when no tax was shown;
+- the estimate didn't say it uses 2025–26 rates and ignores sacrifice and
+  interest;
+- stale or contradictory README and PLAN.md lines.
+
+Two design points go to the owner with the PR: in law the brackets and
+the low income offset are not indexed (only the Medicare threshold is), and
+the interest split between partners puts some interest at the higher
+earner's rate.
 
 1. **Review:** the reviewer subagent checks PR A's diff against this plan,
    the worked examples and the requirements.
@@ -2587,13 +2605,13 @@ wording; whichever lands second rebases.
 - [x] Approve the inflation in the views plan.
 - [x] Implement inflation in the views (steps 1 and 2), then open it for
       verification.
-- [ ] Owner verifies and merges the inflation in the views PR.
-- [ ] Approve the M8 step-by-step plan (plan PR), including the seven owner
+- [x] Owner verifies and merges the inflation in the views PR (#41).
+- [x] Approve the M8 step-by-step plan (plan PR #40), including the seven owner
       decisions. The owner also checks the new tax values (the brackets, the
       low income tax offset, the Medicare levy thresholds and the legislated
       15% and 14% rates) against the ATO before the M8 PRs merge.
-- [ ] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
-      challenger review, then open it stacked on the plan PR.
+- [x] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
+      challenger review, then open it for verification.
 - [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 13):
       challenger review, then open it stacked on PR A.
 - [ ] Owner verifies and merges the M8 PRs.
