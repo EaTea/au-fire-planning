@@ -264,10 +264,11 @@ describe("Results for a couple: example D2 (bridge short, both partners' super l
 });
 
 describe("Results for a couple: example E (realistic)", () => {
-  it("states the FI number at the household retirement, $3,686,887 in 2046", () => {
+  // The headline is the FI number when they have both retired; today's figure is a sub-line.
+  it("leads with the FI number at the household retirement, $3,686,887 in 2046", () => {
     renderResults(exampleE);
 
-    expect(tileText("FI number")).toContain("$3,686,887 in 2046, when you've both retired");
+    expect(tileText("FI number")).toContain("$3,686,887in 2046, when you've both retired");
   });
 
   it("gives each person's earliest retirement: Alex 52 (2044) and Sam 54 (2048)", () => {

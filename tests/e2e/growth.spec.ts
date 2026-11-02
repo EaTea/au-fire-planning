@@ -38,12 +38,18 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   await enter(page, "Inflation per year", "2.5");
   await enter(page, "Safe withdrawal rate", "4");
 
-  // Results: the FI year and the nominal FI number at the retirement age.
+  // Results: the FI year, and the FI number led by its nominal figure at the retirement age.
   await page.getByRole("link", { name: "Next: Results →" }).click();
   // The chart's hidden data table repeats some figures, so look inside the tiles.
-  const fiNumberTile = page.locator(".metric", { hasText: "FI number" });
-  await expect(fiNumberTile.getByText("$1,600,000", { exact: true })).toBeVisible();
-  await expect(page.getByText("$2,375,209 at age 50 (2042)")).toBeVisible();
+  // Matched by its label alone: the progress tile's sub-line also says "FI number".
+  const fiNumberTile = page
+    .locator(".metric")
+    .filter({ has: page.locator(".label", { hasText: /^FI number$/ }) });
+  await expect(fiNumberTile.locator(".value")).toHaveText("$2,375,209");
+  await expect(fiNumberTile.getByText("at age 50 (2042)", { exact: true })).toBeVisible();
+  await expect(
+    fiNumberTile.getByText("$1,600,000 in today's money · $64,000/yr ÷ 4%", { exact: true }),
+  ).toBeVisible();
   const fiReachedTile = page.locator(".metric", { hasText: "FI reached" });
   await expect(fiReachedTile.getByText("2038", { exact: true })).toBeVisible();
   await expect(fiReachedTile.getByText("Age 46", { exact: true })).toBeVisible();
@@ -66,8 +72,14 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   expect(await yearCell(page, 2027, "Portfolio")).toBe("$800,400");
   expect(await yearCell(page, 2038, "Portfolio")).toBe("$2,158,231");
 
-  // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025.
+  // No note in nominal: every figure reads as entered.
+  const todaysMoneyNote = page.getByText(/^Shown in today's money\./);
+  await expect(todaysMoneyNote).toHaveCount(0);
+
+  // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025,
+  // and the note says why the fixed contribution now looks smaller.
   await page.getByRole("button", { name: "Today's dollars" }).click();
+  await expect(todaysMoneyNote).toBeVisible();
   expect(await yearCell(page, 2027, "Into portfolio")).toBe("$29,268");
   expect(await yearCell(page, 2027, "Portfolio")).toBe("$780,878");
 

@@ -1,8 +1,9 @@
 // Today's dollars or nominal dollars (OUT-2): one choice that every dollar
 // figure in the projection follows.
 //
-//   DollarsModeProvider ──► useDollarsMode()      (mode + setter, used by the toggle)
-//                       └─► useMoneyFormatter()   (formatMoney(nominal, inflationIndex))
+//   DollarsModeProvider ┬─► useDollarsMode()      (mode + setter, used by the toggle)
+//                       ├─► useMoneyFormatter()   (formatMoney(nominal, inflationIndex))
+//                       └─► TodaysMoneyNote       (why fixed inputs shrink in today's dollars)
 //
 // The mode lives in memory only; remembering it between visits is a follow-up.
 
@@ -83,5 +84,27 @@ export function DollarsModeToggle() {
       value={mode}
       onChange={setMode}
     />
+  );
+}
+
+/**
+ * A one-line note shown only while "Today's dollars" is chosen. Inputs such
+ * as contributions are fixed dollars and spending rises with inflation, so in
+ * nominal dollars (the default) every figure reads as entered. Converting to
+ * today's money divides each year by its inflation index, which makes a fixed
+ * $50,000 contribution look smaller every year; the note says why, so the
+ * lens doesn't read as the plan changing. Rendered by ResultsScreen under
+ * its page header, next to the toggle it explains.
+ */
+export function TodaysMoneyNote() {
+  const { mode } = useDollarsMode();
+
+  if (mode !== "today") return null;
+
+  return (
+    <p className="todays-money-note">
+      Shown in today&apos;s money. Fixed amounts, like your contributions, look smaller each year
+      because inflation erodes them.
+    </p>
   );
 }

@@ -2536,8 +2536,8 @@ depend on any other work in progress, so it can merge at any time.
 
 ### Inflation in the views: step-by-step plan
 
-**Kind:** behavior change (view only). **Status:** plan, awaiting the
-owner's approval.
+**Kind:** behavior change (view only). **Status:** in progress. The plan
+was approved in PR #38; step 1 is done.
 
 **Why.** The owner found the app's handling of inflation surprising: a
 $50,000 yearly contribution reads as if it were being discounted. The owner's
@@ -2623,7 +2623,7 @@ tiles, the today's note), `src/ui/sections/PortfolioSection.tsx`,
 specs that read the FI tile (`tests/e2e/fiNumber.spec.ts` and any others
 that assert its headline). No engine, reducer or persistence changes.
 
-#### Step 1 · Results tiles and the today's note
+#### Step 1 · Results tiles and the today's note: done
 
 1. `FiNumberTile`: headline at retirement, today's figure and working in the
    sub-line; the incomplete-projection variant adds "in today's money".
@@ -2712,6 +2712,6 @@ wording; whichever lands second rebases.
 - [ ] Implement M7 PR B, couples (steps 4 to 10): challenger review, then
       open it stacked on PR A.
 - [ ] Owner verifies and merges the M7 PRs.
-- [ ] Approve the inflation in the views plan.
+- [x] Approve the inflation in the views plan.
 - [ ] Implement inflation in the views (steps 1 and 2), then open it for
       verification.
