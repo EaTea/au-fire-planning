@@ -2009,6 +2009,17 @@ A and E above are the headline cases.
   URL and check the values on it. The existing super note is kept, with a
   sentence added saying the `incomeTax` section is unchecked.
 - README "How to add next year's rules" now mentions optional sections.
+- **Review fixes:**
+  - `rulesForYear` answers are cached per rule set, year and inflation rate
+    (a `WeakMap` of `Map`s), and the result is shared, so it is read-only.
+    This brought `summarisePlan` for example E from about 41 to 18 ms at best
+    and about 46–65 to 20–23 ms median.
+  - A section is indexed from the snapshot in effect, not only when that
+    snapshot is the latest, so a later file for the section no longer stops
+    indexing the earlier years. For example, a super-only 2028-29 file leaves
+    2027 and 2028 indexed from the 2026 file.
+  - The schema rejects an offset whose first threshold is above its second,
+    and the "No rules file has an incomeTax section" message reads "an".
 
 #### Step 2 · `calculateIncomeTax` (PR A)
 
@@ -2035,9 +2046,10 @@ A and E above are the headline cases.
 - Lines: one per bracket the income reaches (including the 0% one), then the
   offset (`−`), the levy (`+`) and "Tax payable" (`=`). The offset is the
   amount used, capped at the bracket tax.
-- `m8-tax.json` has `taxCases` and no `scenarios`, so it is tested by
-  `tests/unit/taxExamples.test.ts`, and `workedExamples.test.ts` skips files
-  without `scenarios`. The fixture README describes `taxCases`.
+- `m8-tax.json` has a `taxCases` list, tested by
+  `tests/unit/taxExamples.test.ts`. Step 3 later added ordinary `scenarios` to
+  the same file, so `workedExamples.test.ts` runs those and skips any file
+  without `scenarios`. The fixture README describes both.
 
 #### Step 3 · Tax in the projection, not yet funded (PR A)
 
@@ -2068,6 +2080,16 @@ A and E above are the headline cases.
   F, G, A and H's 2027 and couple figures are unaffected.
 - The fixture scenarios (F, G, H, H couple, A) are in `m8-tax.json`, checked
   through a new `taxRows` field in the worked-example harness.
+- **Review fixes:** taxable income is `max(0, salary − salary sacrifice) +
+  the interest share`, so a sacrifice bigger than the salary no longer cancels
+  the tax on interest. A property test checks every person's tax against
+  `calculateIncomeTaxFigures` over random one- and two-person plans, and the
+  row's tax is their sum. Scenario A gains an indexed-year row: 2031 (row 5,
+  age 39) has taxable income $163,150.40 and tax $42,954.51, from the
+  independent model's `tax_parts` on example A's salary ($172,214.51), the
+  $10,000 sacrifice and this step's interest ($935.89, because tax isn't yet
+  paid from cash). In PR B that row's interest and tax rise (the full model
+  gives $43,690.07).
 
 #### Step 4 · Tax and take-home pay on the screens (PR A)
 
@@ -2085,6 +2107,7 @@ A and E above are the headline cases.
    $22,788 and take-home $77,212), the column, and the banners.
 
 **Check:** `npm run check` passes. Check by eye on Income & expenses and
+Year by year.
 
 **As built:**
 - `SalarySection` shows, under each salary above $0, "Estimated tax $X ·
@@ -2101,8 +2124,16 @@ A and E above are the headline cases.
   savings. That comes next." (to be removed in PR B) and "Not yet modelled:
   tax on portfolio income and gains (M9), property (M12) and more."
 - The "Spending while one of you has retired" hint still mentions tax
-  arriving "in a later version"; step 11 rewrites it.
-Year by year.
+  arriving "in a later version"; step 7 rewrites it (the only place that
+  does).
+- **Review fixes:** the Results banner now shows only when the projection is
+  complete and some row has tax, worded "Tax is shown in Year by year but
+  isn't yet taken from your savings, so balances are higher than they will
+  be." Under each estimate a hint names the rules year (from
+  `incomeTaxFinancialYear`) and what is left out: "On today's salary at
+  2025–26 rates, before salary sacrifice and interest." Tests cover the
+  caption, the `aria-expanded` toggle, the dollars toggle being ignored and
+  the banner in each state.
 
 #### Step 5 · E2E, contrast, README (PR A)
 
@@ -2162,6 +2193,9 @@ Year by year.
 
 1. **The projection** follows "The year's cash flow", with `netPay`,
    `fundingNeed`, `savedToCash` and the new `spending`.
+   - **Net pay** is salary − salary sacrifice. It can be negative when the
+     sacrifice exceeds the salary, in which case the shortfall is paid from
+     savings, while taxable income is floored at $0.
 2. **A "stop saving the surplus after row k"** input, used by the Coast
    FIRE runs (step 9).
 3. **Tests, with the independent figures:** F, G and H to the cent; A's and

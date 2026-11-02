@@ -84,11 +84,12 @@ Everything is calculated in your browser and saved only on your device.
   the year you reach it. The combined Coast FIRE above stays the overall answer.
 - **Results, year by year:** at the bottom of Results, the projection of cash
   and the portfolio, one row per year to the plan-until age. Retirement
-  spending is drawn from cash first, then the portfolio. The year FI is
+  spending is drawn from the portfolio first, then super once you can access it,
+  then cash. The year FI is
   reached is highlighted, and years that can't be funded are flagged. One
   today's/nominal toggle at the top of Results covers the whole page.
 
-Tax and property aren't modelled yet; see
+Property and tax on investment income aren't modelled yet; see
 [PLAN.md](PLAN.md) for what comes next.
 
 ## Project layout
@@ -110,7 +111,9 @@ Statutory rates and thresholds live in `src/rules/data/`, not in calculation
 code. When the ATO publishes a new financial year's figures:
 
 1. Copy the latest file, e.g. `src/rules/data/fy2025-26.json`, to
-   `fy2026-27.json`. A file may hold just the sections it changes
+   `fy2026-27.json`. If a file for that year already exists (`fy2026-27.json`
+   and `fy2027-28.json` hold the income tax rates), add the new section to it
+   instead of copying over it. A file may hold just the sections it changes
    (`superannuation`, `incomeTax`, or both), as the `fy2026-27.json` and
    `fy2027-28.json` files hold only `incomeTax`. The app reads each section
    from the latest file that has it, so delete a section you aren't updating.
