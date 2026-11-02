@@ -5,8 +5,9 @@ import { MoneyField } from "../components/MoneyField";
 
 /**
  * Form section for IN-26: the household's cash savings today, as one balance.
- * It earns the general interest rate (Assumptions) and is spent before the
- * portfolio in retirement (the projection's drawdown order). Used by the
+ * It earns the general interest rate (Assumptions) and is drawn last in
+ * retirement, after the portfolio and super (the projection's drawdown
+ * order since "Cash drawn last"). Used by the
  * Assets screen. An unset balance shows the $0 default in the dashed style.
  */
 export function CashSection() {
@@ -20,7 +21,7 @@ export function CashSection() {
         value={plan.cash?.balance}
         defaultValue={DEFAULT_CASH_BALANCE}
         min={0}
-        hint="Earns the general interest rate (Assumptions). Spent before the portfolio in retirement."
+        hint="Earns the general interest rate (Assumptions). Drawn last in retirement, after the portfolio and super."
         onChange={(balance) => dispatch({ type: "setCashBalance", balance })}
       />
     </Card>

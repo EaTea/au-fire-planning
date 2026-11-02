@@ -94,7 +94,7 @@ export function PortfolioSection() {
         value={portfolio.annualContribution}
         defaultValue={DEFAULT_ANNUAL_CONTRIBUTION}
         min={0}
-        hint="The same dollar amount every year, until the age below."
+        hint="Fixed: the same dollars every year, not raised with inflation. Paid until the age below."
         onChange={(annual) =>
           dispatch({ type: "setAnnualContribution", portfolioId: portfolio.id, annual })
         }

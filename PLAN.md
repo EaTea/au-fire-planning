@@ -2536,8 +2536,8 @@ depend on any other work in progress, so it can merge at any time.
 
 ### Inflation in the views: step-by-step plan
 
-**Kind:** behavior change (view only). **Status:** in progress. The plan
-was approved in PR #38; step 1 is done.
+**Kind:** behavior change (view only). **Status:** done. The plan was
+approved in PR #38; steps 1 and 2 are in the implementation PR.
 
 **Why.** The owner found the app's handling of inflation surprising: a
 $50,000 yearly contribution reads as if it were being discounted. The owner's
@@ -2637,7 +2637,7 @@ that assert its headline). No engine, reducer or persistence changes.
 4. E2E: update the specs that read the FI tile's headline, and assert the
    note appears with the toggle.
 
-#### Step 2 · Input hints
+#### Step 2 · Input hints: done
 
 5. The hint wording above on Portfolio, Super, Living expenses, Retirement
    spending, Salary, Inflation and Cash. Component tests assert each hint.
@@ -2713,5 +2713,6 @@ wording; whichever lands second rebases.
       open it stacked on PR A.
 - [ ] Owner verifies and merges the M7 PRs.
 - [x] Approve the inflation in the views plan.
-- [ ] Implement inflation in the views (steps 1 and 2), then open it for
+- [x] Implement inflation in the views (steps 1 and 2), then open it for
       verification.
+- [ ] Owner verifies and merges the inflation in the views PR.

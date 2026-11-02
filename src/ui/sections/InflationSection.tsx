@@ -6,9 +6,10 @@ import { PercentField } from "../components/PercentField";
 /**
  * Form section for IN-11 and IN-12: the yearly inflation rate and the general
  * interest rate. Inflation grows spending and the FI number over time (EXP-3)
- * and converts results to today's dollars (OUT-2); the interest rate is paid
- * on cash savings. Used by the Assumptions screen. Unset rates show their
- * defaults (2.5% and 4%) in the dashed style.
+ * and converts results to today's dollars (OUT-2); contributions and salary
+ * stay as entered unless growth is chosen, and the hint says so. The
+ * interest rate is paid on cash savings. Used by the Assumptions screen.
+ * Unset rates show their defaults (2.5% and 4%) in the dashed style.
  */
 export function InflationSection() {
   const plan = usePlan();
@@ -22,7 +23,7 @@ export function InflationSection() {
         defaultValue={DEFAULT_INFLATION_RATE}
         min={0}
         max={0.15}
-        hint="Grows your spending and FI number, and converts results to today's dollars."
+        hint="Raises your spending and FI number each year. Contributions and salary stay as you enter them unless you choose growth."
         onChange={(rate) => dispatch({ type: "setInflationRate", rate })}
       />
 

@@ -46,3 +46,14 @@ describe("LivingExpensesSection", () => {
     expect(readPlan().expenses.livingAnnual).toBeUndefined();
   });
 });
+
+// Living expenses are at today's prices and rise with inflation; the hint says so.
+describe("LivingExpensesSection hint", () => {
+  it("says the amount is at today's prices and raised with inflation", () => {
+    renderSection(<LivingExpensesSection />);
+
+    expect(
+      screen.getByText(/at today's prices: the plan raises it with inflation each year\./),
+    ).toBeVisible();
+  });
+});

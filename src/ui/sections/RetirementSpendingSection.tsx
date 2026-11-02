@@ -137,6 +137,7 @@ export function RetirementSpendingSection() {
         <MoneyField
           label="Retirement spending per year"
           value={spending?.kind === "amount" ? spending.annual : undefined}
+          hint="At today's prices: the plan raises it with inflation each year."
           min={MINIMUM_DOLLARS}
           onChange={(annual) =>
             dispatch({

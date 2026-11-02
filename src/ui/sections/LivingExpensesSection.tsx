@@ -21,7 +21,7 @@ export function LivingExpensesSection() {
         label="Per year, after tax"
         value={plan.expenses.livingAnnual}
         min={1}
-        hint="What your household spends in a year, after tax. Leave out mortgage repayments and rent: they come later."
+        hint="What your household spends in a year, after tax, at today's prices: the plan raises it with inflation each year. Leave out mortgage repayments and rent: they come later."
         onChange={(annual) => dispatch({ type: "setLivingExpenses", annual })}
       />
     </Card>

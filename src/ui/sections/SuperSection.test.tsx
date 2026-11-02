@@ -63,9 +63,15 @@ describe("SuperSection defaults", () => {
 
     expect(screen.getByText("After fees, before tax. The app takes off the tax on earnings."));
     expect(
-      screen.getByText("Before tax, from your salary while you work. Taxed 15% going in."),
+      screen.getByText(
+        "Fixed: the same dollars every year. Before tax, from your salary while you work. Taxed 15% going in.",
+      ),
     ).toBeVisible();
-    expect(screen.getByText("From after-tax money. Not taxed going in.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Fixed: the same dollars every year. From after-tax money. Not taxed going in.",
+      ),
+    ).toBeVisible();
   });
 });
 

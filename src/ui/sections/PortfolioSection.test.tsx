@@ -292,3 +292,16 @@ describe("PortfolioSection for a couple", () => {
     expect(readPlan().portfolios[0]?.contributionsStopAge).toBe(45);
   });
 });
+
+// Contributions are fixed dollars; the hint says they don't rise with inflation.
+describe("PortfolioSection contributions hint", () => {
+  it("says contributions are the same dollars every year", () => {
+    renderSection(<PortfolioSection />);
+
+    expect(
+      screen.getByText(
+        "Fixed: the same dollars every year, not raised with inflation. Paid until the age below.",
+      ),
+    ).toBeVisible();
+  });
+});
