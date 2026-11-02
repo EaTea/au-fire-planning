@@ -11,8 +11,11 @@
 // row k. Each year's dated expenses are paid from the portfolio first, then
 // super (from 65) and cash last (see projection.ts). Looking forward from
 // row k to the retirement row n (m = n − k years), only the portfolio's
-// starting amount P is ours to choose. portfolioNeeded(k) is the smallest P
-// that still reaches the FI number at row n:
+// starting amount P is ours to choose. A couple's one-retired years before
+// row n draw the interim amount, which is spent like a dated expense here
+// (read off each row's spending), so "dated" below means both.
+// portfolioNeeded(k) is the smallest P that still reaches the FI number at
+// row n:
 //
 //   coast path from row k, starting with portfolio P and cash(k):
 //     each row j: portfolio grows at r, cash at the interest rate g;
@@ -62,11 +65,14 @@
 
 import type { Explained, ExplanationLine } from "./explained";
 import {
+  agesOf,
+  describeAges,
   householdRetirementRowIndex,
   lastPortfolioContributionYear,
   mapNonEmpty,
   projectPortfolio,
   youngestAgeAtRow,
+  type PersonAge,
   type ProjectionInputs,
   type ProjectionRow,
 } from "./projection";
@@ -77,7 +83,9 @@ export interface CoastPathPoint {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** (1+i)^yearIndex; a value in today's dollars is the nominal value ÷ this. */
   readonly inflationIndex: number;
   /** coast(k) = cash(k) + super(k) + portfolioNeeded(k): the savings you need in this year to coast. */
@@ -97,7 +105,9 @@ export interface CoastMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** Investable net worth against the Coast FIRE number in that year. */
   readonly explanation: Explained;
 }
@@ -149,7 +159,8 @@ export function calculateCoastFire(
     return {
       yearIndex: row.yearIndex,
       calendarYear: row.calendarYear,
-      age: row.people[0].age,
+      firstPersonAge: row.people[0].age,
+      ages: agesOf(row),
       inflationIndex: row.inflationIndex,
       coastNumber: row.cashClosing + row.superClosing + need.portfolioNeeded,
       portfolioNeeded: need.portfolioNeeded,
@@ -252,6 +263,8 @@ function superAtRetirementWhenCoastingFrom(
     {
       ...inputsWithVoluntaryContributionsStoppedAfter(inputs, fromIndex, startYear),
       datedExpenses: [],
+      // Interim spending is left out too, so a partner's super isn't drawn on the coast path.
+      interimSpendingAnnual: 0,
       endAge: youngestAgeAtRow(inputs, retirementRowIndex),
     },
     startYear,
@@ -300,9 +313,10 @@ const BISECTION_STEPS = 200;
  * `fromIndex`, looking forward to the last row of `workingRows` (the
  * retirement row). Called by `calculateCoastFire` for every row of the path.
  *
- * Before retirement a row's `spending` is only dated expenses (retirement
- * spending starts the year after), so they are read straight off the
- * projection rows instead of being recomputed. `superLeftAtRetirement` is
+ * Before the retirement row a row's `spending` is dated expenses plus, for a
+ * couple, the interim amount in the years only one has retired (retirement
+ * spending starts the year after the last person retires), so they are read
+ * straight off the projection rows instead of being recomputed. `superLeftAtRetirement` is
  * superLeft(k), from `superAtRetirementWhenCoastingFrom`.
  *
  * `targetAtRetirement` is the amount the coast path must reach at the
@@ -463,7 +477,7 @@ function explainCoastNumber(
   const cashLabel = `Your cash, growing at ${interestPercent} to ${retirementRow.calendarYear}`;
   const lines: ExplanationLine[] = [
     {
-      label: `FI number at age ${retirementRow.people[0].age} (${retirementRow.calendarYear})`,
+      label: `FI number at ${describeAges(retirementRow)} (${retirementRow.calendarYear})`,
       value: need.fiNumberAtRetirement,
       unit: "dollars",
       source: "calculated",
@@ -484,7 +498,7 @@ function explainCoastNumber(
 
   if (hasSuper) {
     lines.push({
-      label: `Your super, growing at ${formatPercent(inputs.people[0].superAccount?.returnRate ?? 0)} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
+      label: `${inputs.people.length > 1 ? "Your super (both of you)" : "Your super"}, growing at ${formatPercent(superReturnToday(inputs, todayRow))} net of fees and tax, with employer contributions, to ${retirementRow.calendarYear}`,
       value: need.superLeftAtRetirement,
       unit: "dollars",
       operator: "−",
@@ -545,6 +559,29 @@ function explainCoastNumber(
   });
 
   return { value: today.coastNumber, unit: "dollars", lines };
+}
+
+/**
+ * The super return quoted in the Coast FIRE breakdown. One person: their own
+ * return. A couple: each person's return weighted by their super balance today
+ * (equal weights when nobody has a balance), so "growing at X%" describes both
+ * accounts together. Called by `explainCoastNumber`.
+ */
+function superReturnToday(inputs: ProjectionInputs, todayRow: ProjectionRow): number {
+  const returns = inputs.people.map((person) => person.superAccount?.returnRate ?? 0);
+  const balances = todayRow.people.map((personYear) => personYear.superClosing);
+  const totalBalance = balances.reduce((total, balance) => total + balance, 0);
+
+  if (inputs.people.length === 1) return returns[0] ?? 0;
+  if (totalBalance <= 0) {
+    return returns.reduce((total, rate) => total + rate, 0) / Math.max(1, returns.length);
+  }
+
+  // Share first, then multiply, like every weighted figure here.
+  return returns.reduce(
+    (total, rate, personIndex) => total + ((balances[personIndex] ?? 0) / totalBalance) * rate,
+    0,
+  );
 }
 
 /**
@@ -635,7 +672,7 @@ function findCoastReached(
 
     const lines: ExplanationLine[] = [
       {
-        label: `Investable at end of ${point.calendarYear} (age ${point.age})`,
+        label: `Investable at end of ${point.calendarYear} (${describeAges(workingRows[point.yearIndex] ?? retirementRow)})`,
         value: point.investable,
         unit: "dollars",
         source: "calculated",
@@ -672,7 +709,8 @@ function findCoastReached(
     return {
       yearIndex: point.yearIndex,
       calendarYear: point.calendarYear,
-      age: point.age,
+      firstPersonAge: point.firstPersonAge,
+      ages: point.ages,
       explanation: { value: point.investable, unit: "dollars", lines },
     };
   }

@@ -144,7 +144,10 @@ describe("resolvePlanInputs: projection inputs", () => {
     return {
       ...plan,
       household: {
-        people: [person, { id: "person-2", label: "Sam", ...sam, superAccessAge: 60 }],
+        people: [
+          person,
+          { id: "person-2", label: "Person 2", name: "Sam", ...sam, superAccessAge: 60 },
+        ],
       },
     };
   }
@@ -157,7 +160,9 @@ describe("resolvePlanInputs: projection inputs", () => {
     expect(projection.inputs.people.map((person) => person.id)).toEqual(["id-1", "person-2"]);
     expect(projection.inputs.people[1]?.currentAge).toEqual({ value: 32, source: "input" });
     expect(projection.inputs.people[1]?.superAccessAge).toEqual({ value: 60, source: "input" });
-    expect(projection.inputs.portfolioOwnerIds).toEqual(["id-1"]);
+    // With nothing stored, a couple jointly owns the portfolio.
+    expect(projection.inputs.portfolioOwnerIds).toEqual(["id-1", "person-2"]);
+    expect(projection.inputs.people.map((person) => person.label)).toEqual(["Person 1", "Sam"]);
   });
 
   // With several people a message names whose input is missing; the one-person labels never change.
@@ -179,7 +184,7 @@ describe("resolvePlanInputs: projection inputs", () => {
       missing: [
         {
           field: "targetRetirementAge",
-          label: "Sam: Target retirement age must be before your plan-until age",
+          label: "Sam: Target retirement age must be before the end of the plan, when Sam is 95",
         },
       ],
     });
@@ -199,6 +204,205 @@ describe("resolvePlanInputs: projection inputs", () => {
         {
           field: "targetRetirementAge",
           label: "Target retirement age must be before your plan-until age",
+        },
+      ],
+    });
+  });
+
+  // The wording names the person ("Sam's"), where one person's reads "your".
+  it("words a couple's retirement-before-today message with the person's name", () => {
+    expect(projectionOf(planWithTwoPeople({ currentAge: 40, targetRetirementAge: 38 }))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "targetRetirementAge",
+          label: "Sam: Target retirement age must be at or after Sam's current age",
+        },
+      ],
+    });
+  });
+
+  it("words the plan-until message for a couple as the younger person's age", () => {
+    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 40 });
+
+    expect(
+      projectionOf({ ...plan, household: { ...plan.household, projectionEndAge: 30 } }),
+    ).toMatchObject({
+      status: "incomplete",
+      missing: expect.arrayContaining([
+        {
+          field: "projectionEndAge",
+          label: "Plan until age must be after the younger person's current age",
+        },
+      ]),
+    });
+  });
+
+  // Ownership decides who the portfolio's contributions follow (IN-14, part).
+  it.each([
+    ["sole Person 2", { kind: "sole", personId: "person-2" }, ["person-2"]],
+    [
+      "joint",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "person-2", fraction: 0.5 },
+          { personId: "id-1", fraction: 0.5 },
+        ],
+      },
+      ["id-1", "person-2"],
+    ],
+    [
+      "a joint share of 0% (not an owner)",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "id-1", fraction: 1 },
+          { personId: "person-2", fraction: 0 },
+        ],
+      },
+      ["id-1"],
+    ],
+    ["an id that isn't in the plan", { kind: "sole", personId: "gone" }, ["id-1"]],
+  ] as const)(
+    "resolves %s ownership to the owners, in the plan's order",
+    (_name, ownership, owners) => {
+      const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
+      const projection = projectionOf({
+        ...plan,
+        portfolios: [{ ...plan.portfolios[0]!, ownership }],
+      });
+      if (projection.status !== "complete") throw new Error("expected complete");
+
+      expect(projection.inputs.portfolioOwnerIds).toEqual(owners);
+    },
+  );
+
+  /**
+   * The resolved interim amount for example A's plan plus Sam, after `changes`.
+   * Person 1 (34, retiring at 50) has 16 years to go; by default Sam (32,
+   * retiring at 52) has 20, so Sam is the later-retiring partner.
+   */
+  function resolvedInterim(
+    changes: (plan: Plan) => Plan,
+    sam: { currentAge: number; targetRetirementAge: number } = {
+      currentAge: 32,
+      targetRetirementAge: 52,
+    },
+  ) {
+    const projection = projectionOf(changes(planWithTwoPeople(sam)));
+    if (projection.status !== "complete") throw new Error("expected complete");
+    return projection.inputs.interimAnnual;
+  }
+
+  /** The plan with one person given a salary, to tell the later partner's pay apart. */
+  function withSalary(plan: Plan, personIndex: number, annual: number): Plan {
+    return {
+      ...plan,
+      household: {
+        people: plan.household.people.map((person, index) =>
+          index === personIndex ? { ...person, salary: { annual } } : person,
+        ),
+      },
+    };
+  }
+
+  it("resolves an entered interim amount as an input, and $0 entered stays $0", () => {
+    expect(
+      resolvedInterim((plan) => ({
+        ...plan,
+        expenses: { ...plan.expenses, interimAnnual: 20000 },
+      })),
+    ).toEqual({ value: 20000, source: "input" });
+    expect(
+      resolvedInterim((plan) => ({ ...plan, expenses: { ...plan.expenses, interimAnnual: 0 } })),
+    ).toEqual({ value: 0, source: "input" });
+  });
+
+  it("defaults to the retirement spending when the later-retiring partner has no salary", () => {
+    // Sam retires later and has no salary.
+    const interim = resolvedInterim((plan) => ({
+      ...plan,
+      expenses: {
+        ...plan.expenses,
+        livingAnnual: 50000,
+        retirementSpending: { kind: "amount", annual: 40000 },
+      },
+    }));
+
+    expect(interim).toEqual({ value: 40000, source: "default" });
+  });
+
+  it("follows a percent retirement spending, as a share of living expenses", () => {
+    const interim = resolvedInterim((plan) => ({
+      ...plan,
+      expenses: {
+        ...plan.expenses,
+        livingAnnual: 50000,
+        retirementSpending: { kind: "percentOfToday", fraction: 0.8 },
+      },
+    }));
+
+    expect(interim).toEqual({ value: 40000, source: "default" });
+  });
+
+  it("defaults to $0 when the later-retiring partner has a salary", () => {
+    const interim = resolvedInterim((plan) =>
+      withSalary(
+        {
+          ...plan,
+          expenses: {
+            ...plan.expenses,
+            livingAnnual: 50000,
+            retirementSpending: { kind: "amount", annual: 40000 },
+          },
+        },
+        1,
+        90000,
+      ),
+    );
+
+    expect(interim).toEqual({ value: 0, source: "default" });
+  });
+
+  // A stop age is an age of the first owner; one before their age today can't happen.
+  it("reports a stop age before the first owner's current age", () => {
+    expect(projectionOf(planWithAges(50, 55, { contributionsStopAge: 45 }))).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "contributionsStopAge",
+          label: "Contributions stop age must be at or after your current age",
+        },
+      ],
+    });
+  });
+
+  it("accepts a stop age equal to the current age", () => {
+    expect(projectionOf(planWithAges(50, 55, { contributionsStopAge: 50 })).status).toBe(
+      "complete",
+    );
+  });
+
+  it("names the first owner in a couple's stop-age message", () => {
+    const plan = planWithTwoPeople({ currentAge: 32, targetRetirementAge: 52 });
+    const projection = projectionOf({
+      ...plan,
+      portfolios: [
+        {
+          ...plan.portfolios[0]!,
+          ownership: { kind: "sole", personId: "person-2" },
+          contributionsStopAge: 30,
+        },
+      ],
+    });
+
+    expect(projection).toEqual({
+      status: "incomplete",
+      missing: [
+        {
+          field: "contributionsStopAge",
+          label: "Contributions stop age must be at or after Sam's current age",
         },
       ],
     });
@@ -236,6 +440,7 @@ describe("resolvePlanInputs: projection inputs", () => {
         },
       ],
       portfolioOwnerIds: ["id-1"],
+      interimAnnual: { value: 0, source: "default" },
       inflationRate: { value: 0.025, source: "default" },
       expectedReturn: { value: 0.07, source: "default" },
       annualContribution: { value: 0, source: "default" },
@@ -515,5 +720,31 @@ describe("resolvePlanInputs: super access age", () => {
 
   it("keeps an entered age, with source input", () => {
     expect(resolveAccessAge(60)).toEqual({ value: 60, source: "input" });
+  });
+});
+
+describe("resolvePlanInputs: people with the same name", () => {
+  it("labels them with their position, in the resolved people and in messages", () => {
+    const blank = createNewPlan(() => "id");
+    const plan: Plan = {
+      ...blank,
+      expenses: { livingAnnual: 1 },
+      household: {
+        people: [
+          { id: "a", label: "Person 1", name: "Alex", currentAge: 40, targetRetirementAge: 50 },
+          { id: "b", label: "Person 2", name: "alex" },
+        ],
+      },
+    };
+    const resolved = resolvePlanInputs(plan);
+    if (resolved.status !== "complete") throw new Error("expected complete");
+
+    expect(resolved.inputs.projection).toEqual({
+      status: "incomplete",
+      missing: [
+        { field: "currentAge", label: "alex (Person 2): Current age" },
+        { field: "targetRetirementAge", label: "alex (Person 2): Target retirement age" },
+      ],
+    });
   });
 });

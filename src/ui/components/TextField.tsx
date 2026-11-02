@@ -7,6 +7,8 @@ interface TextFieldProps {
   /** Called with the new text when the user finishes editing (blur or Enter). */
   readonly onChange: (value: string) => void;
   readonly hint?: string;
+  /** The most characters the box accepts (typing and pasting stop there). */
+  readonly maxLength?: number;
 }
 
 /**
@@ -14,7 +16,7 @@ interface TextFieldProps {
  * but without parsing. Used for names, e.g. the portfolio name on the Assets
  * screen. Nothing is committed if the text didn't change.
  */
-export function TextField({ label, value, onChange, hint }: TextFieldProps) {
+export function TextField({ label, value, onChange, hint, maxLength }: TextFieldProps) {
   const inputId = useId();
 
   // undefined means "not editing": the box shows the committed value.
@@ -37,6 +39,7 @@ export function TextField({ label, value, onChange, hint }: TextFieldProps) {
         <input
           id={inputId}
           type="text"
+          maxLength={maxLength}
           value={draftText ?? value}
           onChange={(event) => setDraftText(event.target.value)}
           onBlur={commitDraft}

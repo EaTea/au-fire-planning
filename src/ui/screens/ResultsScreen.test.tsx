@@ -197,7 +197,7 @@ describe("ResultsScreen", () => {
     });
 
     // For a couple the FI number is stated when the last of them retires, with the first person's age then.
-    it("states the FI number at the household retirement year for two people", () => {
+    it("states the FI number in the year they have both retired, for two people", () => {
       renderResults({
         ...exampleA,
         household: {
@@ -208,8 +208,8 @@ describe("ResultsScreen", () => {
         },
       });
 
-      // Sam retires last, in 2049, when the first person is 57.
-      expect(screen.getByText(/ at age 57 \(2049\)$/)).toBeInTheDocument();
+      // Sam retires last, in 2049.
+      expect(screen.getByText(/ in 2049, when you've both retired$/)).toBeInTheDocument();
     });
 
     it("adds the inflation lines to the FI number breakdown", async () => {

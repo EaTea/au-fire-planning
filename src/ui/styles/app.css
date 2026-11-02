@@ -493,6 +493,14 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+/* The last column (Status) holds notes of unbounded length, so it wraps instead of widening the table past the page. */
+.projection-table th:last-child,
+.projection-table td:last-child {
+  white-space: normal;
+  min-width: 11em;
+  text-align: left;
+}
+
 /* Year is the row's label, so it reads from the left. */
 .projection-table th:first-child,
 .projection-table td:first-child {
@@ -631,14 +639,63 @@ button:focus-visible {
   background: var(--colour-page-background);
 }
 
-/* Text for assistive technology only. */
+/*
+ * Text for assistive technology only. Fixed rather than absolute so a wide
+ * hidden table (the charts' data tables) can't widen the page's scroll area.
+ */
 .visually-hidden {
-  position: absolute;
+  position: fixed;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ---------- Household screen: the toggle row and the person cards ---------- */
+
+/* The toggle card, the person card(s) and the planning horizon card, with room between them. */
+.household-stack {
+  display: grid;
+  grid-template-columns: minmax(
+    0,
+    1fr
+  ); /* lets wide children shrink instead of forcing a sideways scroll */
+  gap: var(--space-large);
+}
+
+.household-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-small) var(--space-medium);
+}
+
+.household-toggle-row .toggle {
+  margin-bottom: 0;
+}
+
+/* Two person cards side by side when there is room, stacked on a narrow screen; the minimum never exceeds the width. */
+.person-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-large);
+}
+
+.ownership-label {
+  font-size: 12px;
+  color: var(--colour-text-muted);
+  margin-bottom: 4px;
+}
+
+.ownership-other-share {
+  margin: -6px 0 var(--space-medium);
+}
+
+.horizon-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--colour-text-muted);
 }
 
 /* ---------- Charts (TimeSeriesChart) and the chart card ---------- */

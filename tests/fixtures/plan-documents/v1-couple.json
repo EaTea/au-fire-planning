@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "household": {
+    "people": [
+      {
+        "id": "person-1",
+        "label": "Person 1",
+        "name": "Alex",
+        "currentAgeYears": 55,
+        "targetRetirementAgeYears": 56,
+        "superAccount": {
+          "balanceDollars": 150000,
+          "returnPercent": 0
+        }
+      },
+      {
+        "id": "person-2",
+        "label": "Person 2",
+        "name": "Sam",
+        "currentAgeYears": 53,
+        "targetRetirementAgeYears": 58,
+        "superAccessAgeYears": 60,
+        "superAccount": {
+          "balanceDollars": 100000,
+          "returnPercent": 0
+        }
+      }
+    ],
+    "projectionEndAgeYears": 66
+  },
+  "expenses": {
+    "livingAnnualDollars": 40000,
+    "interimAnnualDollars": 20000
+  },
+  "assumptions": {
+    "inflationPercent": 0
+  },
+  "portfolios": [
+    {
+      "id": "portfolio-1",
+      "name": "Share portfolio",
+      "valueDollars": 200000,
+      "expectedReturnPercent": 0,
+      "ownership": {
+        "kind": "joint",
+        "shares": [
+          { "personId": "person-1", "percent": 50 },
+          { "personId": "person-2", "percent": 50 }
+        ]
+      }
+    }
+  ]
+}

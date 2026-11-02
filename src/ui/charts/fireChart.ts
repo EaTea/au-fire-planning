@@ -10,6 +10,7 @@
 // tests only need a smoke test.
 
 import type { ProjectionSummary } from "../../engine/fiNumber";
+import { agesOf } from "../../engine/projection";
 import type {
   TimeSeriesBand,
   TimeSeriesMarker,
@@ -51,6 +52,8 @@ export function buildFireChartSeries(
   const points: TimeSeriesPoint[] = projection.rows.map((row) => ({
     year: row.calendarYear,
     age: row.people[0].age,
+    // A couple's chart names both ages.
+    ...(row.people.length > 1 ? { ages: agesOf(row) } : {}),
     values: {
       [INVESTABLE_KEY]: inChosenDollars(row.investableClosing, row.inflationIndex),
       [FI_NUMBER_KEY]: inChosenDollars(row.fiNumber, row.inflationIndex),

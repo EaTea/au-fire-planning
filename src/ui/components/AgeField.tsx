@@ -8,6 +8,8 @@ interface AgeFieldProps {
   readonly value?: number;
   /** Shown in the dashed "default" style while `value` is unset. */
   readonly defaultValue?: number;
+  /** Replaces the formatted default while it is shown, e.g. "when you've both retired". */
+  readonly defaultText?: string;
   /** Called with a valid age, or undefined when the user clears the field. */
   readonly onChange: (value?: number) => void;
   readonly hint?: string;

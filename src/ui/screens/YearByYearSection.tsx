@@ -38,6 +38,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
   const hasSuper = projectionHasSuper(projection.rows);
 
   const fiYearIndex = projection.fiReached?.yearIndex;
+  const isCouple = projection.people.length > 1;
 
   // `?year=2038` (from the chart or the runs-out banner) asks for that year's row to be scrolled to and outlined.
   const requestedYear = Number(searchParams.get("year"));
@@ -49,7 +50,11 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
   // All money goes through formatMoney so it follows the dollars toggle.
   const columns: ProjectionColumn<ProjectionRow>[] = [
     { header: "Year", cell: (row) => row.calendarYear },
-    { header: "Age", cell: (row) => row.people[0].age },
+    // One person: "Age". A couple: the names as the header and each person's age in the cell ("52 · 50").
+    {
+      header: isCouple ? projection.people.map((person) => person.label).join(" · ") : "Age",
+      cell: (row) => row.people.map((personYear) => personYear.age).join(" · "),
+    },
     {
       header: "Salary",
       // "—" rather than $0 once retired, so a blank year doesn't read as a zero salary.
@@ -91,9 +96,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         row.shortfall > 0 ? (
           <span className="projection-shortfall">
             Shortfall −{formatMoney(row.shortfall, row.inflationIndex)}
-            {isShortfallWithSuperLocked(row) &&
-              projection.people[0].superAccessAge !== undefined &&
-              ` · super locked until ${projection.people[0].superAccessAge}`}
+            {isShortfallWithSuperLocked(row) && lockedSuperNote(row, projection)}
           </span>
         ) : (
           "✓"
@@ -119,9 +122,7 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
         columns={columns}
         getRowKey={(row) => row.yearIndex}
         isHighlighted={(row) => row.yearIndex === fiYearIndex}
-        getBandText={(row) =>
-          bandTextForRow(row, hasSuper ? projection.people[0].superAccessAge : undefined)
-        }
+        getBandText={(row) => bandTextForRow(row, projection, hasSuper)}
         scrollToKey={requestedRow?.yearIndex}
       />
     </section>
@@ -132,28 +133,109 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
  * The band a row belongs to. The ordering, top to bottom:
  *
  *   Working · contributing
+ *   One retired · {name} working                 (a couple, while only one has retired)
  *   Bridge · retired, super locked until {age}   (retired years before super opens)
  *   Super accessible                             (retired years from then on)
  *
- * With no super (`superAccessAge` undefined) the two retired bands are
- * replaced by the single "Retired" band, as before M6. When you retire at or
- * after the access age there is no bridge, so "Super accessible" opens the
- * retired years directly. A band row opens wherever the text changes, so each
- * of these appears once. Used by YearByYearSection.
+ * With no super the two retired bands are replaced by the single "Retired"
+ * band, as before M6. When you retire at or after the access age there is no
+ * bridge, so "Super accessible" opens the retired years directly. For a couple
+ * the bridge band names each person whose super is still locked, with their
+ * access age and year ("Bridge · super locked: Alex until 65 (2036), Sam until
+ * 65 (2038)"). A band row opens wherever the text changes, so each of these
+ * appears once. Used by YearByYearSection.
  */
-function bandTextForRow(row: ProjectionRow, superAccessAge: number | undefined): string {
-  if (row.phase === "working" || superAccessAge === undefined) return phaseBandText[row.phase];
+function bandTextForRow(
+  row: ProjectionRow,
+  projection: CompleteProjection,
+  hasSuper: boolean,
+): string {
+  if (row.phase === "oneRetired") {
+    const stillWorking = row.people
+      .filter((personYear) => personYear.phase === "working")
+      .map((personYear) => personYear.label);
 
-  return row.superAccessible
-    ? "Super accessible"
-    : `Bridge · retired, super locked until ${superAccessAge}`;
+    return `One retired · ${stillWorking.join(" and ")} working`;
+  }
+
+  const [firstPerson] = projection.people;
+  const singleAccessAge = hasSuper ? firstPerson.superAccessAge : undefined;
+
+  if (row.phase === "working" || !hasSuper || singleAccessAge === undefined) {
+    return phaseBandText[row.phase];
+  }
+
+  if (row.superAccessible) return "Super accessible";
+
+  // A couple's bridge band lists everyone who has super (the same text on every bridge row).
+  if (projection.people.length > 1) {
+    return `Bridge · super locked: ${lockedUntilWords(projection)}`;
+  }
+
+  return `Bridge · retired, super locked until ${singleAccessAge}`;
 }
 
-/** The heading of each phase's band row in the table, for plans without super. */
+/**
+ * "Alex until 65 (2036), Sam until 65 (2038)": each person who has super, with
+ * their access age and the year they reach it. Used by the couple's bridge band.
+ */
+function lockedUntilWords(projection: CompleteProjection): string {
+  const todayRow = projection.rows[0];
+
+  return projection.people
+    .flatMap((person, personIndex) => {
+      const holdsSuper = projection.rows.some(
+        (candidate) => (candidate.people[personIndex]?.superClosing ?? 0) > 0,
+      );
+      const todayAge = todayRow?.people[personIndex]?.age;
+      if (!holdsSuper || person.superAccessAge === undefined || todayAge === undefined) return [];
+
+      const year = (todayRow?.calendarYear ?? 0) + (person.superAccessAge - todayAge);
+
+      return [`${person.label} until ${person.superAccessAge} (${year})`];
+    })
+    .join(", ");
+}
+
+/**
+ * The note on a shortfall year in which some super is locked: " · super locked
+ * until 65" for one person, and for a couple each person whose super has a
+ * balance but can't be drawn yet ("Alex's super locked until 65 (2036)").
+ * Used by the Status column.
+ */
+function lockedSuperNote(row: ProjectionRow, projection: CompleteProjection): string {
+  if (projection.people.length === 1) {
+    const accessAge = projection.people[0].superAccessAge;
+
+    return accessAge === undefined ? "" : ` · super locked until ${accessAge}`;
+  }
+
+  const todayRow = projection.rows[0];
+
+  // Everyone whose super has a balance but can't be drawn yet, with when it opens.
+  const locked = row.people.flatMap((personYear, personIndex) => {
+    const accessAge = projection.people[personIndex]?.superAccessAge;
+    const todayAge = todayRow?.people[personIndex]?.age;
+    if (personYear.superAccessible || personYear.superClosing <= 0) return [];
+    if (accessAge === undefined || todayAge === undefined) return [];
+
+    const year = (todayRow?.calendarYear ?? 0) + (accessAge - todayAge);
+
+    return [{ label: personYear.label, untilText: `${accessAge} (${year})` }];
+  });
+
+  // "Alex's super locked until 65 (2036), Sam's until 65 (2038)": the first says what is locked, the rest just whose.
+  const phrases = locked.map(({ label, untilText }, index) =>
+    index === 0 ? `${label}'s super locked until ${untilText}` : `${label}'s until ${untilText}`,
+  );
+
+  return phrases.length === 0 ? "" : ` · ${phrases.join(", ")}`;
+}
+
+/** The heading of each phase's band row in the table, for plans without super (the one-retired band is worded per row). */
 const phaseBandText: Record<ProjectionRow["phase"], string> = {
   working: "Working · contributing",
-  // Only couples reach this phase; the couple wording that names who is still working arrives in M7 PR B.
-  oneRetired: "One retired · the other still working",
+  oneRetired: "One retired",
   retired: "Retired · spending drawn from the portfolio, then cash",
 };
 

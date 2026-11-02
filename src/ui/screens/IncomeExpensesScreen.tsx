@@ -1,6 +1,7 @@
 import { StepPage } from "../components/StepPage";
 import { steps } from "../navigation/steps";
 import { DatedExpensesSection } from "../sections/DatedExpensesSection";
+import { InterimSpendingSection } from "../sections/InterimSpendingSection";
 import { LivingExpensesSection } from "../sections/LivingExpensesSection";
 import { RetirementSpendingSection } from "../sections/RetirementSpendingSection";
 import { SalarySection } from "../sections/SalarySection";
@@ -20,6 +21,7 @@ export function IncomeExpensesScreen() {
       <SalarySection />
       <LivingExpensesSection />
       <RetirementSpendingSection />
+      <InterimSpendingSection />
       <DatedExpensesSection />
     </StepPage>
   );

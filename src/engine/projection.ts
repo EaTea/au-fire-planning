@@ -17,6 +17,7 @@
 //
 //   spending to fund (nominal) =
 //       retirement spending × index    (only once everyone has retired)
+//     + interim spending × index       (only while some, not all, have retired)
 //     + dated expenses for this year × index
 //
 //   super, once for each person (M5), in this order:
@@ -40,7 +41,7 @@
 //     ProjectionRow (household totals: the sums over `people`)
 //       ├─ cash, portfolio, spending, shortfall ...  (household only)
 //       └─ people[0] ─ PersonYear: age, phase, salary, super flows
-//          people[1] ─ PersonYear: ...                (couples, later)
+//          people[1] ─ PersonYear: ...                (a couple; one entry for one person)
 //
 // Cash is drawn last so it acts as a buffer: it is only touched once the
 // portfolio is empty. That holds in working years too, so a dated expense
@@ -176,6 +177,12 @@ export interface ProjectionInputs {
   readonly livingAnnual: number;
   /** Spending drawn each retired year, in today's dollars. */
   readonly retirementSpendingAnnual: number;
+  /**
+   * Spending drawn from savings in each year in which some but not all of the
+   * household have retired (EXP-2), in today's dollars. Absent means $0: the
+   * partner still working is assumed to cover it, as in working years.
+   */
+  readonly interimSpendingAnnual?: number;
   /** Dated and one-off expenses, drawn from savings in any year they apply. */
   readonly datedExpenses: readonly ProjectionDatedExpense[];
   /** M1's FI number in today's dollars. */
@@ -198,6 +205,8 @@ export type ProjectionPhase = "working" | "oneRetired" | "retired";
 export interface PersonYear {
   /** Matches `ProjectionPerson.id`. */
   readonly personId: string;
+  /** The person's display name ("Alex", or "Person 1"), for explanation lines that quote their age. */
+  readonly label: string;
   /** This person's age in the row. */
   readonly age: number;
   /** "retired" when `age` is above this person's retirement age. */
@@ -454,12 +463,49 @@ export function lastPortfolioContributionYear(inputs: ProjectionInputs, startYea
   return startYear + Math.max(-1, ...lastWorkingRows);
 }
 
+/** One person's age with their display name: the data behind `formatAges`. */
+export interface PersonAge {
+  readonly label: string;
+  readonly age: number;
+}
+
+/** Everyone's age in a row, as data for `formatAges`. Used wherever a result carries the ages of its year. */
+export function agesOf(row: ProjectionRow): readonly PersonAge[] {
+  return row.people.map(({ label, age }) => ({ label, age }));
+}
+
+/**
+ * How a row's ages read in an explanation line. One person: "age 52". A
+ * couple names both: "Alex 52 · Sam 50". Used inside parentheses and after
+ * "at" by every engine line that quotes an age, so the wording is decided
+ * once.
+ */
+export function describeAges(row: ProjectionRow): string {
+  return formatAges(agesOf(row));
+}
+
+/**
+ * Words for one or more people's ages: "age 52" for one, "Alex 52 · Sam 50"
+ * for several. Used by `describeAges` and by results that carry ages as data
+ * (see `Solvency`).
+ */
+export function formatAges(ages: readonly PersonAge[]): string {
+  const [firstAge, ...otherAges] = ages;
+
+  if (firstAge === undefined) return "";
+  if (otherAges.length === 0) return `age ${firstAge.age}`;
+
+  return ages.map(({ label, age }) => `${label} ${age}`).join(" · ");
+}
+
 /** The year investable net worth first reaches the FI number, with the working behind it. */
 export interface FiMilestone {
   readonly yearIndex: number;
   readonly calendarYear: number;
   /** The first person's age in that year. */
-  readonly age: number;
+  readonly firstPersonAge: number;
+  /** Everyone's age in that year with their display names; see `formatAges`. */
+  readonly ages: readonly PersonAge[];
   /** The investable net worth against the FI number in that year. */
   readonly explanation: Explained;
 }
@@ -556,11 +602,10 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
     const cashAvailable = cashOpening + cashInterest;
     const portfolioAvailable = portfolioOpening + portfolioGrowth + contribution;
 
-    // Retirement spending only starts in the first year everyone is retired
-    // (the interim amount for years in between arrives in M7 step 5), but
-    // dated expenses apply in any year, including while working.
-    const retirementSpending =
-      phase === "retired" ? inputs.retirementSpendingAnnual * inflationIndex : 0;
+    // Retirement spending only starts in the first year everyone is retired;
+    // in the years between, the interim amount is drawn instead (default $0).
+    // Dated expenses apply in any year, including while working.
+    const retirementSpending = phaseSpendingToday(inputs, phase) * inflationIndex;
     const datedSpending =
       sumDatedExpensesInYear(inputs.datedExpenses, calendarYear) * inflationIndex;
     const spending = retirementSpending + datedSpending;
@@ -582,6 +627,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       drawings,
       ({ person, superYear, accessible, drawn }): PersonYear => ({
         personId: person.id,
+        label: person.label,
         age: person.currentAge + yearIndex,
         phase: personPhase(person, yearIndex),
         salary: salaryInYear(person, inputs, yearIndex),
@@ -654,6 +700,7 @@ function personYearToday(
 
   return {
     personId: person.id,
+    label: person.label,
     age: person.currentAge,
     phase: personPhase(person, 0),
     salary: salaryInYear(person, inputs, 0),
@@ -668,6 +715,23 @@ function personYearToday(
     superClosing: superToday,
     superAccessible: isSuperAccessibleInYear(person, inputs, 0, startYear),
   };
+}
+
+/**
+ * The spending drawn from savings in a household phase, apart from dated
+ * expenses, in today's dollars: retirement spending once everyone has
+ * retired, the interim amount while only some have, nothing while everyone
+ * works. Called by `projectPortfolio` for every row.
+ */
+function phaseSpendingToday(inputs: ProjectionInputs, phase: ProjectionPhase): number {
+  switch (phase) {
+    case "retired":
+      return inputs.retirementSpendingAnnual;
+    case "oneRetired":
+      return inputs.interimSpendingAnnual ?? 0;
+    case "working":
+      return 0;
+  }
 }
 
 /**
@@ -776,6 +840,29 @@ export function drawSuperProRata<Candidate extends { available: number; accessib
 }
 
 /**
+ * Whether a person has any super to speak of, judged from their inputs: a
+ * balance today, a voluntary contribution, or employer contributions (a salary
+ * with an employer rate that isn't 0). The app carries an empty account for a
+ * person who entered nothing, and that account is never "accessible": there is
+ * nothing to draw, and it must not make a household look like its super is
+ * open (Year by year bands, the household flag). Called by
+ * `isSuperAccessibleInYear`.
+ */
+function personHoldsSuper(person: ProjectionPerson): boolean {
+  const account = person.superAccount;
+  if (account === undefined) return false;
+
+  const hasEmployerContributions = (person.salary?.annual ?? 0) > 0 && account.employerRate !== 0;
+
+  return (
+    account.opening > 0 ||
+    account.salarySacrifice.annual > 0 ||
+    account.nonConcessional.annual > 0 ||
+    hasEmployerContributions
+  );
+}
+
+/**
  * Whether a person's super can be drawn in row `yearIndex` (calendar year
  * `calendarYear`), using that year's rules. False when they have no super
  * account. Called by `projectPortfolio` for each person in each row.
@@ -787,7 +874,7 @@ function isSuperAccessibleInYear(
   calendarYear: number,
 ): boolean {
   const account = person.superAccount;
-  if (account === undefined) return false;
+  if (account === undefined || !personHoldsSuper(person)) return false;
 
   const rules = rulesForYear(account.ruleSet, calendarYear, inputs.inflationRate).superannuation;
 
@@ -1012,7 +1099,7 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
 
   const lines: ExplanationLine[] = [
     {
-      label: `Balance at end of ${row.calendarYear} (age ${firstPersonAge})`,
+      label: `Balance at end of ${row.calendarYear} (${describeAges(row)})`,
       value: row.investableClosing,
       unit: "dollars",
       source: "calculated",
@@ -1037,7 +1124,8 @@ export function findFiReached(rows: readonly ProjectionRow[]): FiMilestone | und
   return {
     yearIndex: row.yearIndex,
     calendarYear: row.calendarYear,
-    age: firstPersonAge,
+    firstPersonAge,
+    ages: agesOf(row),
     explanation: { value: row.investableClosing, unit: "dollars", lines },
   };
 }

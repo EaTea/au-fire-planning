@@ -111,6 +111,29 @@ describe("DatedExpensesSection", () => {
     expect(readPlan().expenses.datedExpenses?.[0]).toMatchObject({ fromYear: 2087, toYear: 2087 });
   });
 
+  // The plan runs until the younger partner (30) reaches 95: 2026 + 65 = 2091, not Person 1's 2051.
+  it("limits the years by the youngest person's age for a couple", async () => {
+    const user = userEvent.setup();
+    const { readPlan } = renderSection(<DatedExpensesSection />, {
+      ...planWithExpenses([replaceCar]),
+      household: {
+        people: [
+          { id: "person-1", label: "Person 1", currentAge: 70 },
+          { id: "person-2", label: "Person 2", currentAge: 30 },
+        ],
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "From for Replace car" }));
+    await user.keyboard("2092{Enter}");
+    expect(screen.getByText("Enter a value of at most 2091.")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("From year for Replace car"));
+    await user.keyboard("2091{Enter}");
+
+    expect(readPlan().expenses.datedExpenses?.[0]).toMatchObject({ fromYear: 2091 });
+  });
+
   it("follows a changed plan-until age when limiting years", async () => {
     const user = userEvent.setup();
     renderSection(<DatedExpensesSection />, {

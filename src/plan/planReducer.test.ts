@@ -512,3 +512,314 @@ describe("planReducer: drawdown actions", () => {
     expect(planReducer(plan, { type: "removeDatedExpense", id: "zzz" })).toEqual(plan);
   });
 });
+
+// Couples (M7 step 4): adding and removing a partner, names, the interim amount and ownership.
+describe("planReducer: couples", () => {
+  /** A plan with Person 1 (id "person-1") and a partner (id "person-2"), one portfolio "portfolio-1". */
+  function couplePlan(): Plan {
+    return planReducer(buildBlankPlan(), { type: "addPartner", id: "person-2" });
+  }
+
+  const jointOwnership = {
+    kind: "joint",
+    shares: [
+      { personId: "person-1", fraction: 0.7 },
+      { personId: "person-2", fraction: 0.3 },
+    ],
+  } as const;
+
+  it("adds Person 2 with nothing set", () => {
+    const plan = couplePlan();
+
+    expect(plan.household.people).toEqual([
+      { id: "person-1", label: "Person 1" },
+      { id: "person-2", label: "Person 2" },
+    ]);
+  });
+
+  // A repeated click (or a third add) must not create a third person.
+  it("ignores addPartner when there are already two people", () => {
+    const plan = couplePlan();
+
+    expect(planReducer(plan, { type: "addPartner", id: "person-3" })).toBe(plan);
+  });
+
+  it("removes Person 2 and their data, keeping Person 1's", () => {
+    const withData = planReducer(
+      planReducer(couplePlan(), { type: "setSalary", personId: "person-2", annual: 90000 }),
+      { type: "setCurrentAge", personId: "person-1", age: 40 },
+    );
+
+    const removed = planReducer(withData, { type: "removePartner" });
+
+    expect(removed.household.people).toEqual([
+      { id: "person-1", label: "Person 1", currentAge: 40 },
+    ]);
+  });
+
+  it("clears the interim amount with the partner", () => {
+    const withInterim = planReducer(couplePlan(), { type: "setInterimSpending", annual: 20000 });
+
+    const removed = planReducer(withInterim, { type: "removePartner" });
+
+    expect(removed.expenses.interimAnnual).toBeUndefined();
+    expect("interimAnnual" in removed.expenses).toBe(false);
+  });
+
+  it("ignores removePartner with only one person", () => {
+    const plan = buildBlankPlan();
+
+    expect(planReducer(plan, { type: "removePartner" })).toBe(plan);
+  });
+
+  // The ownership goes back to Person 1 whether Person 2 owned it alone or in a joint split.
+  it.each([
+    ["Person 2 as sole owner", { kind: "sole", personId: "person-2" }],
+    ["a joint split", jointOwnership],
+  ] as const)("gives a portfolio owned by %s back to Person 1", (_name, ownership) => {
+    const owned = planReducer(couplePlan(), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership,
+    });
+
+    const removed = planReducer(owned, { type: "removePartner" });
+
+    expect(removed.portfolios[0]?.ownership).toEqual({ kind: "sole", personId: "person-1" });
+  });
+
+  it("leaves Person 1's sole ownership, and an unset owner, as they were when removing", () => {
+    const soleFirst = planReducer(couplePlan(), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: { kind: "sole", personId: "person-1" },
+    });
+
+    expect(planReducer(soleFirst, { type: "removePartner" }).portfolios[0]?.ownership).toEqual({
+      kind: "sole",
+      personId: "person-1",
+    });
+    expect(planReducer(couplePlan(), { type: "removePartner" }).portfolios[0]).not.toHaveProperty(
+      "ownership",
+    );
+  });
+
+  it("sets a name, trims it, and clears it when empty or undefined", () => {
+    const named = planReducer(couplePlan(), {
+      type: "setPersonName",
+      personId: "person-2",
+      name: "  Sam ",
+    });
+    expect(named.household.people[1]?.name).toBe("Sam");
+
+    const blankName = planReducer(named, {
+      type: "setPersonName",
+      personId: "person-2",
+      name: "  ",
+    });
+    expect(blankName.household.people[1]?.name).toBeUndefined();
+
+    const cleared = planReducer(named, { type: "setPersonName", personId: "person-2" });
+    expect(cleared.household.people[1]?.name).toBeUndefined();
+  });
+
+  it("ignores a name for a person that doesn't exist", () => {
+    const plan = couplePlan();
+
+    expect(
+      planReducer(plan, { type: "setPersonName", personId: "nobody", name: "X" }).household,
+    ).toEqual(plan.household);
+  });
+
+  it("sets and clears the interim amount", () => {
+    const set = planReducer(couplePlan(), { type: "setInterimSpending", annual: 20000 });
+    expect(set.expenses.interimAnnual).toBe(20000);
+
+    const cleared = planReducer(set, { type: "setInterimSpending" });
+    expect(cleared.expenses.interimAnnual).toBeUndefined();
+  });
+
+  it("sets and clears a portfolio's ownership", () => {
+    const set = planReducer(couplePlan(), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: jointOwnership,
+    });
+    expect(set.portfolios[0]?.ownership).toEqual(jointOwnership);
+
+    const cleared = planReducer(set, { type: "setPortfolioOwnership", portfolioId: "portfolio-1" });
+    expect(cleared.portfolios[0]?.ownership).toBeUndefined();
+  });
+
+  // The stored document rejects these, so the reducer must never let them into the plan.
+  it.each([
+    [
+      "a split that doesn't add to 100%",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "person-1", fraction: 0.6 },
+          { personId: "person-2", fraction: 0.3 },
+        ],
+      },
+    ],
+    ["a single share", { kind: "joint", shares: [{ personId: "person-1", fraction: 1 }] }],
+    [
+      "a negative share",
+      {
+        kind: "joint",
+        shares: [
+          { personId: "person-1", fraction: 1.2 },
+          { personId: "person-2", fraction: -0.2 },
+        ],
+      },
+    ],
+    ["an unknown person", { kind: "sole", personId: "nobody" }],
+  ] as const)("ignores ownership with %s", (_name, ownership) => {
+    const plan = couplePlan();
+
+    expect(
+      planReducer(plan, { type: "setPortfolioOwnership", portfolioId: "portfolio-1", ownership }),
+    ).toBe(plan);
+  });
+
+  it("ignores ownership for a portfolio that doesn't exist", () => {
+    const plan = couplePlan();
+    const result = planReducer(plan, {
+      type: "setPortfolioOwnership",
+      portfolioId: "nope",
+      ownership: { kind: "sole", personId: "person-2" },
+    });
+
+    expect(result.portfolios).toEqual(plan.portfolios);
+  });
+});
+
+// The contributions stop age is an age of the portfolio's first owner, so it moves with them.
+describe("planReducer: the stop age follows the first owner", () => {
+  /** Alex 55 (person-1) and Sam 35 (person-2); the portfolio is owned by Sam with a stop age of 45 (Sam's age). */
+  function samOwnsWithStopAge(stopAge: number | undefined = 45): Plan {
+    const base = planReducer(buildBlankPlan(), { type: "addPartner", id: "person-2" });
+
+    return {
+      ...base,
+      household: {
+        ...base.household,
+        people: [
+          { id: "person-1", label: "Person 1", currentAge: 55 },
+          { id: "person-2", label: "Person 2", currentAge: 35 },
+        ],
+      },
+      portfolios: [
+        {
+          id: "portfolio-1",
+          name: "Share portfolio",
+          ownership: { kind: "sole", personId: "person-2" },
+          contributionsStopAge: stopAge,
+        },
+      ],
+    };
+  }
+
+  it("converts the stop age to Person 1's age when Just me removes the owner, keeping the same year", () => {
+    const removed = planReducer(samOwnsWithStopAge(), { type: "removePartner" });
+
+    // Sam's 45 is ten years away, which is Alex's 65.
+    expect(removed.portfolios[0]?.contributionsStopAge).toBe(65);
+    expect(removed.portfolios[0]?.ownership).toEqual({ kind: "sole", personId: "person-1" });
+  });
+
+  it("clears a stop age that is already in the past for the new person", () => {
+    // Sam is 35, so a stop age of 30 (Sam's) was already past.
+    const removed = planReducer(samOwnsWithStopAge(30), { type: "removePartner" });
+
+    expect(removed.portfolios[0]).not.toHaveProperty("contributionsStopAge");
+  });
+
+  it("clears the stop age when either person's age isn't known", () => {
+    const plan = samOwnsWithStopAge();
+    const withoutAge = {
+      ...plan,
+      household: {
+        ...plan.household,
+        people: [
+          { ...plan.household.people[0]!, currentAge: undefined },
+          plan.household.people[1]!,
+        ],
+      },
+    };
+
+    expect(planReducer(withoutAge, { type: "removePartner" }).portfolios[0]).not.toHaveProperty(
+      "contributionsStopAge",
+    );
+  });
+
+  it("leaves the stop age alone when Just me doesn't change the first owner", () => {
+    const plan = samOwnsWithStopAge();
+    const alexOwns: Plan = {
+      ...plan,
+      portfolios: [
+        {
+          ...plan.portfolios[0]!,
+          ownership: { kind: "sole", personId: "person-1" },
+          contributionsStopAge: 60,
+        },
+      ],
+    };
+
+    expect(
+      planReducer(alexOwns, { type: "removePartner" }).portfolios[0]?.contributionsStopAge,
+    ).toBe(60);
+    // With no stored owner the first owner is Person 1 as well.
+    const { ownership, ...noOwner } = alexOwns.portfolios[0]!;
+    void ownership;
+    expect(
+      planReducer({ ...alexOwns, portfolios: [noOwner] }, { type: "removePartner" }).portfolios[0]
+        ?.contributionsStopAge,
+    ).toBe(60);
+  });
+
+  it("converts the stop age when the owner is switched from Sam to Person 1, and when to joint", () => {
+    const toAlex = planReducer(samOwnsWithStopAge(), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: { kind: "sole", personId: "person-1" },
+    });
+    expect(toAlex.portfolios[0]?.contributionsStopAge).toBe(65);
+
+    // Joint's first owner is Person 1 as well.
+    const toJoint = planReducer(samOwnsWithStopAge(), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: {
+        kind: "joint",
+        shares: [
+          { personId: "person-1", fraction: 0.5 },
+          { personId: "person-2", fraction: 0.5 },
+        ],
+      },
+    });
+    expect(toJoint.portfolios[0]?.contributionsStopAge).toBe(65);
+  });
+
+  it("clears the stop age when switching the owner would put it in the past", () => {
+    const toAlex = planReducer(samOwnsWithStopAge(30), {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: { kind: "sole", personId: "person-1" },
+    });
+
+    expect(toAlex.portfolios[0]).not.toHaveProperty("contributionsStopAge");
+  });
+
+  it("keeps the stop age when the first owner stays the same", () => {
+    const plan = samOwnsWithStopAge();
+    const same = planReducer(plan, {
+      type: "setPortfolioOwnership",
+      portfolioId: "portfolio-1",
+      ownership: { kind: "sole", personId: "person-2" },
+    });
+
+    expect(same.portfolios[0]?.contributionsStopAge).toBe(45);
+  });
+});

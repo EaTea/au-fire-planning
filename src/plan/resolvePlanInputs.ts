@@ -10,6 +10,7 @@ import {
   DEFAULT_CASH_BALANCE,
   DEFAULT_EXPECTED_RETURN,
   DEFAULT_INFLATION_RATE,
+  DEFAULT_INTERIM_SPENDING,
   DEFAULT_INTEREST_RATE,
   DEFAULT_PORTFOLIO_VALUE,
   DEFAULT_PROJECTION_END_AGE,
@@ -21,9 +22,12 @@ import {
   DEFAULT_SUPER_CONTRIBUTION_ANNUAL,
   DEFAULT_SUPER_RETURN,
 } from "./defaults";
+import { displayName } from "./displayName";
+import { defaultInterimSpending } from "./interimDefault";
 import type {
   Person,
   Plan,
+  PortfolioOwnership,
   RetirementSpending,
   SalaryGrowth,
   Sourced,
@@ -38,7 +42,8 @@ export interface MissingInput {
     | "retirementSpending"
     | "currentAge"
     | "targetRetirementAge"
-    | "projectionEndAge";
+    | "projectionEndAge"
+    | "contributionsStopAge";
   readonly label: string;
 }
 
@@ -91,7 +96,7 @@ export interface ResolvedSuperAccount {
  */
 export interface ResolvedPerson {
   readonly id: string;
-  /** The plan's display label, e.g. "Person 1". */
+  /** The person's display name: the name they were given, or "Person N" (see `displayName`). */
   readonly label: string;
   readonly currentAge: Sourced<number>;
   readonly targetRetirementAge: Sourced<number>;
@@ -130,12 +135,19 @@ export interface ResolvedProjectionInputs {
    * contributions continue while the portfolio's owners are working.
    */
   readonly contributionsStopAge: Sourced<number | undefined>;
-  /** Who owns the portfolio, by person id. Until ownership is stored (M7 step 4) that is the first person. */
+  /** Who owns the portfolio, by person id in the plan's order (see `resolveOwnerIds`). */
   readonly portfolioOwnerIds: readonly string[];
   /** The age the projection runs until, measured on the youngest person (default 95). */
   readonly endAge: Sourced<number>;
   /** General interest rate on cash, a fraction (default 4%). */
   readonly interestRate: Sourced<number>;
+  /**
+   * Dollars per year in today's dollars drawn from savings while some but not
+   * all of the household have retired. Unset it defaults to $0 when the partner
+   * who retires later has a salary, and otherwise to the retirement spending
+   * (see `defaultInterimSpending`).
+   */
+  readonly interimAnnual: Sourced<number>;
   /** Dated and one-off expenses, in the order entered. */
   readonly datedExpenses: readonly ResolvedDatedExpense[];
 }
@@ -238,18 +250,21 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
   }
 
   /** Words a missing-input label with the person's name when there is more than one person. */
-  const labelFor = (person: Person, text: string): string =>
-    planPeople.length > 1 ? `${person.label}: ${text}` : text;
+  const labelFor = (person: Person, personIndex: number, text: string): string =>
+    planPeople.length > 1 ? `${displayName(person, personIndex, planPeople)}: ${text}` : text;
+  const isCouple = planPeople.length > 1;
 
   // Each person's own ages: both must be there, and retirement can't be before today.
-  for (const person of planPeople) {
+  for (const [personIndex, person] of planPeople.entries()) {
+    const name = displayName(person, personIndex, planPeople);
+
     if (person.currentAge === undefined) {
-      missing.push({ field: "currentAge", label: labelFor(person, "Current age") });
+      missing.push({ field: "currentAge", label: labelFor(person, personIndex, "Current age") });
     }
     if (person.targetRetirementAge === undefined) {
       missing.push({
         field: "targetRetirementAge",
-        label: labelFor(person, "Target retirement age"),
+        label: labelFor(person, personIndex, "Target retirement age"),
       });
     }
 
@@ -261,7 +276,11 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
     ) {
       missing.push({
         field: "targetRetirementAge",
-        label: labelFor(person, "Target retirement age must be at or after your current age"),
+        label: labelFor(
+          person,
+          personIndex,
+          `Target retirement age must be at or after ${isCouple ? `${name}'s` : "your"} current age`,
+        ),
       });
     }
   }
@@ -275,32 +294,60 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
   if (youngestAge !== undefined && endAge.value <= youngestAge) {
     missing.push({
       field: "projectionEndAge",
-      label: "Plan until age must be after your current age",
+      label: isCouple
+        ? "Plan until age must be after the younger person's current age"
+        : "Plan until age must be after your current age",
     });
   }
 
   // Each person's last age is the plan-until age, moved by how much older than the youngest
   // they are. When their age (or anyone's) isn't known yet there is no move: the retirement
   // age is compared with the plan-until age itself.
-  for (const person of planPeople) {
+  for (const [personIndex, person] of planPeople.entries()) {
     if (person.targetRetirementAge === undefined) continue;
 
-    const yearsOlderThanYoungest =
-      person.currentAge !== undefined && youngestAge !== undefined
-        ? person.currentAge - youngestAge
-        : 0;
+    const ageIsKnown = person.currentAge !== undefined && youngestAge !== undefined;
+    const yearsOlderThanYoungest = ageIsKnown ? person.currentAge! - youngestAge! : 0;
+    const lastAgeInPlan = endAge.value + yearsOlderThanYoungest;
 
-    if (person.targetRetirementAge >= endAge.value + yearsOlderThanYoungest) {
+    if (person.targetRetirementAge >= lastAgeInPlan) {
+      const name = displayName(person, personIndex, planPeople);
+
       missing.push({
         field: "targetRetirementAge",
-        label: labelFor(person, "Target retirement age must be before your plan-until age"),
+        label: labelFor(
+          person,
+          personIndex,
+          isCouple && ageIsKnown
+            ? `Target retirement age must be before the end of the plan, when ${name} is ${lastAgeInPlan}`
+            : "Target retirement age must be before your plan-until age",
+        ),
       });
     }
   }
 
+  // An entered stop age is an age of the first owner, so it can't be before their age today.
+  const stopAge = portfolio?.contributionsStopAge;
+  const firstOwnerId = resolveOwnerIds(portfolio?.ownership, planPeople)[0];
+  const firstOwnerIndex = planPeople.findIndex((person) => person.id === firstOwnerId);
+  const firstOwner = planPeople[firstOwnerIndex];
+
+  if (
+    stopAge !== undefined &&
+    firstOwner?.currentAge !== undefined &&
+    stopAge < firstOwner.currentAge
+  ) {
+    const ownerName = displayName(firstOwner, firstOwnerIndex, planPeople);
+
+    missing.push({
+      field: "contributionsStopAge",
+      label: `Contributions stop age must be at or after ${isCouple ? `${ownerName}'s` : "your"} current age`,
+    });
+  }
+
   // A person with an age missing resolves to nothing; the plan is then incomplete anyway.
-  const resolvedPeople = planPeople.flatMap((person) => {
-    const resolved = resolvePerson(person);
+  const resolvedPeople = planPeople.flatMap((person, personIndex) => {
+    const resolved = resolvePerson(person, personIndex, planPeople);
 
     return resolved === undefined ? [] : [resolved];
   });
@@ -324,7 +371,11 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
         portfolio?.contributionsStopAge === undefined
           ? { value: undefined, source: "default" }
           : { value: portfolio.contributionsStopAge, source: "input" },
-      portfolioOwnerIds: [firstPerson.id],
+      portfolioOwnerIds: resolveOwnerIds(portfolio?.ownership, planPeople),
+      interimAnnual: sourceOrDefault(
+        plan.expenses.interimAnnual,
+        defaultInterimSpending(plan).amount ?? DEFAULT_INTERIM_SPENDING,
+      ),
       endAge,
       interestRate: sourceOrDefault(plan.assumptions.interestRate, DEFAULT_INTEREST_RATE),
       datedExpenses: (plan.expenses.datedExpenses ?? []).map((expense): ResolvedDatedExpense => ({
@@ -343,19 +394,55 @@ function resolveProjectionInputs(plan: Plan): ResolvedProjection {
 }
 
 /**
+ * Works out who owns the portfolio, as person ids in the plan's order. Sole
+ * ownership is that person and a joint portfolio is everyone in the split. With
+ * nothing stored the default applies: Person 1 for one person, both for a
+ * couple. A joint share of 0% is not an owner (the portfolio is then wholly
+ * the other person's, so a stop age follows them). An id that isn't in the plan (the stored plan can name a person
+ * removed since) counts as Person 1. Called by `resolveProjectionInputs`, and
+ * by the portfolio card to word the contributions stop age.
+ */
+export function resolveOwnerIds(
+  ownership: PortfolioOwnership | undefined,
+  people: readonly Person[],
+): readonly string[] {
+  const firstPersonId = people[0]?.id;
+  if (firstPersonId === undefined) return [];
+
+  const knownIds = new Set(people.map((person) => person.id));
+  const requestedIds =
+    ownership === undefined
+      ? people.map((person) => person.id)
+      : ownership.kind === "sole"
+        ? [ownership.personId]
+        : ownership.shares.filter((share) => share.fraction > 0).map((share) => share.personId);
+
+  // A single person owns it alone however it was stored; otherwise unknown ids fall back to Person 1.
+  const ownerIds = new Set(
+    requestedIds.map((personId) => (knownIds.has(personId) ? personId : firstPersonId)),
+  );
+
+  return people.map((person) => person.id).filter((personId) => ownerIds.has(personId));
+}
+
+/**
  * Resolves one person whose two ages are known (`resolveProjectionInputs`
  * has already reported anyone whose ages are missing): applies the salary,
  * super and access-age defaults. Returns `undefined` for a person with an age
  * missing, which the caller never uses because the plan is then incomplete.
  */
-function resolvePerson(person: Person): ResolvedPerson | undefined {
+function resolvePerson(
+  person: Person,
+  personIndex: number,
+  people: readonly Person[],
+): ResolvedPerson | undefined {
   if (person.currentAge === undefined || person.targetRetirementAge === undefined) {
     return undefined;
   }
 
   return {
     id: person.id,
-    label: person.label,
+    label: displayName(person, personIndex, people),
     currentAge: { value: person.currentAge, source: "input" },
     targetRetirementAge: { value: person.targetRetirementAge, source: "input" },
     salaryAnnual: sourceOrDefault(person.salary?.annual, DEFAULT_SALARY_ANNUAL),

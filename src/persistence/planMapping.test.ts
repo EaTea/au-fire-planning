@@ -6,6 +6,7 @@ import type {
   DatedExpense,
   GrowthRate,
   Plan,
+  PortfolioOwnership,
   RetirementSpending,
   Salary,
   SuperAccount,
@@ -130,6 +131,21 @@ const superAccounts: fc.Arbitrary<SuperAccount | undefined> = fc
     return Object.keys(account).length === 0 ? undefined : account;
   });
 
+/** Ownership: one person, or a joint split into whole percents that add to 100. */
+const ownerships: fc.Arbitrary<PortfolioOwnership> = fc.oneof(
+  fc.constantFrom("person-id", "partner-id").map((personId) => ({
+    kind: "sole" as const,
+    personId,
+  })),
+  fc.integer({ min: 0, max: 100 }).map((firstPercent) => ({
+    kind: "joint" as const,
+    shares: [
+      { personId: "person-id", fraction: percentToFraction(firstPercent) },
+      { personId: "partner-id", fraction: percentToFraction(100 - firstPercent) },
+    ],
+  })),
+);
+
 /** Arbitrary plans where every optional value may or may not be set. */
 const plans: fc.Arbitrary<Plan> = fc
   .record({
@@ -152,6 +168,13 @@ const plans: fc.Arbitrary<Plan> = fc
     salary: salaries,
     superAccount: superAccounts,
     personLabel: fc.string(),
+    personName: fc.option(fc.string(), { nil: undefined }),
+    // No partner, or a partner who may have a name.
+    partner: fc.option(fc.record({ name: fc.option(fc.string(), { nil: undefined }) }), {
+      nil: undefined,
+    }),
+    interimAnnual: fc.option(dollars, { nil: undefined }),
+    ownership: fc.option(ownerships, { nil: undefined }),
     portfolioName: fc.string(),
     projectionEndAge: fc.option(ages, { nil: undefined }),
     cashBalance: fc.option(dollars, { nil: undefined }),
@@ -168,6 +191,7 @@ const plans: fc.Arbitrary<Plan> = fc
         {
           id: "person-id",
           label: generated.personLabel,
+          ...(generated.personName !== undefined ? { name: generated.personName } : {}),
           ...(generated.currentAge !== undefined ? { currentAge: generated.currentAge } : {}),
           ...(generated.targetRetirementAge !== undefined
             ? { targetRetirementAge: generated.targetRetirementAge }
@@ -178,6 +202,15 @@ const plans: fc.Arbitrary<Plan> = fc
           ...(generated.salary !== undefined ? { salary: generated.salary } : {}),
           ...(generated.superAccount !== undefined ? { superAccount: generated.superAccount } : {}),
         },
+        ...(generated.partner !== undefined
+          ? [
+              {
+                id: "partner-id",
+                label: "Person 2",
+                ...(generated.partner.name !== undefined ? { name: generated.partner.name } : {}),
+              },
+            ]
+          : []),
       ],
     },
     ...(generated.cashBalance !== undefined ? { cash: { balance: generated.cashBalance } } : {}),
@@ -189,6 +222,7 @@ const plans: fc.Arbitrary<Plan> = fc
       ...(generated.retirementSpending !== undefined
         ? { retirementSpending: generated.retirementSpending }
         : {}),
+      ...(generated.interimAnnual !== undefined ? { interimAnnual: generated.interimAnnual } : {}),
     },
     assumptions: {
       ...(generated.safeWithdrawalRate !== undefined
@@ -211,6 +245,7 @@ const plans: fc.Arbitrary<Plan> = fc
         ...(generated.contributionsStopAge !== undefined
           ? { contributionsStopAge: generated.contributionsStopAge }
           : {}),
+        ...(generated.ownership !== undefined ? { ownership: generated.ownership } : {}),
       },
     ],
   }));
@@ -424,6 +459,72 @@ describe("planToWire: drawdown fields", () => {
     const document = planToWire({ ...blank, cash: {} });
 
     expect(document).not.toHaveProperty("cash");
+  });
+});
+
+describe("couple fields", () => {
+  /** A plan with Alex and Sam, an interim amount and a joint 60/40 portfolio. */
+  function couplePlan(): Plan {
+    const blank = blankPlan();
+    const [person] = blank.household.people;
+    const [portfolio] = blank.portfolios;
+    if (person === undefined || portfolio === undefined) throw new Error("blank plan is empty");
+
+    return {
+      ...blank,
+      household: {
+        people: [
+          { ...person, name: "Alex" },
+          { id: "person-2", label: "Person 2", name: "Sam" },
+        ],
+      },
+      expenses: { interimAnnual: 20000 },
+      portfolios: [
+        {
+          ...portfolio,
+          ownership: {
+            kind: "joint",
+            shares: [
+              { personId: person.id, fraction: 0.6 },
+              { personId: "person-2", fraction: 0.4 },
+            ],
+          },
+        },
+      ],
+    };
+  }
+
+  it("writes the name, the interim amount and the ownership with units in the names", () => {
+    const document = planToWire(couplePlan());
+
+    expect(document.household.people.map((person) => person.name)).toEqual(["Alex", "Sam"]);
+    expect(document.expenses.interimAnnualDollars).toBe(20000);
+    expect(document.portfolios[0]?.ownership).toStrictEqual({
+      kind: "joint",
+      shares: [
+        { personId: "id-1", percent: 60 },
+        { personId: "person-2", percent: 40 },
+      ],
+    });
+  });
+
+  it("writes none of the couple fields for a plan that doesn't use them", () => {
+    const document = planToWire(blankPlan());
+
+    expect(document.household.people[0]).not.toHaveProperty("name");
+    expect(document.expenses).not.toHaveProperty("interimAnnualDollars");
+    expect(document.portfolios[0]).not.toHaveProperty("ownership");
+  });
+
+  it("round-trips a couple plan, and sole ownership", () => {
+    const plan = couplePlan();
+    const sole: Plan = {
+      ...plan,
+      portfolios: [{ ...plan.portfolios[0]!, ownership: { kind: "sole", personId: "person-2" } }],
+    };
+
+    expect(planFromWire(planToWire(plan))).toStrictEqual(plan);
+    expect(planFromWire(planToWire(sole))).toStrictEqual(sole);
   });
 });
 

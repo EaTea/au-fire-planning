@@ -95,6 +95,11 @@ export function formatFactor(factor: number): string {
   return factor.toFixed(4);
 }
 
+/** Capitalises the first letter, e.g. "age 52" becomes "Age 52". Used to start a line with the engine's `formatAges` wording. */
+export function capitaliseFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Formats an age in whole years for a field, e.g. 34 becomes "34". */
 export function formatAge(age: number): string {
   return String(age);
