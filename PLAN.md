@@ -1567,10 +1567,7 @@ Conventions settled while building M7, which later milestones rely on:
 
 ### M8 · Personal income tax: step-by-step plan
 
-**Status:** plan, awaiting the owner's approval. PR A (steps 1 to 5) is implemented and awaiting its challenger review (step 6). As with M6 and M7, the
-implementation PRs are opened stacked on this plan PR once the plan is
-written. The plan is still reviewed first, and the implementation follows
-any change to it.
+**Status:** plan approved (PR #40). PR A (steps 1 to 5) is implemented and awaiting its challenger review (step 6); PR B is not started.
 
 **Kind:** behavior change.
 
