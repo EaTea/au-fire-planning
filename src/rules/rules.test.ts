@@ -157,6 +157,21 @@ describe("rules file schema", () => {
     expect(() => parseRulesFile({ ...incomeTaxOnly, sources: onlySuperSources })).toThrow();
   });
 
+  it("rejects an offset whose first threshold is above its second", () => {
+    const file = sampleRulesFile();
+    const offset = file.incomeTax?.lowIncomeTaxOffset;
+    const backwards = {
+      ...file.incomeTax,
+      lowIncomeTaxOffset: {
+        ...offset,
+        firstThresholdDollars: 50_000,
+        secondThresholdDollars: 45_000,
+      },
+    };
+
+    expect(() => parseRulesFile({ ...file, incomeTax: backwards })).toThrow();
+  });
+
   it("rejects brackets that don't start at $0 or don't increase", () => {
     const file = sampleRulesFile();
     const brackets = file.incomeTax?.residentBrackets ?? [];
@@ -363,7 +378,9 @@ describe("rulesForYear with sections in separate files", () => {
     const { incomeTax, ...superOnly } = sampleRulesFile();
     void incomeTax;
 
-    expect(() => rulesForYear(ruleSetFromWire([superOnly]), 2026, 0.025)).toThrow(/incomeTax/);
+    expect(() => rulesForYear(ruleSetFromWire([superOnly]), 2026, 0.025)).toThrow(
+      "No rules file has an incomeTax section",
+    );
   });
 });
 
@@ -479,5 +496,66 @@ describe("bundled income tax rules", () => {
       expect(rules.superannuation.preservationAgeYears).toBe(60);
       expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
     }
+  });
+});
+
+describe("rulesForYear indexation before a later file", () => {
+  /** A file with only the superannuation section, starting 2028-07-01 with a $280,000 base. */
+  function laterSuperOnlyFile(): RulesFileV1 {
+    const { incomeTax, ...withoutTax } = sampleRulesFile({
+      financialYear: "2028-29",
+      effectiveFrom: "2028-07-01",
+    });
+    void incomeTax;
+
+    return {
+      ...withoutTax,
+      superannuation: {
+        ...(sampleRulesFile().superannuation as NonNullable<RulesFileV1["superannuation"]>),
+        maximumContributionBaseQuarterlyDollars: 70000,
+      },
+    };
+  }
+
+  it("keeps indexing the years before a later file starts, from the earlier file", () => {
+    const ruleSet = ruleSetFromWire([sampleRulesFile(), laterSuperOnlyFile()]);
+
+    // The 2025-26 file covers 2026 ($250,000); 2027 and 2028 are estimated from it.
+    expect(
+      rulesForYear(ruleSet, 2027, 0.025).superannuation.maximumContributionBaseAnnualDollars,
+    ).toBeCloseTo(256_250);
+    expect(
+      rulesForYear(ruleSet, 2028, 0.025).superannuation.maximumContributionBaseAnnualDollars,
+    ).toBeCloseTo(262_656.25);
+    expect(rulesForYear(ruleSet, 2027, 0.025).isEstimated).toBe(true);
+
+    // The later file's own first year (1 Jan 2029) is its own, unindexed figure.
+    const year2029 = rulesForYear(ruleSet, 2029, 0.025);
+    expect(year2029.financialYear).toBe("2028-29");
+    expect(year2029.superannuation.maximumContributionBaseAnnualDollars).toBe(280_000);
+    expect(year2029.isEstimated).toBe(false);
+  });
+});
+
+describe("rulesForYear caching", () => {
+  it("gives the same object for the same rule set, year and inflation", () => {
+    expect(rulesForYear(bundledRuleSet, 2031, 0.025)).toBe(
+      rulesForYear(bundledRuleSet, 2031, 0.025),
+    );
+  });
+
+  it("gives different results for a different inflation rate, year or rule set", () => {
+    const base = rulesForYear(bundledRuleSet, 2031, 0.025);
+
+    expect(rulesForYear(bundledRuleSet, 2031, 0.03)).not.toBe(base);
+    expect(
+      rulesForYear(bundledRuleSet, 2031, 0.03).incomeTax.medicareLevy.lowIncomeThresholdDollars,
+    ).toBeGreaterThan(base.incomeTax.medicareLevy.lowIncomeThresholdDollars);
+    expect(rulesForYear(bundledRuleSet, 2032, 0.025)).not.toBe(base);
+
+    const otherRuleSet = ruleSetFromWire([sampleRulesFile()]);
+    expect(rulesForYear(otherRuleSet, 2026, 0.025)).not.toBe(
+      rulesForYear(bundledRuleSet, 2026, 0.025),
+    );
   });
 });

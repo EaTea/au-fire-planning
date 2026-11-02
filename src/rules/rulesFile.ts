@@ -63,13 +63,17 @@ const incomeTaxWireSchema = z.object({
         ),
       { message: "bracket start amounts must increase" },
     ),
-  lowIncomeTaxOffset: z.object({
-    maximumDollars: dollarsSchema,
-    firstThresholdDollars: dollarsSchema,
-    firstReductionPercent: percentSchema,
-    secondThresholdDollars: dollarsSchema,
-    secondReductionPercent: percentSchema,
-  }),
+  lowIncomeTaxOffset: z
+    .object({
+      maximumDollars: dollarsSchema,
+      firstThresholdDollars: dollarsSchema,
+      firstReductionPercent: percentSchema,
+      secondThresholdDollars: dollarsSchema,
+      secondReductionPercent: percentSchema,
+    })
+    .refine((offset) => offset.firstThresholdDollars <= offset.secondThresholdDollars, {
+      message: "the offset's first threshold must not be above its second",
+    }),
   medicareLevy: z.object({
     ratePercent: percentSchema,
     lowIncomeThresholdDollars: dollarsSchema,

@@ -227,8 +227,11 @@ function firstCoveredCalendarYear(snapshot: RuleSnapshot): number {
  *   - Only snapshots that have the section are considered.
  *   - The last of those that started on or before 1 January is used; years
  *     before the earliest use the earliest.
- *   - `yearsBeyondLatest` counts the years after the calendar year the latest
- *     such snapshot covers (0 when a later snapshot supersedes, or in range).
+ *   - `yearsBeyondLatest` counts the years after the calendar year the
+ *     snapshot in effect covers, which is how many times its dollar amounts
+ *     are indexed (0 in range). It is counted from the snapshot in effect, not
+ *     only the latest one, so a section is still indexed in the years before a
+ *     later file for that section starts.
  *
  * Used by `rulesForYear` once per section, so each section is indexed from its
  * own latest file (the FY2025-26 super rules and the FY2027-28 tax rules age
@@ -245,10 +248,10 @@ function sectionInEffect<Section>(
     (snapshot) => readSection(snapshot) !== undefined,
   );
   const earliestSnapshot = snapshotsWithSection[0];
-  const latestSnapshot = snapshotsWithSection[snapshotsWithSection.length - 1];
 
-  if (earliestSnapshot === undefined || latestSnapshot === undefined) {
-    throw new Error(`No rules file has a ${sectionName} section`);
+  if (earliestSnapshot === undefined) {
+    const article = /^[aeiou]/i.test(sectionName) ? "an" : "a";
+    throw new Error(`No rules file has ${article} ${sectionName} section`);
   }
 
   const snapshotInEffect =
@@ -256,10 +259,7 @@ function sectionInEffect<Section>(
       .reverse()
       .find((snapshot) => snapshot.effectiveFrom <= firstOfJanuary) ?? earliestSnapshot;
 
-  const yearsBeyondLatest =
-    snapshotInEffect === latestSnapshot
-      ? Math.max(0, calendarYear - firstCoveredCalendarYear(latestSnapshot))
-      : 0;
+  const yearsBeyondLatest = Math.max(0, calendarYear - firstCoveredCalendarYear(snapshotInEffect));
 
   return {
     snapshot: snapshotInEffect,
@@ -320,9 +320,47 @@ function indexIncomeTaxRules(rules: IncomeTaxRules, thresholdGrowth: number): In
  *
  * Called by the engine once per row (from M5 step 2 onwards) and by the
  * super and age screens; the engine never reads the data files itself. Throws
- * if no snapshot has a section, since the app can't run without it.
+ * if no snapshot has a section, since the app can't run without it. Answers
+ * are cached per rule set, year and inflation rate, so the same object comes
+ * back each time: treat it as read-only.
  */
 export function rulesForYear(
+  ruleSet: RuleSet,
+  calendarYear: number,
+  inflationRate: number,
+): YearRules {
+  let cacheForRuleSet = rulesForYearCache.get(ruleSet);
+  if (cacheForRuleSet === undefined) {
+    cacheForRuleSet = new Map();
+    rulesForYearCache.set(ruleSet, cacheForRuleSet);
+  }
+
+  const cacheKey = `${calendarYear}|${inflationRate}`;
+  let yearRules = cacheForRuleSet.get(cacheKey);
+  if (yearRules === undefined) {
+    yearRules = workOutRulesForYear(ruleSet, calendarYear, inflationRate);
+    cacheForRuleSet.set(cacheKey, yearRules);
+  }
+
+  return yearRules;
+}
+
+/**
+ * Remembers each rule set's `rulesForYear` answers by calendar year and
+ * inflation rate. The projection asks for the same year's rules once per
+ * person per row, and the earliest-age and Coast FIRE searches re-run the
+ * projection many times, so recomputing (and re-indexing) every call roughly
+ * doubled the time `summarisePlan` takes. A WeakMap lets a rule set (and its
+ * answers) be garbage-collected with it.
+ */
+const rulesForYearCache = new WeakMap<RuleSet, Map<string, YearRules>>();
+
+/**
+ * The uncached work of `rulesForYear`: picks each section's snapshot and
+ * indexes its dollar amounts. The result is shared between callers by the
+ * cache, so callers must treat it as read-only.
+ */
+function workOutRulesForYear(
   ruleSet: RuleSet,
   calendarYear: number,
   inflationRate: number,
