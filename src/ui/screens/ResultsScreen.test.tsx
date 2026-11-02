@@ -176,7 +176,22 @@ describe("ResultsScreen", () => {
     renderResults(blankPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
+      screen.getByText(
+        /Not yet modelled: tax on portfolio income and gains \(M9\), property \(M12\) and more\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says tax is shown but not yet taken from savings, incomplete or complete", () => {
+    const { unmount } = renderResults(blankPlan);
+    expect(
+      screen.getByText("Tax is shown but isn't yet taken from your savings. That comes next."),
+    ).toBeInTheDocument();
+    unmount();
+
+    renderResults(workedPlan);
+    expect(
+      screen.getByText("Tax is shown but isn't yet taken from your savings. That comes next."),
     ).toBeInTheDocument();
   });
 
@@ -184,7 +199,9 @@ describe("ResultsScreen", () => {
     renderResults(workedPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
+      screen.getByText(
+        /Not yet modelled: tax on portfolio income and gains \(M9\), property \(M12\) and more\./,
+      ),
     ).toBeInTheDocument();
   });
 

@@ -2074,7 +2074,7 @@ A and E above are the headline cases.
 
 #### Step 4 · Tax and take-home pay on the screens (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **Income & expenses:** under each salary, "Estimated tax $X · take-home
    $Y a year", with an `ExplainPanel` breakdown ("How is this
@@ -2088,6 +2088,23 @@ A and E above are the headline cases.
    $22,788 and take-home $77,212), the column, and the banners.
 
 **Check:** `npm run check` passes. Check by eye on Income & expenses and
+
+**As built:**
+- `SalarySection` shows, under each salary above $0, "Estimated tax $X ·
+  take-home $Y a year" and a "How is this calculated?" toggle with the
+  `ExplainPanel` working. It taxes today's gross salary on the rules for the
+  plan's start year (`usePlanStartYear`), in today's dollars regardless of
+  the dollars toggle. With a couple, each line and toggle is prefixed with
+  the person's name (via `PerPersonFields`). The salary hint no longer says
+  tax arrives later.
+- Year by year has a "Tax" column after Salary, showing "—" when there is
+  no tax (like Salary). It follows the dollars toggle. At 1440px the table
+  still fits without scrolling and Status isn't squeezed.
+- Results has both banners: "Tax is shown but isn't yet taken from your
+  savings. That comes next." (to be removed in PR B) and "Not yet modelled:
+  tax on portfolio income and gains (M9), property (M12) and more."
+- The "Spending while one of you has retired" hint still mentions tax
+  arriving "in a later version"; step 11 rewrites it.
 Year by year.
 
 #### Step 5 · E2E, contrast, README (PR A)

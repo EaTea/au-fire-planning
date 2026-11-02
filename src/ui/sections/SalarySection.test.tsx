@@ -1,7 +1,8 @@
-import { screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import type { Plan } from "../../plan/types";
 import { blankPlan, renderSection } from "./sectionTestHelpers";
 import { SalarySection } from "./SalarySection";
 
@@ -77,6 +78,91 @@ describe("SalarySection", () => {
     renderSection(<SalarySection />);
 
     expect(screen.getByText(/Before tax\. Sets your employer super contributions/)).toBeVisible();
+  });
+
+  describe("estimated tax and take-home pay", () => {
+    /** One person on a given salary, with the clock fixed in 2026 by renderSection. */
+    function planWithSalary(annual: number): Plan {
+      return {
+        ...blankPlan,
+        household: { people: [{ id: "person-1", label: "Person 1", salary: { annual } }] },
+      };
+    }
+
+    it("shows nothing while there is no salary above $0", () => {
+      renderSection(<SalarySection />);
+      expect(screen.queryByText(/Estimated tax/)).not.toBeInTheDocument();
+
+      cleanup();
+      renderSection(<SalarySection />, planWithSalary(0));
+      expect(screen.queryByText(/Estimated tax/)).not.toBeInTheDocument();
+    });
+
+    // Worked example T3: $100,000 in 2026 is $20,788 of tax and $2,000 of Medicare levy.
+    it("shows $22,788 of tax and $77,212 take-home on $100,000", () => {
+      renderSection(<SalarySection />, planWithSalary(100000));
+
+      expect(
+        screen.getByText("Estimated tax $22,788 · take-home $77,212 a year"),
+      ).toBeInTheDocument();
+    });
+
+    it("updates as the salary is typed", async () => {
+      const user = userEvent.setup();
+      renderSection(<SalarySection />);
+
+      await user.type(screen.getByLabelText("Gross salary per year"), "100000{Enter}");
+
+      expect(screen.getByText(/Estimated tax \$22,788/)).toBeInTheDocument();
+    });
+
+    it("opens the working: brackets, the offset and the levy", async () => {
+      const user = userEvent.setup();
+      renderSection(<SalarySection />, planWithSalary(100000));
+
+      expect(screen.queryByText("Tax payable")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "How is this calculated?" }));
+
+      expect(screen.getByText("Tax on income from $18,200 to $45,000 at 16%")).toBeInTheDocument();
+      expect(screen.getByText("Low income tax offset")).toBeInTheDocument();
+      expect(screen.getByText(/Medicare levy/)).toBeInTheDocument();
+      expect(screen.getByText("Tax payable")).toBeInTheDocument();
+    });
+
+    it("shows one estimate for each person, with names, when there are two", () => {
+      renderSection(<SalarySection />, {
+        ...blankPlan,
+        household: {
+          people: [
+            { id: "a", label: "Person 1", name: "Alex", salary: { annual: 100000 } },
+            { id: "s", label: "Person 2", name: "Sam", salary: { annual: 40000 } },
+          ],
+        },
+      });
+
+      expect(
+        screen.getByText("Alex: Estimated tax $22,788 · take-home $77,212 a year"),
+      ).toBeInTheDocument();
+      // Sam: $3,488 less a $575 offset, plus $800 levy.
+      expect(
+        screen.getByText("Sam: Estimated tax $3,713 · take-home $36,287 a year"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows an estimate only for the person who has a salary", () => {
+      renderSection(<SalarySection />, {
+        ...blankPlan,
+        household: {
+          people: [
+            { id: "a", label: "Person 1", name: "Alex", salary: { annual: 100000 } },
+            { id: "s", label: "Person 2", name: "Sam" },
+          ],
+        },
+      });
+
+      expect(screen.getByText(/^Alex: Estimated tax/)).toBeInTheDocument();
+      expect(screen.queryByText(/^Sam: Estimated tax/)).not.toBeInTheDocument();
+    });
   });
 
   it("prefixes labels with names when there are two people", () => {

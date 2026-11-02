@@ -95,7 +95,13 @@ export function ResultsScreen() {
           <MissingInputsBanner missing={summary.missing} />
         )}
 
-        <Banner tone="info">Not yet modelled: tax (M8), property (M12) and more.</Banner>
+        {/* This banner goes in M8 PR B, when tax is taken from savings. */}
+        <Banner tone="info">
+          Tax is shown but isn&apos;t yet taken from your savings. That comes next.
+        </Banner>
+        <Banner tone="info">
+          Not yet modelled: tax on portfolio income and gains (M9), property (M12) and more.
+        </Banner>
       </div>
 
       {projection?.status === "complete" && <YearByYearSection projection={projection} />}

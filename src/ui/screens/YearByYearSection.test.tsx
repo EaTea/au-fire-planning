@@ -164,6 +164,7 @@ describe("YearByYearSection", () => {
       "Year",
       "Age",
       "Salary",
+      "Tax",
       "Into portfolio",
       "Into super",
       "Growth & interest",
@@ -178,6 +179,53 @@ describe("YearByYearSection", () => {
 
     // Age 34 (2026) to age 95 (2087) is 62 rows, plus the header row and two band rows.
     expect(screen.getAllByRole("row")).toHaveLength(65);
+  });
+
+  describe("Tax column", () => {
+    /** Age 40, retiring at 42 on a flat $100,000 salary, 2% inflation (worked example F's tax). */
+    const withSalary: Plan = {
+      ...blankPlan,
+      household: {
+        people: [
+          {
+            id: "person-1",
+            label: "Person 1",
+            currentAge: 40,
+            targetRetirementAge: 42,
+            salary: { annual: 100000, growth: { kind: "none" } },
+          },
+        ],
+        projectionEndAge: 45,
+      },
+      expenses: { livingAnnual: 60000 },
+      assumptions: { inflationRate: 0.02, interestRate: 0 },
+      portfolios: [
+        { id: "portfolio-1", name: "Share portfolio", value: 100000, expectedReturn: 0 },
+      ],
+    };
+
+    it("sits after Salary and shows the household's tax, with a dash once there is none", () => {
+      renderYearByYear(withSalary);
+
+      const headers = headerTexts();
+      expect(headers.indexOf("Tax")).toBe(headers.indexOf("Salary") + 1);
+
+      // 2027 uses the FY2026-27 rules (15%): $22,520. 2028 uses 14%: $22,252.
+      expect(cellFor(2027, "Tax")).toBe("$22,520");
+      expect(cellFor(2028, "Tax")).toBe("$22,252");
+      // Retired from 2029, with no cash interest.
+      expect(cellFor(2029, "Tax")).toBe("—");
+    });
+
+    it("follows the dollars toggle", async () => {
+      const user = userEvent.setup();
+      renderYearByYear(withSalary);
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      // $22,520 ÷ 1.02.
+      expect(cellFor(2027, "Tax")).toBe("$22,078");
+    });
   });
 
   it("starts in nominal dollars, matching worked example A", () => {
@@ -286,6 +334,7 @@ describe("YearByYearSection", () => {
       Year: "2027",
       Age: "61",
       Salary: "—",
+      Tax: "—",
       "Into portfolio": "$0",
       "Into super": "$0",
       "Growth & interest": "$10,500",
@@ -309,6 +358,7 @@ describe("YearByYearSection", () => {
       Year: "2031",
       Age: "65",
       Salary: "—",
+      Tax: "—",
       "Into portfolio": "$0",
       "Into super": "$0",
       "Growth & interest": "$1,326",
