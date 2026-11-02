@@ -106,13 +106,17 @@ function outlinedRowYear(): string | undefined {
 }
 
 describe("ResultsScreen", () => {
-  it("shows the worked FI number and progress when the plan is complete", () => {
+  // Without ages there is no retirement year yet, so the headline is today's FI number and says so.
+  it("shows the worked FI number in today's money, and progress, when the plan is complete", () => {
     renderResults(workedPlan);
 
     expect(screen.getByText("$1,600,000")).toBeInTheDocument();
+    expect(screen.getByText("In today's money")).toBeInTheDocument();
     expect(screen.getByText("$64,000/yr ÷ 4%")).toBeInTheDocument();
     expect(screen.getByText("45%")).toBeInTheDocument();
-    expect(screen.getByText("$720,000 invested of $1,600,000")).toBeInTheDocument();
+    expect(
+      screen.getByText("$720,000 invested of today's FI number, $1,600,000"),
+    ).toBeInTheDocument();
   });
 
   it("opens the FI number breakdown with its lines", async () => {
@@ -189,11 +193,48 @@ describe("ResultsScreen", () => {
   });
 
   describe("with the projection", () => {
-    it("shows the nominal FI number at retirement as a second sub-line, in nominal dollars", () => {
+    // The FI number rises with inflation, so the headline is the figure at retirement.
+    it("leads with the nominal FI number at retirement, with today's figure as a sub-line", () => {
       renderResults(exampleA);
 
-      expect(screen.getByText("$64,000/yr ÷ 4%")).toBeInTheDocument();
-      expect(screen.getByText("$2,375,209 at age 50 (2042)")).toBeInTheDocument();
+      const tile = screen
+        .getByText("FI number", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
+
+      expect(within(tile).getByText("$2,375,209")).toHaveClass("value");
+      expect(within(tile).getByText("at age 50 (2042)")).toBeInTheDocument();
+      expect(
+        within(tile).getByText("$1,600,000 in today's money · $64,000/yr ÷ 4%"),
+      ).toBeInTheDocument();
+    });
+
+    // The tile is fixed: today's dollars only changes the projected figures.
+    it("keeps the FI number tile the same in today's dollars", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleA);
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+
+      const tile = screen
+        .getByText("FI number", { selector: ".metric .label" })
+        .closest<HTMLElement>(".metric")!;
+      expect(within(tile).getByText("$2,375,209")).toHaveClass("value");
+    });
+
+    // The note explains why fixed inputs shrink in today's money, and only shows there.
+    it("explains today's money only while Today's dollars is chosen", async () => {
+      const user = userEvent.setup();
+      renderResults(exampleA);
+      const note =
+        /The table and charts are in today's money\. Fixed amounts, like your contributions/;
+
+      expect(screen.queryByText(note)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Today's dollars" }));
+      expect(screen.getByText(note)).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Nominal" }));
+      expect(screen.queryByText(note)).not.toBeInTheDocument();
     });
 
     // For a couple the FI number is stated when the last of them retires, with the first person's age then.
@@ -209,7 +250,7 @@ describe("ResultsScreen", () => {
       });
 
       // Sam retires last, in 2049.
-      expect(screen.getByText(/ in 2049, when you've both retired$/)).toBeInTheDocument();
+      expect(screen.getByText("in 2049, when you've both retired")).toBeInTheDocument();
     });
 
     it("adds the inflation lines to the FI number breakdown", async () => {

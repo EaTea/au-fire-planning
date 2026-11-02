@@ -160,3 +160,17 @@ describe("RetirementSpendingSection", () => {
     expect(screen.getByLabelText(amountLabel)).toHaveValue("");
   });
 });
+
+// A dollar amount is at today's prices and rises with inflation; the hint says so.
+describe("RetirementSpendingSection amount hint", () => {
+  it("says a dollar amount is at today's prices and raised with inflation", async () => {
+    const user = userEvent.setup();
+    renderSection(<RetirementSpendingSection />);
+
+    await user.click(screen.getByRole("button", { name: "$ amount" }));
+
+    expect(
+      screen.getByText("At today's prices: the plan raises it with inflation each year."),
+    ).toBeVisible();
+  });
+});

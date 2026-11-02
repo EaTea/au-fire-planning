@@ -106,7 +106,7 @@ export function SuperSection() {
                 value={account?.salarySacrifice?.annual}
                 defaultValue={DEFAULT_SUPER_CONTRIBUTION_ANNUAL}
                 min={0}
-                hint="Before tax, from your salary while you work. Taxed 15% going in."
+                hint="Fixed: the same dollars every year. Before tax, from your salary while you work. Taxed 15% going in."
                 onChange={(annual) =>
                   dispatch({ type: "setSalarySacrifice", personId: person.id, annual })
                 }
@@ -137,7 +137,7 @@ export function SuperSection() {
                 value={account?.nonConcessional?.annual}
                 defaultValue={DEFAULT_SUPER_CONTRIBUTION_ANNUAL}
                 min={0}
-                hint="From after-tax money. Not taxed going in."
+                hint="Fixed: the same dollars every year. From after-tax money. Not taxed going in."
                 onChange={(annual) =>
                   dispatch({ type: "setNonConcessional", personId: person.id, annual })
                 }

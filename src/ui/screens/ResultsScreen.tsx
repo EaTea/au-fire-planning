@@ -9,7 +9,7 @@ import { usePlan, usePlanSummary } from "../../plan/PlanProvider";
 import { Banner } from "../components/Banner";
 import { MetricTile } from "../components/MetricTile";
 import { StepPage } from "../components/StepPage";
-import { DollarsModeToggle } from "../dollarsMode";
+import { DollarsModeToggle, TodaysMoneyNote } from "../dollarsMode";
 import { capitaliseFirst, formatDollars, formatPercent } from "../format";
 import { steps } from "../navigation/steps";
 import { planEndWords } from "../planEndWords";
@@ -31,10 +31,15 @@ const step = steps.find((candidate) => candidate.id === "results")!;
  * Joins the FI number's working with the extra lines that carry it forward
  * to the retirement age (FIRE-1). The projection's own first line ("FI number
  * today") repeats the "= FI number" line that ends the first breakdown, so it
- * is left out.
+ * is left out. The result's value is the figure at retirement, matching the
+ * FI number tile's headline and the breakdown's last line.
  */
 function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explained): Explained {
-  return { ...fiNumber, lines: [...fiNumber.lines, ...atRetirement.lines.slice(1)] };
+  return {
+    ...fiNumber,
+    value: atRetirement.value,
+    lines: [...fiNumber.lines, ...atRetirement.lines.slice(1)],
+  };
 }
 
 /**
@@ -59,6 +64,8 @@ export function ResultsScreen() {
       intro="Your FI number, when you could reach it and retire, whether the money lasts, and every year of the plan behind those figures."
       headerAction={<DollarsModeToggle />}
     >
+      <TodaysMoneyNote />
+
       {projection?.status === "complete" && <JumpLinks projection={projection} />}
 
       <div className="results-stack">
@@ -69,7 +76,7 @@ export function ResultsScreen() {
             <MetricTile
               label="Progress to FI"
               value={formatPercent(summary.progressToFi.value)}
-              subLine={`${formatDollars(summary.investable.value)} invested of ${formatDollars(summary.fiNumber.value)}`}
+              subLine={`${formatDollars(summary.investable.value)} invested of today's FI number, ${formatDollars(summary.fiNumber.value)}`}
               explanation={summary.progressToFi}
             />
 
@@ -151,37 +158,48 @@ function useScrollToRequestedSection() {
 type CompleteSummary = Extract<ReturnType<typeof usePlanSummary>, { status: "complete" }>;
 
 /**
- * The FI number tile: today's-dollar figure with its calculation. When the
- * projection is complete it gains a second sub-line with the nominal figure
- * at the target retirement age (FIRE-1), always in nominal dollars (it does
- * not follow the today's/nominal toggle), and the working for it.
+ * The FI number tile (FIRE-1). The FI number is a target that rises with
+ * inflation, so the headline is the figure at the household retirement year,
+ * in that year's dollars, and today's figure with its calculation is the
+ * second sub-line:
+ *
+ *   FI number
+ *   $2,375,209                                  ← at retirement (nominal)
+ *   at age 50 (2042)                            ← when that is
+ *   $1,600,000 in today's money · $64,000/yr ÷ 4%
+ *
+ * While the projection is incomplete there is no retirement year yet, so the
+ * headline is today's figure and says so. The tile is fixed: it doesn't
+ * follow the today's/nominal toggle, like Money lasts. Rendered by
+ * ResultsScreen as the first tile.
  */
 function FiNumberTile({ summary }: { readonly summary: CompleteSummary }) {
   const { projection } = summary;
-  const todaySubLine = `${formatDollars(summary.retirementSpending.value)}/yr ÷ ${formatPercent(summary.safeWithdrawalRate)}`;
+  const todayWorking = `${formatDollars(summary.retirementSpending.value)}/yr ÷ ${formatPercent(summary.safeWithdrawalRate)}`;
 
   if (projection.status !== "complete") {
     return (
       <MetricTile
         label="FI number"
         value={formatDollars(summary.fiNumber.value)}
-        subLine={todaySubLine}
+        subLine={["In today's money", todayWorking]}
         explanation={summary.fiNumber}
       />
     );
   }
 
   // One person: "at age 50 (2042)". A couple: "in 2046, when you've both retired".
-  const atRetirementLine =
+  const whenLine =
     projection.people.length > 1
-      ? `${formatDollars(projection.fiNumberAtRetirement.value)} in ${projection.householdRetirementYear}, when you've both retired`
-      : `${formatDollars(projection.fiNumberAtRetirement.value)} at ${formatAges(agesAtHouseholdRetirement(projection))} (${projection.householdRetirementYear})`;
+      ? `in ${projection.householdRetirementYear}, when you've both retired`
+      : `at ${formatAges(agesAtHouseholdRetirement(projection))} (${projection.householdRetirementYear})`;
+  const todayLine = `${formatDollars(summary.fiNumber.value)} in today's money · ${todayWorking}`;
 
   return (
     <MetricTile
       label="FI number"
-      value={formatDollars(summary.fiNumber.value)}
-      subLine={[todaySubLine, atRetirementLine]}
+      value={formatDollars(projection.fiNumberAtRetirement.value)}
+      subLine={[whenLine, todayLine]}
       explanation={combineFiNumberExplanations(summary.fiNumber, projection.fiNumberAtRetirement)}
     />
   );
