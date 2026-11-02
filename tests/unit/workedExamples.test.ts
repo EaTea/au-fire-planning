@@ -22,7 +22,8 @@ interface WorkedExampleFile {
   readonly milestone: string;
   /** Calendar year of row 0 for the projection (M2 onwards); defaults to 2026. */
   readonly startYear?: number;
-  readonly scenarios: readonly WorkedScenario[];
+  /** Absent in files that hold other kinds of case, e.g. m8-tax.json's `taxCases` (tested in taxExamples.test.ts). */
+  readonly scenarios?: readonly WorkedScenario[];
 }
 
 interface WorkedScenario {
@@ -719,8 +720,11 @@ describe("worked examples", () => {
   });
 
   for (const [path, file] of Object.entries(fixtureFiles)) {
+    const scenarios = file.scenarios;
+    if (scenarios === undefined) continue;
+
     describe(`${path} (${file.milestone})`, () => {
-      it.each(file.scenarios.map((scenario) => [scenario.name, scenario] as const))(
+      it.each(scenarios.map((scenario) => [scenario.name, scenario] as const))(
         "%s",
         (_name, scenario) => {
           expect(scenario.checkedBy).not.toBe("");

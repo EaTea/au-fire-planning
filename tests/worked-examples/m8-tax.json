@@ -1,0 +1,202 @@
+{
+  "milestone": "M8",
+  "description": "Personal income tax: the tax calculation for one person in one year (T1 to T14), going through rulesForYear with the bundled rules.",
+  "taxCases": [
+    {
+      "name": "T1",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 18200,
+      "expected": {
+        "bracketTax": 0,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 0,
+        "medicareLevy": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "T2",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 45000,
+      "expected": {
+        "bracketTax": 4288,
+        "lowIncomeTaxOffset": 325,
+        "incomeTax": 3963,
+        "medicareLevy": 900,
+        "total": 4863
+      }
+    },
+    {
+      "name": "T3",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20788,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20788,
+        "medicareLevy": 2000,
+        "total": 22788
+      }
+    },
+    {
+      "name": "T4",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 145000,
+      "expected": {
+        "bracketTax": 34988,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 34988,
+        "medicareLevy": 2900,
+        "total": 37888
+      }
+    },
+    {
+      "name": "T5",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 30000,
+      "expected": {
+        "bracketTax": 1888,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 1188,
+        "medicareLevy": 277.8,
+        "total": 1465.8
+      }
+    },
+    {
+      "name": "T6",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 200000,
+      "expected": {
+        "bracketTax": 56138,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 56138,
+        "medicareLevy": 4000,
+        "total": 60138
+      }
+    },
+    {
+      "name": "T7",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 40000,
+      "expected": {
+        "bracketTax": 3488,
+        "lowIncomeTaxOffset": 575,
+        "incomeTax": 2913,
+        "medicareLevy": 800,
+        "total": 3713
+      }
+    },
+    {
+      "name": "T8",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 60000,
+      "expected": {
+        "bracketTax": 8788,
+        "lowIncomeTaxOffset": 100,
+        "incomeTax": 8688,
+        "medicareLevy": 1200,
+        "total": 9888
+      }
+    },
+    {
+      "name": "T9",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2027,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20520,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20520,
+        "medicareLevy": 2000,
+        "total": 22520
+      }
+    },
+    {
+      "name": "T10",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2028,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20252,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20252,
+        "medicareLevy": 2000,
+        "total": 22252
+      }
+    },
+    {
+      "name": "T11",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 27222,
+      "expected": {
+        "bracketTax": 1443.52,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 743.52,
+        "medicareLevy": 0,
+        "total": 743.52
+      }
+    },
+    {
+      "name": "T12",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 34027,
+      "expected": {
+        "bracketTax": 2532.32,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 1832.32,
+        "medicareLevy": 680.5,
+        "total": 2512.82
+      }
+    },
+    {
+      "name": "T13",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2031,
+      "inflationRate": 0.025,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 19502.4702,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 19502.4702,
+        "medicareLevy": 2000,
+        "total": 21502.4702
+      }
+    },
+    {
+      "name": "T14",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": -5000,
+      "expected": {
+        "bracketTax": 0,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 0,
+        "medicareLevy": 0,
+        "total": 0
+      }
+    }
+  ]
+}

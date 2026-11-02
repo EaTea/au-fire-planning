@@ -2015,7 +2015,7 @@ A and E above are the headline cases.
 
 #### Step 2 · `calculateIncomeTax` (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. `calculateIncomeTax(taxableIncome, incomeTaxRules)` in
    `src/engine/incomeTax.ts`, returning an `Explained` per the design. It
@@ -2030,6 +2030,17 @@ A and E above are the headline cases.
    - income below the tax-free threshold and Medicare threshold pays $0.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `calculateIncomeTax` returns an `IncomeTaxResult`: an `Explained` (value =
+  tax payable) that also carries `bracketTax`, `lowIncomeTaxOffsetApplied`,
+  `incomeTax` and `medicareLevy`, so step 3 can store the parts separately.
+- Lines: one per bracket the income reaches (including the 0% one), then the
+  offset (`−`), the levy (`+`) and "Tax payable" (`=`). The offset is the
+  amount used, capped at the bracket tax.
+- `m8-tax.json` has `taxCases` and no `scenarios`, so it is tested by
+  `tests/unit/taxExamples.test.ts`, and `workedExamples.test.ts` skips files
+  without `scenarios`. The fixture README describes `taxCases`.
 
 #### Step 3 · Tax in the projection, not yet funded (PR A)
 
