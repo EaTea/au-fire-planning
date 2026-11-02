@@ -1970,7 +1970,7 @@ A and E above are the headline cases.
 
 #### Step 1 · Rules: sections, income tax, and the legislated rates (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** behavior change (data only, no screen changes).
 
@@ -1998,6 +1998,20 @@ A and E above are the headline cases.
      shade-in rate is within $1 of $34,027.
 
 **Check:** `npm run check` passes. No worked example changes.
+
+**As built:**
+- `YearRules` keeps `financialYear` and `isEstimated` for the superannuation
+  section (so every M5/M6 caller is unchanged) and adds
+  `incomeTaxFinancialYear`, `incomeTaxIsEstimated` and `incomeTax`.
+- `rulesForYear` throws if no file holds a section, so the bundled set must
+  always have both. A file with only one section is fine on its own.
+- A bundled-data test also checks the bracket list starts at $0 and
+  increases (the schema rejects it otherwise).
+- All three files are `unverified`. Their notes say the values and the three
+  URLs were entered from memory and not opened, so the owner must open each
+  URL and check the values on it. The existing super note is kept, with a
+  sentence added saying the `incomeTax` section is unchecked.
+- README "How to add next year's rules" now mentions optional sections.
 
 #### Step 2 · `calculateIncomeTax` (PR A)
 

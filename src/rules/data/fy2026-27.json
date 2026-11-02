@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "financialYear": "2026-27",
+  "effectiveFrom": "2026-07-01",
+  "verification": {
+    "status": "unverified",
+    "note": "The incomeTax values and the three source URLs were entered from memory and not opened. The owner must open each URL in sources and check the values on it. Specifically check the legislated bottom rate for 2026-27 (15%); the other values are carried over unchanged from the FY2025-26 file. This file holds only the incomeTax section."
+  },
+  "incomeTax": {
+    "residentBrackets": [
+      {
+        "fromDollars": 0,
+        "ratePercent": 0
+      },
+      {
+        "fromDollars": 18200,
+        "ratePercent": 15
+      },
+      {
+        "fromDollars": 45000,
+        "ratePercent": 30
+      },
+      {
+        "fromDollars": 135000,
+        "ratePercent": 37
+      },
+      {
+        "fromDollars": 190000,
+        "ratePercent": 45
+      }
+    ],
+    "lowIncomeTaxOffset": {
+      "maximumDollars": 700,
+      "firstThresholdDollars": 37500,
+      "firstReductionPercent": 5,
+      "secondThresholdDollars": 45000,
+      "secondReductionPercent": 1.5
+    },
+    "medicareLevy": {
+      "ratePercent": 2,
+      "lowIncomeThresholdDollars": 27222,
+      "shadeInPercent": 10
+    }
+  },
+  "sources": {
+    "residentBrackets": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+    "lowIncomeTaxOffset": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/offsets-and-rebates/low-income-tax-offset",
+    "medicareLevy": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction-for-low-income-earners"
+  }
+}
