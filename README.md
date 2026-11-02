@@ -20,8 +20,13 @@ Everything is calculated in your browser and saved only on your device.
 - **Income & expenses, salary:** your gross (before-tax) salary and how it
   grows (with inflation, inflation plus or minus a margin, a fixed rate, or not
   at all). It stops at your target retirement age and shows in Year by year;
-  it sets your employer super contributions, but doesn't pay for living
-  expenses until tax is modelled.
+  it sets your employer super contributions.
+- **Tax and take-home pay:** under each salary, the estimated income tax
+  (resident rates, the low income tax offset and the Medicare levy) and
+  take-home pay, with a "How is this calculated?" breakdown. Year by year has a
+  Tax column for salary and interest on cash. For now tax is shown only: it
+  isn't yet taken out of your savings, so balances don't change until the next
+  release.
 - **Assets, super:** your super balance, its return net of fees, the employer
   contribution rate (the legislated rate unless you change it), and optional
   salary sacrifice and after-tax (non-concessional) contributions with start

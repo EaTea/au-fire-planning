@@ -1567,7 +1567,7 @@ Conventions settled while building M7, which later milestones rely on:
 
 ### M8 · Personal income tax: step-by-step plan
 
-**Status:** plan, awaiting the owner's approval. As with M6 and M7, the
+**Status:** plan, awaiting the owner's approval. PR A (steps 1 to 5) is implemented and awaiting its challenger review (step 6). As with M6 and M7, the
 implementation PRs are opened stacked on this plan PR once the plan is
 written. The plan is still reviewed first, and the implementation follows
 any change to it.
@@ -2109,7 +2109,7 @@ Year by year.
 
 #### Step 5 · E2E, contrast, README (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **`tests/e2e/tax.spec.ts`,** with the clock fixed in 2026: enter a
    $100,000 salary and read the estimate ($22,788 and $77,212, with the
@@ -2120,6 +2120,17 @@ Year by year.
    "As built" notes.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
+
+**As built:**
+- `tests/e2e/tax.spec.ts`: one person ($100,000: $22,788 and $77,212 with the
+  working open; Tax column $22,520 in 2027, $22,252 in 2028 and "—" from 2029;
+  both Results banners) and a couple (Sam's $40,000 gives $3,713 and $36,287,
+  T7). Run 10 times with `--repeat-each 10`.
+- The contrast sweep gains one test: Income & expenses with the breakdown
+  open for one person and a couple, and Year by year with the Tax column in
+  both dollar modes.
+- README "What it does" gains a "Tax and take-home pay" item and drops "doesn't
+  pay for living expenses until tax is modelled".
 
 #### Step 6 · Challenger review of PR A, then open it
 

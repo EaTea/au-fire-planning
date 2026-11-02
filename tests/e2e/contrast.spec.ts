@@ -419,6 +419,57 @@ test("the year by year table on results has readable text in both dollar modes, 
   }
 });
 
+/** Types `value` into the field with `label` and presses Tab so the app commits it. */
+async function enterValue(page: Page, label: string, value: string): Promise<void> {
+  await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel(label, { exact: true }).press("Tab");
+}
+
+test("Income & expenses has readable text with the tax breakdown open, for one person and a couple, and Year by year with its Tax column in both dollar modes", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-15T12:00:00") });
+  await startFresh(page, "./#/household");
+
+  // One person with a salary: the estimate and its breakdown.
+  await enterValue(page, "Current age", "40");
+  await enterValue(page, "Target retirement age", "45");
+  await page.goto("#/income-expenses");
+  await enterValue(page, "Gross salary per year", "145000");
+  await enterValue(page, "Per year, after tax", "60000");
+  await page.getByRole("button", { name: "How is this calculated?", exact: true }).click();
+  await expect(page.getByText("Tax payable")).toBeVisible();
+
+  expect(await findLowContrastText(page), "one person's tax breakdown").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "one person's tax breakdown").toEqual([]);
+
+  // Results needs the assets and assumptions too (any valid values do).
+  await fillPage(page, "#/assets", "valid");
+  await fillPage(page, "#/assumptions", "valid");
+
+  // Year by year with the Tax column, in both dollar modes.
+  await page.goto("#/results?view=year-by-year");
+  await expect(page.getByRole("columnheader", { name: "Tax", exact: true })).toBeVisible();
+  for (const mode of ["Today's dollars", "Nominal"]) {
+    await page.getByRole("button", { name: mode }).click();
+    expect(await findLowContrastText(page), `Tax column, ${mode}`).toEqual([]);
+    expect(await findLowContrastWhileInteracting(page), `Tax column, ${mode}`).toEqual([]);
+  }
+
+  // A couple: two estimates, one with its breakdown open.
+  await page.goto("#/household");
+  await page.getByRole("button", { name: "A couple" }).click();
+  await enterValue(page, "Person 1: Name (optional)", "Alex");
+  await enterValue(page, "Person 2: Name (optional)", "Sam");
+  await page.goto("#/income-expenses");
+  await enterValue(page, "Sam: Gross salary per year", "40000");
+  await page.getByRole("button", { name: "Sam: How is this calculated?", exact: true }).click();
+  await expect(page.getByText(/^Sam: Estimated tax/)).toBeVisible();
+
+  expect(await findLowContrastText(page), "couple's tax breakdown").toEqual([]);
+  expect(await findLowContrastWhileInteracting(page), "couple's tax breakdown").toEqual([]);
+});
+
 test("results has readable text with a shortfall, its banners and an outlined row", async ({
   page,
 }) => {
