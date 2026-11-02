@@ -67,7 +67,11 @@ loads every file in this folder and checks the engine against it to the cent.
   matters past the latest file), a `taxableIncome` and `expected` figures
   `bracketTax`, `lowIncomeTaxOffset` (the amount actually used, capped at the
   bracket tax), `incomeTax`, `medicareLevy` and `total`. Each case goes through
-  `rulesForYear` with the bundled rules.
+  `rulesForYear` with the bundled rules. The same file also holds ordinary
+  `scenarios` (F, G, H and A) whose `expected.taxRows` list rows (`yearIndex`
+  plus any of `tax`, `personTax` and `personTaxableIncome`, the last two with
+  one entry per person). Until PR B funds tax, balances are not reduced by it,
+  so those scenarios check tax fields only.
 
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.

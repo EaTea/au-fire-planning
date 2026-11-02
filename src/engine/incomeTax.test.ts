@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateIncomeTax } from "./incomeTax";
+import { calculateIncomeTax, calculateIncomeTaxFigures } from "./incomeTax";
 import { bundledRuleSet } from "../rules/bundledRuleSet";
 import { rulesForYear } from "../rules/ruleSet";
 
@@ -52,6 +52,18 @@ describe("calculateIncomeTax", () => {
       expect(result.value, String(badIncome)).toBe(0);
       expect(result.lines.length).toBeGreaterThan(0);
       expect(result.lines.at(-1)?.operator).toBe("=");
+    }
+  });
+
+  it("gives the same figures without the explanation as with it", () => {
+    for (const income of [-5, 0, 18_200, 27_222, 34_027, 40_000, 100_000, 250_000, Number.NaN]) {
+      const withLines = calculateIncomeTax(income, rules2026);
+      const figuresOnly = calculateIncomeTaxFigures(income, rules2026);
+
+      expect(figuresOnly.tax, String(income)).toBe(withLines.value);
+      expect(figuresOnly.incomeTax).toBe(withLines.incomeTax);
+      expect(figuresOnly.medicareLevy).toBe(withLines.medicareLevy);
+      expect(figuresOnly.lowIncomeTaxOffsetApplied).toBe(withLines.lowIncomeTaxOffsetApplied);
     }
   });
 });

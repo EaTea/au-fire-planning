@@ -78,6 +78,7 @@ function exampleD(
     retirementSpendingAnnual: overrides.retirementSpendingAnnual ?? 40_000,
     datedExpenses: [],
     fiNumberToday: 1_000_000,
+    ruleSet: bundledRuleSet,
   };
 }
 

@@ -2044,7 +2044,7 @@ A and E above are the headline cases.
 
 #### Step 3 · Tax in the projection, not yet funded (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **Per-person tax in each row.** `PersonYear` gets `taxableIncome`,
    `incomeTax`, `medicareLevy` and `tax`. Taxable income is salary − salary
@@ -2056,6 +2056,21 @@ A and E above are the headline cases.
    still pass, since nothing else moves.
 
 **Check:** `npm run check` passes.
+
+**As built:**
+- `ProjectionInputs` gains a required `ruleSet`, because income tax needs the
+  rules even when a person has no super account (row tax uses
+  `rulesForYear(ruleSet, calendarYear, inflationRate).incomeTax`).
+  `summarisePlan` passes the bundled set; `onePersonInputs` uses it too.
+- `PersonYear` gains `taxableIncome` (never below $0), `incomeTax`,
+  `medicareLevy` and `tax`; `ProjectionRow` gains `tax` (the sum). Row 0 is 0.
+- **Example H's 2028 differs from the plan in this PR.** Tax is not yet paid
+  from cash, so cash at the end of 2027 is $584,000, not $583,830, and 2028
+  tax is $22.40, not $21.45. The fixture checks $22.40 and says so. $21.45
+  returns when PR B funds tax (step 8), and that step must update the fixture.
+  F, G, A and H's 2027 and couple figures are unaffected.
+- The fixture scenarios (F, G, H, H couple, A) are in `m8-tax.json`, checked
+  through a new `taxRows` field in the worked-example harness.
 
 #### Step 4 · Tax and take-home pay on the screens (PR A)
 

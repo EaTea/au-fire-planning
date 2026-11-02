@@ -86,22 +86,43 @@ function medicareLevyFor(taxableIncome: number, rules: IncomeTaxRules): number {
   return Math.min(shadedInLevy, levy.rate * taxableIncome);
 }
 
-/**
- * Works out one person's tax payable for one year, with the working shown (NFR-1).
- *
- * Lines are one per bracket that income reaches (added together), then the
- * offset (taken off), the Medicare levy (added) and the total (the result).
- * Never throws: a negative or non-finite taxable income counts as $0, so
- * callers can pass a raw salary-less-sacrifice figure without guarding.
- */
-export function calculateIncomeTax(taxableIncome: number, rules: IncomeTaxRules): IncomeTaxResult {
-  const income = Number.isFinite(taxableIncome) ? Math.max(0, taxableIncome) : 0;
+/** One bracket's slice of a taxable income: the part inside the bracket and the tax on it. */
+interface BracketSlice {
+  readonly bracket: IncomeTaxRules["residentBrackets"][number];
+  readonly nextBracket: IncomeTaxRules["residentBrackets"][number] | undefined;
+  readonly taxInBracket: number;
+}
 
-  const lines: ExplanationLine[] = [];
+/** The tax-only figures of one calculation: everything but the explanation lines. */
+interface IncomeTaxFigures {
+  readonly bracketSlices: readonly BracketSlice[];
+  readonly bracketTax: number;
+  readonly lowIncomeTaxOffsetApplied: number;
+  readonly incomeTax: number;
+  readonly medicareLevy: number;
+  readonly totalTax: number;
+}
+
+/**
+ * Cleans a taxable income for calculation: negative or non-finite counts as $0,
+ * so callers can pass a raw salary-less-sacrifice figure without guarding.
+ */
+function cleanTaxableIncome(taxableIncome: number): number {
+  return Number.isFinite(taxableIncome) ? Math.max(0, taxableIncome) : 0;
+}
+
+/**
+ * The numbers behind a tax calculation, with no text built. This is the one
+ * place the tax is worked out; `calculateIncomeTax` adds the explanation on
+ * top and `calculateIncomeTaxFigures` exposes it to the projection, which
+ * runs it thousands of times in the Coast FIRE and earliest-age searches and
+ * must not build labels each time.
+ */
+function workOutIncomeTax(income: number, rules: IncomeTaxRules): IncomeTaxFigures {
+  const bracketSlices: BracketSlice[] = [];
   let bracketTax = 0;
 
-  // One line per bracket that income reaches: the slice of income inside the
-  // bracket, times its rate.
+  // The slice of income inside each bracket it reaches, times the bracket's rate.
   rules.residentBrackets.forEach((bracket, index) => {
     if (income <= bracket.fromDollars) {
       return;
@@ -110,27 +131,10 @@ export function calculateIncomeTax(taxableIncome: number, rules: IncomeTaxRules)
     const nextBracket = rules.residentBrackets[index + 1];
     const sliceTop = nextBracket === undefined ? income : Math.min(income, nextBracket.fromDollars);
     const taxInBracket = (sliceTop - bracket.fromDollars) * bracket.rate;
+
     bracketTax += taxInBracket;
-
-    const rangeText =
-      nextBracket !== undefined && income > nextBracket.fromDollars
-        ? `from ${formatWholeDollars(bracket.fromDollars)} to ${formatWholeDollars(nextBracket.fromDollars)}`
-        : `above ${formatWholeDollars(bracket.fromDollars)}`;
-
-    lines.push({
-      label: `Tax on income ${rangeText} at ${formatPercent(bracket.rate)}`,
-      value: taxInBracket,
-      unit: "dollars",
-      ...(lines.length === 0 ? {} : { operator: "+" as const }),
-      source: "calculated",
-    });
+    bracketSlices.push({ bracket, nextBracket, taxInBracket });
   });
-
-  // With no taxable income no bracket applies; keep a first line so the
-  // working still starts from something.
-  if (lines.length === 0) {
-    lines.push({ label: "Tax on income", value: 0, unit: "dollars", source: "calculated" });
-  }
 
   // The offset can only reduce tax to $0, never create a refund.
   const lowIncomeTaxOffsetApplied = Math.min(
@@ -139,26 +143,95 @@ export function calculateIncomeTax(taxableIncome: number, rules: IncomeTaxRules)
   );
   const incomeTax = bracketTax - lowIncomeTaxOffsetApplied;
   const medicareLevy = medicareLevyFor(income, rules);
-  const totalTax = incomeTax + medicareLevy;
+
+  return {
+    bracketSlices,
+    bracketTax,
+    lowIncomeTaxOffsetApplied,
+    incomeTax,
+    medicareLevy,
+    totalTax: incomeTax + medicareLevy,
+  };
+}
+
+/**
+ * The income tax and Medicare levy for one person-year without the
+ * explanation. Called by `projectPortfolio` for every person in every row;
+ * the Income & expenses screen uses `calculateIncomeTax` for the working.
+ * Gives exactly the same figures as `calculateIncomeTax`.
+ */
+export function calculateIncomeTaxFigures(
+  taxableIncome: number,
+  rules: IncomeTaxRules,
+): Pick<
+  IncomeTaxResult,
+  "bracketTax" | "lowIncomeTaxOffsetApplied" | "incomeTax" | "medicareLevy"
+> & {
+  readonly tax: number;
+} {
+  const figures = workOutIncomeTax(cleanTaxableIncome(taxableIncome), rules);
+
+  return {
+    bracketTax: figures.bracketTax,
+    lowIncomeTaxOffsetApplied: figures.lowIncomeTaxOffsetApplied,
+    incomeTax: figures.incomeTax,
+    medicareLevy: figures.medicareLevy,
+    tax: figures.totalTax,
+  };
+}
+
+/**
+ * Works out one person's tax payable for one year, with the working shown (NFR-1).
+ *
+ * Lines are one per bracket that income reaches (added together), then the
+ * offset (taken off), the Medicare levy (added) and the total (the result).
+ * Never throws: a negative or non-finite taxable income counts as $0.
+ */
+export function calculateIncomeTax(taxableIncome: number, rules: IncomeTaxRules): IncomeTaxResult {
+  const income = cleanTaxableIncome(taxableIncome);
+  const figures = workOutIncomeTax(income, rules);
+
+  const lines: ExplanationLine[] = figures.bracketSlices.map(
+    ({ bracket, nextBracket, taxInBracket }, sliceIndex) => {
+      const rangeText =
+        nextBracket !== undefined && income > nextBracket.fromDollars
+          ? `from ${formatWholeDollars(bracket.fromDollars)} to ${formatWholeDollars(nextBracket.fromDollars)}`
+          : `above ${formatWholeDollars(bracket.fromDollars)}`;
+
+      return {
+        label: `Tax on income ${rangeText} at ${formatPercent(bracket.rate)}`,
+        value: taxInBracket,
+        unit: "dollars",
+        ...(sliceIndex === 0 ? {} : { operator: "+" as const }),
+        source: "calculated",
+      };
+    },
+  );
+
+  // With no taxable income no bracket applies; keep a first line so the
+  // working still starts from something.
+  if (lines.length === 0) {
+    lines.push({ label: "Tax on income", value: 0, unit: "dollars", source: "calculated" });
+  }
 
   lines.push(
     {
       label: "Low income tax offset",
-      value: lowIncomeTaxOffsetApplied,
+      value: figures.lowIncomeTaxOffsetApplied,
       unit: "dollars",
       operator: "−",
       source: "calculated",
     },
     {
       label: `Medicare levy (${formatPercent(rules.medicareLevy.rate)}, shaded in at low incomes)`,
-      value: medicareLevy,
+      value: figures.medicareLevy,
       unit: "dollars",
       operator: "+",
       source: "calculated",
     },
     {
       label: "Tax payable",
-      value: totalTax,
+      value: figures.totalTax,
       unit: "dollars",
       operator: "=",
       source: "calculated",
@@ -166,12 +239,12 @@ export function calculateIncomeTax(taxableIncome: number, rules: IncomeTaxRules)
   );
 
   return {
-    value: totalTax,
+    value: figures.totalTax,
     unit: "dollars",
     lines,
-    bracketTax,
-    lowIncomeTaxOffsetApplied,
-    incomeTax,
-    medicareLevy,
+    bracketTax: figures.bracketTax,
+    lowIncomeTaxOffsetApplied: figures.lowIncomeTaxOffsetApplied,
+    incomeTax: figures.incomeTax,
+    medicareLevy: figures.medicareLevy,
   };
 }

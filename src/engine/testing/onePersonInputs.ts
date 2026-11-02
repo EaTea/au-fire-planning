@@ -13,6 +13,7 @@
 //
 // Only tests import this file.
 
+import { bundledRuleSet } from "../../rules/bundledRuleSet";
 import type {
   ContributionsStop,
   ProjectionDatedExpense,
@@ -95,6 +96,7 @@ export function onePersonInputs(
     retirementSpendingAnnual: settings.retirementSpendingAnnual,
     datedExpenses: settings.datedExpenses,
     fiNumberToday: settings.fiNumberToday,
+    ruleSet: bundledRuleSet,
   };
 }
 
