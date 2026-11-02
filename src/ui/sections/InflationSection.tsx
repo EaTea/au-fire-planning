@@ -23,7 +23,7 @@ export function InflationSection() {
         defaultValue={DEFAULT_INFLATION_RATE}
         min={0}
         max={0.15}
-        hint="Raises your spending and FI number each year. Contributions and salary stay as you enter them unless you choose growth."
+        hint="Raises your spending and FI number each year, and converts to today's money. Contributions stay as you enter them; salary grows only if you choose."
         onChange={(rate) => dispatch({ type: "setInflationRate", rate })}
       />
 

@@ -31,10 +31,15 @@ const step = steps.find((candidate) => candidate.id === "results")!;
  * Joins the FI number's working with the extra lines that carry it forward
  * to the retirement age (FIRE-1). The projection's own first line ("FI number
  * today") repeats the "= FI number" line that ends the first breakdown, so it
- * is left out.
+ * is left out. The result's value is the figure at retirement, matching the
+ * FI number tile's headline and the breakdown's last line.
  */
 function combineFiNumberExplanations(fiNumber: Explained, atRetirement: Explained): Explained {
-  return { ...fiNumber, lines: [...fiNumber.lines, ...atRetirement.lines.slice(1)] };
+  return {
+    ...fiNumber,
+    value: atRetirement.value,
+    lines: [...fiNumber.lines, ...atRetirement.lines.slice(1)],
+  };
 }
 
 /**

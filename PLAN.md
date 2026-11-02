@@ -2594,13 +2594,15 @@ with the model.
   - Retirement spending as a $ amount: "At today's prices: the plan raises it
     with inflation each year."
   - Salary "Grows at": "No growth keeps the same dollars every year."
-- **Inflation hint:** "Raises your spending and FI number each year.
-  Contributions and salary stay as you enter them unless you choose growth."
+- **Inflation hint:** "Raises your spending and FI number each year, and
+  converts to today's money. Contributions stay as you enter them; salary
+  grows only if you choose."
 - **Today's dollars as an explicit lens.** The toggle stays, nominal by
   default. When "Today's dollars" is chosen, a one-line note sits under the
-  page header: "Shown in today's money. Fixed amounts, like your
-  contributions, look smaller each year because inflation erodes them." The
-  note goes away in nominal.
+  page header: "The table and charts are in today's money. Fixed amounts,
+  like your contributions, look smaller each year because inflation erodes
+  them." It names the table and charts because the FI number and Money lasts
+  tiles stay fixed. The note goes away in nominal.
 - **Cash hint fix:** "Earns the general interest rate (Assumptions). Drawn
   last in retirement, after the portfolio and super."
 
@@ -2634,8 +2636,10 @@ that assert its headline). No engine, reducer or persistence changes.
 3. The today's-money note under the header, shown only in today's mode.
    Unit test: absent by default, present after choosing Today's dollars,
    gone again on Nominal.
-4. E2E: update the specs that read the FI tile's headline, and assert the
-   note appears with the toggle.
+4. E2E: update the specs that read the FI tile's headline
+   (`tests/e2e/growth.spec.ts`; `fiNumber.spec.ts` and `persistence.spec.ts`
+   enter no ages, so they still see today's figure as the headline), and
+   assert the note appears with the toggle.
 
 #### Step 2 · Input hints: done
 

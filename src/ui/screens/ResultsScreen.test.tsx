@@ -225,7 +225,8 @@ describe("ResultsScreen", () => {
     it("explains today's money only while Today's dollars is chosen", async () => {
       const user = userEvent.setup();
       renderResults(exampleA);
-      const note = /Shown in today's money\. Fixed amounts, like your contributions/;
+      const note =
+        /The table and charts are in today's money\. Fixed amounts, like your contributions/;
 
       expect(screen.queryByText(note)).not.toBeInTheDocument();
 

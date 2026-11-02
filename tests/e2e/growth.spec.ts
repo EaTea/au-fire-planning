@@ -73,7 +73,7 @@ test("worked example A reaches FI in 2038 at age 46 and shows it year by year", 
   expect(await yearCell(page, 2038, "Portfolio")).toBe("$2,158,231");
 
   // No note in nominal: every figure reads as entered.
-  const todaysMoneyNote = page.getByText(/^Shown in today's money\./);
+  const todaysMoneyNote = page.getByText(/^The table and charts are in today's money\./);
   await expect(todaysMoneyNote).toHaveCount(0);
 
   // Switching to today's dollars divides by the inflation index: $30,000 ÷ 1.025,

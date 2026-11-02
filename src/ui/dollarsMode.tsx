@@ -103,8 +103,8 @@ export function TodaysMoneyNote() {
 
   return (
     <p className="todays-money-note">
-      Shown in today&apos;s money. Fixed amounts, like your contributions, look smaller each year
-      because inflation erodes them.
+      The table and charts are in today&apos;s money. Fixed amounts, like your contributions, look
+      smaller each year because inflation erodes them.
     </p>
   );
 }
