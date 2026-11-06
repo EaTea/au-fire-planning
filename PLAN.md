@@ -1609,7 +1609,7 @@ changes, and the second only makes sense once the first is checked.
   the tax calculation and per-person tax in the projection. Tax and
   take-home pay are shown, but your balances don't change yet. A banner
   says so. Its base is this plan PR.
-- **PR B, the working-year cash flow** (steps 7 to 13). Take-home pay funds
+- **PR B, the working-year cash flow** (steps 7 to 14). Take-home pay funds
   spending, contributions and tax; surplus goes to cash; Coast FIRE, the
   bridge and the earliest age follow; chart (c). Its base is PR A.
 
@@ -1701,12 +1701,19 @@ Each PR goes through the challenger review before it is opened.
   the latest file in effect that has it. This is a small change to
   `rulesForYear` and the rules schema (step 1). It avoids guessing the
   FY2026–27 super values.
-- **Indexation after the latest file:** every dollar amount in the section
-  (bracket thresholds, the offset's amount and thresholds, the levy
-  threshold) grows with inflation, once per year after the calendar year the
-  section's latest file covers, flagged `isEstimated`. The rates don't
-  change. This is M5's rule for the contribution base, extended (owner
-  decision 2).
+- **Indexation after the latest file** (owner decision 2, 2026-11-06):
+  - **Fixed:** the brackets, including the $18,200 tax-free threshold, and
+    the low income tax offset keep the latest file's values. In law they are
+    changed only by legislation, which the rules files record. So wages that
+    rise with inflation drift into higher brackets (bracket creep), as they do
+    in real life.
+  - **Indexed:** the Medicare levy's low-income threshold grows with
+    inflation, once per year after the calendar year the latest file covers,
+    flagged `isEstimated`. It is raised by the government every year.
+  - **Superannuation** keeps M5's rule: the maximum contribution base is
+    indexed.
+  - **A correction:** PR A indexed every tax dollar amount, as this plan's
+    first draft said. Step 7 of PR B changes it.
 
 **The year's cash flow** (the new core of the projection). Each row, for
 each person and for the household:
@@ -1810,12 +1817,14 @@ year, before salary sacrifice, interest or other income.
    - **The alternatives:** always model pay, which makes a salary a
      required input and changes every no-salary example; or an explicit
      "my pay covers my costs" setting.
-2. **Tax thresholds grow with inflation after the latest file.**
-   - **Why:** it's M5's rule for the contribution base, and governments
-     index the brackets from time to time.
-   - **The alternative:** hold them fixed. That is bracket creep, more
-     cautious for salaries that grow. Under the default "no growth" salary
-     it makes tax fall over time, since prices rise but pay doesn't.
+2. **The tax brackets and the low income offset are not indexed with
+   inflation; only the Medicare threshold is.** *Decided by the owner on
+   2026-11-06, after PR A, replacing the first draft's "index everything".*
+   - **Why:** the tax-free threshold and the brackets don't rise with
+     inflation in law. Indexing them would understate tax for anyone whose
+     pay rises over time. The Medicare low-income threshold does rise.
+   - **The effect:** with the default "no growth" salary, tax is flat in
+     dollars. With salary growth, tax rises faster than pay.
 3. **Add FY2026–27 and FY2027–28 tax files** carrying the legislated 15%
    and 14% bottom rates, rather than keeping 16% for good.
 4. **Cash interest is taxed and split equally between the partners.**
@@ -1838,7 +1847,7 @@ re-derived M5–M7 examples. The start year is 2026. A row in 2027 uses the
 FY2026–27 rules (15% bottom rate) and a row in 2028 or later the FY2027–28
 rules (14%), so the tax a figure shows depends on its year.
 
-**T: the tax calculation** (`calculateIncomeTax`, 0% inflation):
+**T: the tax calculation** (`calculateIncomeTax`, 0% inflation unless stated):
 
 | Case | Year | Taxable income | Bracket tax | LITO | Income tax | Medicare levy | Total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1855,10 +1864,14 @@ rules (14%), so the tax a figure shows depends on its year.
 | T11 | 2026 | $27,222 | $1,443.52 | $700 | $743.52 | $0 | **$743.52** |
 | T12 | 2026 | $34,027 | $2,532.32 | $700 | $1,832.32 | $680.50 | **$2,512.82** |
 
-- **T13 (indexation):** $100,000 in 2031 at 2.5% inflation. Three years
-  past the 2028 file, so every dollar amount is ×1.025³ = 1.076891.
-  Bracket tax $19,502.4702, income tax $19,502.4702, Medicare levy $2,000,
-  total **$21,502.4702**.
+- **T13 (the brackets don't index):** $100,000 in 2031 at 2.5% inflation
+  pays exactly what it did in 2028: bracket tax $20,252, no offset, Medicare
+  levy $2,000, total **$22,252**.
+- **T13b (the Medicare threshold does):** $30,000 in 2031 at 2.5%
+  inflation. The low-income threshold is $27,222 × 1.025³ = $29,315.12.
+  Bracket tax at 14% is $1,652; the offset is $700 (not indexed), so income
+  tax is $952; the levy is 10% × ($30,000 − $29,315.12) = $68.49. Total
+  **$1,020.49**. (In 2026 the same $30,000 paid $1,465.80, T5.)
 - **T14 (negative income):** a taxable income below $0 pays $0.
 
 **F: one person, working years paid from take-home pay.**
@@ -1916,21 +1929,23 @@ $10,000 a year salary sacrifice 2027–2042, access at 65).
   tax $33,193.75 (15% bottom rate), Medicare $2,817.50, tax **$36,011.25**.
   Out: living $65,600 + tax + $30,000 contribution. Funding need
   −$8,463.75: cash **$29,263.75**, portfolio $800,400, super $219,815.15.
-- **End of 2042:** cash $526,155.42, portfolio $2,962,199.51, super
-  $1,175,633.85, investable **$4,663,988.78**.
-- **FI reached:** 2033, age 41: investable $2,041,786.51 against an FI number
+- **End of 2042** (the brackets stay fixed from 2029, so tax is higher
+  than if they were indexed): cash $440,630.17, portfolio $2,962,199.51,
+  super $1,175,633.85, investable **$4,578,463.52**.
+- **FI reached:** 2033, age 41: investable $2,034,099.72 against an FI number
   of $1,901,897.21.
-- **The bridge** (2043–2056): need $978,216.63, projected $3,488,354.92,
-  **MET**. **After access** (2057–2087): need $2,562,245.03, projected
-  $8,667,394.69, **MET**.
+- **The bridge** (2043–2056): need $979,483.03, projected $3,402,829.67,
+  **MET**. **After access** (2057–2087): need $2,633,278.40, projected
+  $8,516,027.17, **MET**.
 - **Earliest retirement:** age 40 (2032).
 - **Coast FIRE:** the number today is **$672,262.87**, reached 2026.
-  - **Outside super:** needs $338,666.95 today (portfolio $318,666.95 +
+  - **Outside super:** needs $339,095.92 today (portfolio $319,095.92 +
     cash $20,000), has $740,000, coasting since 2026.
-  - **Super alone:** needs $257,377.31, has $185,000, coasting from
-    **2039, age 47**.
-  - M6's figures were $338,666.95 and $256,832.52: only the super need
-    moves, because tax on interest slightly raises the after-access need.
+  - **Super alone:** needs $269,921.24, has $185,000, coasting from
+    **2042, age 50**.
+  - M6's figures were $338,666.95 and $256,832.52 (reached 2039). They move
+    because tax now shows up in the bridge and after-access needs: more of
+    your income and interest is taxed once the brackets stop rising.
 
 **E: the couple example, with pay modelled** (M7's example E, with the
 interim amount entered as $50,000: Alex 34, retires at 50, salary $145,000
@@ -1939,16 +1954,17 @@ growing at inflation + 1%, super $185,000, $10,000 a year salary sacrifice
 growth, super $120,000, access 60; portfolio $100,000 joint, contributing
 $20,000 a year to 2046; cash $20,000; retirement spending $90,000, living
 expenses $90,000; plan until 95; 2.5% inflation, 7% return, 4% interest).
-- **FI reached:** 2038 (Alex 46, Sam 44): investable $3,048,759.83 against
-  $3,025,999.85.
-- **The bridge** (2043–2053): need $680,462.35, projected $2,637,456.64,
+- **FI reached:** 2039 (Alex 47, Sam 45): investable $3,289,382.16 against
+  $3,101,649.85.
+- **The bridge** (2043–2053): need $718,650.83, projected $2,510,970.42,
   **MET**. The need before contributions, for the coast split, is
   **$665,649.10**.
-- **After access** (2054–2089): need $3,816,347.33, projected $4,296,838.16
+- **After access** (2054–2089): need $4,129,730.15, projected $4,021,737.35
   (the open super, portfolio and cash), plus Alex's $2,220,151.72 locked
-  until 2057. **MET.** The money lasts to 2089.
-- **Earliest retirement:** Alex 40 (2032) and Sam 34 (2028).
-- **Cash:** by 2042 the saved surplus has built cash to $1,784,479.20, so the
+  until 2057. **MET**, because Alex's super opens in 2057, though the
+  projected figure alone is under the need. The money lasts to 2089.
+- **Earliest retirement:** Alex 41 (2033) and Sam 36 (2030).
+- **Cash:** by 2042 the saved surplus has built cash to $1,657,992.97, so the
   default of saving surplus to cash matters for a high earner (follow-ups).
 
 **Unchanged:** M7's D and D2 have no salary and no cash, so their figures
@@ -1962,7 +1978,7 @@ bridge and Coast FIRE figures): M5's A, B, S1, S2, S3 and C; M6's A, A with
 access at 60, and C; M7's E. Their super rows (employer contributions,
 contributions tax, earnings and super balances) don't change, because pay
 doesn't touch super. The lead works the new expectations out with the
-independent script when step 8 starts, and gives them to the implementer.
+independent script when step 9 starts, and gives them to the implementer.
 A and E above are the headline cases.
 
 #### Step 1 · Rules: sections, income tax, and the legislated rates (PR A)
@@ -2076,7 +2092,7 @@ A and E above are the headline cases.
 - **Example H's 2028 differs from the plan in this PR.** Tax is not yet paid
   from cash, so cash at the end of 2027 is $584,000, not $583,830, and 2028
   tax is $22.40, not $21.45. The fixture checks $22.40 and says so. $21.45
-  returns when PR B funds tax (step 8), and that step must update the fixture.
+  returns when PR B funds tax (step 9), and that step must update the fixture.
   F, G, A and H's 2027 and couple figures are unaffected.
 - The fixture scenarios (F, G, H, H couple, A) are in `m8-tax.json`, checked
   through a new `taxRows` field in the worked-example harness.
@@ -2124,7 +2140,7 @@ Year by year.
   savings. That comes next." (to be removed in PR B) and "Not yet modelled:
   tax on portfolio income and gains (M9), property (M12) and more."
 - The "Spending while one of you has retired" hint still mentions tax
-  arriving "in a later version"; step 7 rewrites it (the only place that
+  arriving "in a later version"; step 8 rewrites it (the only place that
   does).
 - **Review fixes:** the Results banner now shows only when the projection is
   complete and some row has tax, worded "Tax is shown in Year by year but
@@ -2177,17 +2193,46 @@ tax fields). Its findings were fixed in their own commits:
   interest;
 - stale or contradictory README and PLAN.md lines.
 
-Two design points go to the owner with the PR: in law the brackets and
-the low income offset are not indexed (only the Medicare threshold is), and
-the interest split between partners puts some interest at the higher
-earner's rate.
+Two design points went to the owner with the PR. The owner decided that the
+brackets and the low income offset are not indexed (only the Medicare
+threshold is); step 7 of PR B makes that change. The other, that the interest
+split between partners puts some interest at the higher earner's rate, waits
+for the per-person tax view.
 
 1. **Review:** the reviewer subagent checks PR A's diff against this plan,
    the worked examples and the requirements.
 2. **Fix and open:** fix the findings, then open PR A, stacked on the plan
    PR.
 
-#### Step 7 · Resolution: pay mode and the new interim meaning (PR B)
+#### Step 7 · Hold the brackets and the offset fixed (PR B)
+
+- [ ] Done
+
+**Kind:** behavior change (rules only). It carries out owner decision 2.
+
+1. **`rulesForYear`** indexes only the Medicare levy's low-income
+   threshold, once per year after the calendar year the latest file with
+   the `incomeTax` section covers. The brackets (including the tax-free
+   threshold) and the low income tax offset keep the latest file's values.
+   Superannuation is unchanged. The `isEstimated` flag for income tax is
+   true only because the Medicare threshold is an estimate.
+2. **Tests:**
+   - the rules tests that expect indexed brackets are changed to expect them
+     fixed, and a test pins that the Medicare threshold is indexed;
+   - the fixture case T13 becomes the fixed-bracket case ($100,000 in 2031
+     at 2.5% is $22,252), and T13b ($30,000 in 2031: $1,020.49) is added;
+   - the homogeneity property ("tax scales when every amount is indexed")
+     is replaced by one that says the brackets and the offset don't depend
+     on inflation, and the Medicare threshold scales with it;
+   - example A's pinned 2031 row (taxable income $163,150.40) is now tax
+     **$44,430.66**, not $42,954.51: bracket tax $41,167.65 and Medicare
+     $3,263.01.
+3. **README** and the "Rules as data" note say which amounts are indexed.
+
+**Check:** `npm run check` and `npm run test:e2e` pass. No other worked
+example changes: every one before 2029 has the same tax.
+
+#### Step 8 · Resolution: pay mode and the new interim meaning (PR B)
 
 - [ ] Done
 
@@ -2205,7 +2250,7 @@ earner's rate.
 
 **Check:** `npm run check` passes.
 
-#### Step 8 · The working-year cash flow (PR B)
+#### Step 9 · The working-year cash flow (PR B)
 
 - [ ] Done
 
@@ -2215,7 +2260,7 @@ earner's rate.
      sacrifice exceeds the salary, in which case the shortfall is paid from
      savings, while taxable income is floored at $0.
 2. **A "stop saving the surplus after row k"** input, used by the Coast
-   FIRE runs (step 9).
+   FIRE runs (step 10).
 3. **Tests, with the independent figures:** F, G and H to the cent; A's and
    E's rows (2027, end of 2042 and the FI year for A; E's phases); money
    conservation as a property (opening + growth + inflows − outflows =
@@ -2227,7 +2272,7 @@ earner's rate.
 
 **Check:** `npm run check` passes.
 
-#### Step 9 · The bridge, Coast FIRE and the earliest age (PR B)
+#### Step 10 · The bridge, Coast FIRE and the earliest age (PR B)
 
 - [ ] Done
 
@@ -2244,7 +2289,7 @@ earner's rate.
 
 **Check:** `npm run check` passes.
 
-#### Step 10 · `CashFlowChart` and chart (c) (PR B)
+#### Step 11 · `CashFlowChart` and chart (c) (PR B)
 
 - [ ] Done
 
@@ -2262,7 +2307,7 @@ earner's rate.
 **Check:** `npm run check` and `npm run test:e2e` pass. Check by eye with A
 and G.
 
-#### Step 11 · Results and Income & expenses wording (PR B)
+#### Step 12 · Results and Income & expenses wording (PR B)
 
 - [ ] Done
 
@@ -2275,7 +2320,7 @@ and G.
 
 **Check:** `npm run check` passes.
 
-#### Step 12 · E2E, contrast, README and wrap-up (PR B)
+#### Step 13 · E2E, contrast, README and wrap-up (PR B)
 
 - [ ] Done
 
@@ -2292,7 +2337,7 @@ and G.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
-#### Step 13 · Challenger review of PR B, then open it
+#### Step 14 · Challenger review of PR B, then open it
 
 - [ ] Done
 
@@ -2313,6 +2358,10 @@ and G.
   income is mostly interest, so the effect is small, but it is missing.
 - **Cash ownership,** so interest is taxed by owner rather than split
   equally.
+- **The Medicare levy low-income threshold for 2026–27 and 2027–28.** The
+  government raises it each year, but the tax-only files carry the
+  FY2025–26 figure ($27,222). The owner supplies the newer figures when they
+  are known.
 - **Per-person tax columns** in Year by year (the mockup's "Per-person tax"
   chip) and a "year in detail" panel with each partner's tax (mockup 05).
 - **A single salary-sacrifice-aware estimate** on Income & expenses
@@ -2612,6 +2661,6 @@ wording; whichever lands second rebases.
       15% and 14% rates) against the ATO before the M8 PRs merge.
 - [x] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
       challenger review, then open it for verification.
-- [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 13):
+- [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 14):
       challenger review, then open it stacked on PR A.
 - [ ] Owner verifies and merges the M8 PRs.
