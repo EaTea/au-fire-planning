@@ -4,7 +4,7 @@ This is the living plan for building the Australian FIRE Planner. It is
 written against [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md)
 and the [desktop mockups](requirements/mockups/README.md).
 
-**Current status:** M0 to M7, the colour scheme, the one-page Results, cash drawn last, the salary growth default and Start over from the logo are done. The M8 (personal income tax) step-by-step plan is in review. The plan for inflation in the views is merged and its implementation is still to do.
+**Current status:** M0 to M7, the colour scheme, the one-page Results, cash drawn last, the salary growth default, Start over from the logo and inflation in the views are done. The M8 (personal income tax) plan is approved (PR #40), and M8 PR A (tax as data and take-home pay shown) is open for review.
 
 | Part | Contents | Status |
 | --- | --- | --- |
@@ -1567,10 +1567,7 @@ Conventions settled while building M7, which later milestones rely on:
 
 ### M8 · Personal income tax: step-by-step plan
 
-**Status:** plan, awaiting the owner's approval. As with M6 and M7, the
-implementation PRs are opened stacked on this plan PR once the plan is
-written. The plan is still reviewed first, and the implementation follows
-any change to it.
+**Status:** plan approved (PR #40). PR A (steps 1 to 6) is implemented and open for review; PR B is not started.
 
 **Kind:** behavior change.
 
@@ -1970,7 +1967,7 @@ A and E above are the headline cases.
 
 #### Step 1 · Rules: sections, income tax, and the legislated rates (PR A)
 
-- [ ] Done
+- [x] Done
 
 **Kind:** behavior change (data only, no screen changes).
 
@@ -1999,9 +1996,34 @@ A and E above are the headline cases.
 
 **Check:** `npm run check` passes. No worked example changes.
 
+**As built:**
+- `YearRules` keeps `financialYear` and `isEstimated` for the superannuation
+  section (so every M5/M6 caller is unchanged) and adds
+  `incomeTaxFinancialYear`, `incomeTaxIsEstimated` and `incomeTax`.
+- `rulesForYear` throws if no file holds a section, so the bundled set must
+  always have both. A file with only one section is fine on its own.
+- A bundled-data test also checks the bracket list starts at $0 and
+  increases (the schema rejects it otherwise).
+- All three files are `unverified`. Their notes say the values and the three
+  URLs were entered from memory and not opened, so the owner must open each
+  URL and check the values on it. The existing super note is kept, with a
+  sentence added saying the `incomeTax` section is unchecked.
+- README "How to add next year's rules" now mentions optional sections.
+- **Review fixes:**
+  - `rulesForYear` answers are cached per rule set, year and inflation rate
+    (a `WeakMap` of `Map`s), and the result is shared, so it is read-only.
+    This brought `summarisePlan` for example E from about 41 to 18 ms at best
+    and about 46–65 to 20–23 ms median.
+  - A section is indexed from the snapshot in effect, not only when that
+    snapshot is the latest, so a later file for the section no longer stops
+    indexing the earlier years. For example, a super-only 2028-29 file leaves
+    2027 and 2028 indexed from the 2026 file.
+  - The schema rejects an offset whose first threshold is above its second,
+    and the "No rules file has an incomeTax section" message reads "an".
+
 #### Step 2 · `calculateIncomeTax` (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. `calculateIncomeTax(taxableIncome, incomeTaxRules)` in
    `src/engine/incomeTax.ts`, returning an `Explained` per the design. It
@@ -2017,9 +2039,21 @@ A and E above are the headline cases.
 
 **Check:** `npm run check` passes.
 
+**As built:**
+- `calculateIncomeTax` returns an `IncomeTaxResult`: an `Explained` (value =
+  tax payable) that also carries `bracketTax`, `lowIncomeTaxOffsetApplied`,
+  `incomeTax` and `medicareLevy`, so step 3 can store the parts separately.
+- Lines: one per bracket the income reaches (including the 0% one), then the
+  offset (`−`), the levy (`+`) and "Tax payable" (`=`). The offset is the
+  amount used, capped at the bracket tax.
+- `m8-tax.json` has a `taxCases` list, tested by
+  `tests/unit/taxExamples.test.ts`. Step 3 later added ordinary `scenarios` to
+  the same file, so `workedExamples.test.ts` runs those and skips any file
+  without `scenarios`. The fixture README describes both.
+
 #### Step 3 · Tax in the projection, not yet funded (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **Per-person tax in each row.** `PersonYear` gets `taxableIncome`,
    `incomeTax`, `medicareLevy` and `tax`. Taxable income is salary − salary
@@ -2032,9 +2066,34 @@ A and E above are the headline cases.
 
 **Check:** `npm run check` passes.
 
+**As built:**
+- `ProjectionInputs` gains a required `ruleSet`, because income tax needs the
+  rules even when a person has no super account (row tax uses
+  `rulesForYear(ruleSet, calendarYear, inflationRate).incomeTax`).
+  `summarisePlan` passes the bundled set; `onePersonInputs` uses it too.
+- `PersonYear` gains `taxableIncome` (never below $0), `incomeTax`,
+  `medicareLevy` and `tax`; `ProjectionRow` gains `tax` (the sum). Row 0 is 0.
+- **Example H's 2028 differs from the plan in this PR.** Tax is not yet paid
+  from cash, so cash at the end of 2027 is $584,000, not $583,830, and 2028
+  tax is $22.40, not $21.45. The fixture checks $22.40 and says so. $21.45
+  returns when PR B funds tax (step 8), and that step must update the fixture.
+  F, G, A and H's 2027 and couple figures are unaffected.
+- The fixture scenarios (F, G, H, H couple, A) are in `m8-tax.json`, checked
+  through a new `taxRows` field in the worked-example harness.
+- **Review fixes:** taxable income is `max(0, salary − salary sacrifice) +
+  the interest share`, so a sacrifice bigger than the salary no longer cancels
+  the tax on interest. A property test checks every person's tax against
+  `calculateIncomeTaxFigures` over random one- and two-person plans, and the
+  row's tax is their sum. Scenario A gains an indexed-year row: 2031 (row 5,
+  age 39) has taxable income $163,150.40 and tax $42,954.51, from the
+  independent model's `tax_parts` on example A's salary ($172,214.51), the
+  $10,000 sacrifice and this step's interest ($935.89, because tax isn't yet
+  paid from cash). In PR B that row's interest and tax rise (the full model
+  gives $43,690.07).
+
 #### Step 4 · Tax and take-home pay on the screens (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **Income & expenses:** under each salary, "Estimated tax $X · take-home
    $Y a year", with an `ExplainPanel` breakdown ("How is this
@@ -2050,9 +2109,35 @@ A and E above are the headline cases.
 **Check:** `npm run check` passes. Check by eye on Income & expenses and
 Year by year.
 
+**As built:**
+- `SalarySection` shows, under each salary above $0, "Estimated tax $X ·
+  take-home $Y a year" and a "How is this calculated?" toggle with the
+  `ExplainPanel` working. It taxes today's gross salary on the rules for the
+  plan's start year (`usePlanStartYear`), in today's dollars regardless of
+  the dollars toggle. With a couple, each line and toggle is prefixed with
+  the person's name (via `PerPersonFields`). The salary hint no longer says
+  tax arrives later.
+- Year by year has a "Tax" column after Salary, showing "—" when there is
+  no tax (like Salary). It follows the dollars toggle. At 1440px the table
+  still fits without scrolling and Status isn't squeezed.
+- Results has both banners: "Tax is shown but isn't yet taken from your
+  savings. That comes next." (to be removed in PR B) and "Not yet modelled:
+  tax on portfolio income and gains (M9), property (M12) and more."
+- The "Spending while one of you has retired" hint still mentions tax
+  arriving "in a later version"; step 7 rewrites it (the only place that
+  does).
+- **Review fixes:** the Results banner now shows only when the projection is
+  complete and some row has tax, worded "Tax is shown in Year by year but
+  isn't yet taken from your savings, so balances are higher than they will
+  be." Under each estimate a hint names the rules year (from
+  `incomeTaxFinancialYear`) and what is left out: "On today's salary at
+  2025–26 rates, before salary sacrifice and interest." Tests cover the
+  caption, the `aria-expanded` toggle, the dollars toggle being ignored and
+  the banner in each state.
+
 #### Step 5 · E2E, contrast, README (PR A)
 
-- [ ] Done
+- [x] Done
 
 1. **`tests/e2e/tax.spec.ts`,** with the clock fixed in 2026: enter a
    $100,000 salary and read the estimate ($22,788 and $77,212, with the
@@ -2064,9 +2149,38 @@ Year by year.
 
 **Check:** `npm run check` and `npm run test:e2e` pass.
 
+**As built:**
+- `tests/e2e/tax.spec.ts`: one person ($100,000: $22,788 and $77,212 with the
+  working open; Tax column $22,520 in 2027, $22,252 in 2028 and "—" from 2029;
+  both Results banners) and a couple (Sam's $40,000 gives $3,713 and $36,287,
+  T7). Run 10 times with `--repeat-each 10`.
+- The contrast sweep gains one test: Income & expenses with the breakdown
+  open for one person and a couple, and Year by year with the Tax column in
+  both dollar modes.
+- README "What it does" gains a "Tax and take-home pay" item and drops "doesn't
+  pay for living expenses until tax is modelled".
+
 #### Step 6 · Challenger review of PR A, then open it
 
-- [ ] Done
+- [x] Done
+
+**As built:** the reviewer compared `calculateIncomeTax` with the
+independent model on 30,795 income, year and inflation combinations (the
+largest difference was 0.000000), and `summarisePlan` with the base branch
+on 1,000 random one-person and couple plans (identical apart from the new
+tax fields). Its findings were fixed in their own commits:
+- salary sacrifice larger than salary cancelled tax on cash interest;
+- `rulesForYear` made `summarisePlan` twice as slow, so it is cached;
+- adding a later rules file switched off indexation for earlier years;
+- the Results banner showed when no tax was shown;
+- the estimate didn't say it uses 2025–26 rates and ignores sacrifice and
+  interest;
+- stale or contradictory README and PLAN.md lines.
+
+Two design points go to the owner with the PR: in law the brackets and
+the low income offset are not indexed (only the Medicare threshold is), and
+the interest split between partners puts some interest at the higher
+earner's rate.
 
 1. **Review:** the reviewer subagent checks PR A's diff against this plan,
    the worked examples and the requirements.
@@ -2097,6 +2211,9 @@ Year by year.
 
 1. **The projection** follows "The year's cash flow", with `netPay`,
    `fundingNeed`, `savedToCash` and the new `spending`.
+   - **Net pay** is salary − salary sacrifice. It can be negative when the
+     sacrifice exceeds the salary, in which case the shortfall is paid from
+     savings, while taxable income is floored at $0.
 2. **A "stop saving the surplus after row k"** input, used by the Coast
    FIRE runs (step 9).
 3. **Tests, with the independent figures:** F, G and H to the cent; A's and
@@ -2488,13 +2605,13 @@ wording; whichever lands second rebases.
 - [x] Approve the inflation in the views plan.
 - [x] Implement inflation in the views (steps 1 and 2), then open it for
       verification.
-- [ ] Owner verifies and merges the inflation in the views PR.
-- [ ] Approve the M8 step-by-step plan (plan PR), including the seven owner
+- [x] Owner verifies and merges the inflation in the views PR (#41).
+- [x] Approve the M8 step-by-step plan (plan PR #40), including the seven owner
       decisions. The owner also checks the new tax values (the brackets, the
       low income tax offset, the Medicare levy thresholds and the legislated
       15% and 14% rates) against the ATO before the M8 PRs merge.
-- [ ] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
-      challenger review, then open it stacked on the plan PR.
+- [x] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
+      challenger review, then open it for verification.
 - [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 13):
       challenger review, then open it stacked on PR A.
 - [ ] Owner verifies and merges the M8 PRs.

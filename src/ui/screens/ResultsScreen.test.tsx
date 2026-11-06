@@ -180,15 +180,58 @@ describe("ResultsScreen", () => {
     renderResults(blankPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
+      screen.getByText(
+        /Not yet modelled: tax on portfolio income and gains \(M9\), property \(M12\) and more\./,
+      ),
     ).toBeInTheDocument();
+  });
+
+  describe("the tax is-not-yet-taken banner", () => {
+    const bannerText =
+      "Tax is shown in Year by year but isn't yet taken from your savings, so balances are higher than they will be.";
+
+    /** Example A with a $100,000 salary, so rows carry tax. */
+    const exampleAWithSalary: Plan = {
+      ...exampleA,
+      household: {
+        people: [
+          {
+            id: "person-1",
+            label: "Person 1",
+            currentAge: 34,
+            targetRetirementAge: 50,
+            salary: { annual: 100000 },
+          },
+        ],
+      },
+    };
+
+    it("is not shown while the plan is incomplete", () => {
+      renderResults(blankPlan);
+
+      expect(screen.queryByText(bannerText)).not.toBeInTheDocument();
+    });
+
+    it("is not shown when the plan is complete but no row has tax", () => {
+      renderResults(exampleA);
+
+      expect(screen.queryByText(bannerText)).not.toBeInTheDocument();
+    });
+
+    it("is shown when the plan is complete and some row has tax", () => {
+      renderResults(exampleAWithSalary);
+
+      expect(screen.getByText(bannerText)).toBeInTheDocument();
+    });
   });
 
   it("says what is not modelled yet when complete", () => {
     renderResults(workedPlan);
 
     expect(
-      screen.getByText(/Not yet modelled: tax \(M8\), property \(M12\) and more\./),
+      screen.getByText(
+        /Not yet modelled: tax on portfolio income and gains \(M9\), property \(M12\) and more\./,
+      ),
     ).toBeInTheDocument();
   });
 

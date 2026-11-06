@@ -61,6 +61,11 @@ export function YearByYearSection({ projection }: YearByYearSectionProps) {
       cell: (row) => (row.salary > 0 ? formatMoney(row.salary, row.inflationIndex) : "—"),
     },
     {
+      header: "Tax",
+      // Income tax and Medicare levy on salary and cash interest (M8); "—" when there is none, like Salary.
+      cell: (row) => (row.tax > 0 ? formatMoney(row.tax, row.inflationIndex) : "—"),
+    },
+    {
       header: "Into portfolio",
       cell: (row) => formatMoney(row.contribution, row.inflationIndex),
     },

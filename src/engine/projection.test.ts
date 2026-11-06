@@ -375,11 +375,23 @@ describe("salary in the projection", () => {
       2026,
     );
 
-    /** The row with the salary (the household's and the person's) set to 0, so only the pay differs. */
+    /**
+     * The row with the salary (the household's and the person's) and the
+     * income tax on it set to 0, so only the pay and the tax on it differ.
+     * (Tax is shown but does not touch balances in M8 PR A.)
+     */
     const ignoringSalary = (candidate: ProjectionRow | undefined) => ({
       ...candidate,
       salary: 0,
-      people: candidate?.people.map((personYear) => ({ ...personYear, salary: 0 })),
+      tax: 0,
+      people: candidate?.people.map((personYear) => ({
+        ...personYear,
+        salary: 0,
+        taxableIncome: 0,
+        incomeTax: 0,
+        medicareLevy: 0,
+        tax: 0,
+      })),
     });
 
     for (const [index, payRow] of withPay.entries()) {
@@ -410,6 +422,10 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
         salarySacrifice: 0,
         nonConcessional: 0,
         contributionsTax: 0,
+        taxableIncome: 0,
+        incomeTax: 0,
+        medicareLevy: 0,
+        tax: 0,
         superOpening: 0,
         superEarnings: 0,
         superEarningsTax: 0,
@@ -441,6 +457,7 @@ function row(yearIndex: number, investableClosing: number, fiNumber: number): Pr
     salarySacrifice: 0,
     nonConcessional: 0,
     contributionsTax: 0,
+    tax: 0,
     superOpening: 0,
     superEarnings: 0,
     superEarningsTax: 0,
@@ -550,6 +567,7 @@ describe("projectPortfolio: a household of several people", () => {
     retirementSpendingAnnual: 60_000,
     datedExpenses: [],
     fiNumberToday: 1_500_000,
+    ruleSet: bundledRuleSet,
   };
 
   // The row's household figures must be exactly what the people add up to.

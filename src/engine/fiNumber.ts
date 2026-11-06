@@ -368,6 +368,7 @@ function summariseProjection(
       toYear: expense.toYear,
     })),
     fiNumberToday: fiNumberToday.value,
+    ruleSet,
   };
 
   const rows = projectPortfolio(projectionSettings, startYear);

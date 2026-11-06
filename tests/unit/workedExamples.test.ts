@@ -22,7 +22,8 @@ interface WorkedExampleFile {
   readonly milestone: string;
   /** Calendar year of row 0 for the projection (M2 onwards); defaults to 2026. */
   readonly startYear?: number;
-  readonly scenarios: readonly WorkedScenario[];
+  /** Absent in files that hold other kinds of case, e.g. m8-tax.json's `taxCases` (tested in taxExamples.test.ts). */
+  readonly scenarios?: readonly WorkedScenario[];
 }
 
 interface WorkedScenario {
@@ -92,7 +93,20 @@ interface WorkedScenario {
     readonly householdRetirementYear?: number;
     /** M7 figures: per-person figures in the listed rows. */
     readonly personRows?: readonly ExpectedPersonRow[];
+    /** M8 figures: income tax in the listed rows. */
+    readonly taxRows?: readonly ExpectedTaxRow[];
   };
+}
+
+/** Tax figures in one row of the projection (M8); unlisted fields aren't checked. */
+interface ExpectedTaxRow {
+  readonly yearIndex: number;
+  /** The household's income tax plus Medicare levy that year. */
+  readonly tax?: number;
+  /** One entry per person, in order: their tax that year. */
+  readonly personTax?: readonly number[];
+  /** One entry per person, in order: their taxable income that year. */
+  readonly personTaxableIncome?: readonly number[];
 }
 
 /** The super figures checked for one projection row; unlisted fields aren't checked. */
@@ -687,6 +701,30 @@ function checkPeopleFigures(summary: CompleteSummary, expected: WorkedScenario["
   }
 }
 
+/** Checks the income tax figures (M8) in the listed rows, for the household and for each person. */
+function checkTaxFigures(summary: CompleteSummary, expected: WorkedScenario["expected"]) {
+  if (expected.taxRows === undefined) return;
+
+  expect(summary.projection.status).toBe("complete");
+  if (summary.projection.status !== "complete") return;
+
+  for (const expectedRow of expected.taxRows) {
+    const row = summary.projection.rows[expectedRow.yearIndex];
+    expect(row, `row ${expectedRow.yearIndex} should exist`).toBeDefined();
+    if (row === undefined) continue;
+
+    if (expectedRow.tax !== undefined) {
+      expectToTheCent(row.tax, expectedRow.tax);
+    }
+    for (const [index, expectedTax] of (expectedRow.personTax ?? []).entries()) {
+      expectToTheCent(row.people[index]?.tax ?? Number.NaN, expectedTax);
+    }
+    for (const [index, expectedIncome] of (expectedRow.personTaxableIncome ?? []).entries()) {
+      expectToTheCent(row.people[index]?.taxableIncome ?? Number.NaN, expectedIncome);
+    }
+  }
+}
+
 /** Checks the "does the money last?" answer against a fixture, field by field. */
 function checkSolvency(actual: CompleteProjection["solvency"], expected: ExpectedSolvency) {
   expect(actual.status).toBe(expected.status);
@@ -719,8 +757,11 @@ describe("worked examples", () => {
   });
 
   for (const [path, file] of Object.entries(fixtureFiles)) {
+    const scenarios = file.scenarios;
+    if (scenarios === undefined) continue;
+
     describe(`${path} (${file.milestone})`, () => {
-      it.each(file.scenarios.map((scenario) => [scenario.name, scenario] as const))(
+      it.each(scenarios.map((scenario) => [scenario.name, scenario] as const))(
         "%s",
         (_name, scenario) => {
           expect(scenario.checkedBy).not.toBe("");
@@ -738,6 +779,7 @@ describe("worked examples", () => {
           checkProjectionFigures(summary, scenario.expected);
           checkCoastFigures(summary, scenario.expected);
           checkSalaryFigures(summary, scenario.expected);
+          checkTaxFigures(summary, scenario.expected);
           checkSuperFigures(summary, scenario.expected);
           checkBridgeFigures(summary, scenario.expected);
           checkCoastSplitFigures(summary, scenario.expected);

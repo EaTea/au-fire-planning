@@ -320,6 +320,16 @@ body {
   margin-top: 3px;
 }
 
+/* The estimated tax and take-home line under a salary (M8), with its breakdown toggle. */
+.tax-estimate {
+  margin: var(--space-small) 0 var(--space-medium);
+  font-size: 13px;
+}
+
+.tax-estimate p {
+  margin: 0;
+}
+
 .muted {
   color: var(--colour-text-muted);
 }

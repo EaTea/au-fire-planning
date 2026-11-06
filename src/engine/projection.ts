@@ -51,6 +51,7 @@
 // of them to today's dollars divides by that single number.
 
 import type { SalaryGrowth } from "../plan/types";
+import { calculateIncomeTaxFigures } from "./incomeTax";
 import { rulesForYear, type RuleSet, type SuperannuationRules } from "../rules/ruleSet";
 import type { Explained, ExplanationLine } from "./explained";
 
@@ -187,6 +188,12 @@ export interface ProjectionInputs {
   readonly datedExpenses: readonly ProjectionDatedExpense[];
   /** M1's FI number in today's dollars. */
   readonly fiNumberToday: number;
+  /**
+   * The statutory rules for the household as a whole (income tax, M8). Super
+   * rows also read the rules from each person's `superAccount.ruleSet`; both
+   * come from the same bundled set.
+   */
+  readonly ruleSet: RuleSet;
 }
 
 /** Whether one person is working or retired in a year. */
@@ -221,6 +228,18 @@ export interface PersonYear {
   readonly nonConcessional: number;
   /** Tax on concessional contributions (employer + salary sacrifice). */
   readonly contributionsTax: number;
+  /**
+   * Income taxed this year (M8): salary less salary sacrifice, plus this
+   * person's equal share of the year's cash interest (cash has no owner yet).
+   * 0 in row 0, which has no flows.
+   */
+  readonly taxableIncome: number;
+  /** Income tax on `taxableIncome` after the low income tax offset, excluding the Medicare levy. */
+  readonly incomeTax: number;
+  /** Medicare levy on `taxableIncome`. */
+  readonly medicareLevy: number;
+  /** Income tax plus Medicare levy. Shown in M8 PR A; balances are not yet reduced by it. */
+  readonly tax: number;
   readonly superOpening: number;
   /** Earnings on the opening balance, before earnings tax. */
   readonly superEarnings: number;
@@ -280,6 +299,8 @@ export interface ProjectionRow {
   readonly nonConcessional: number;
   /** Tax on concessional contributions (employer + salary sacrifice). Sum over `people`. */
   readonly contributionsTax: number;
+  /** Income tax plus Medicare levy on salary and cash interest. Sum over `people`; not yet taken out of balances. */
+  readonly tax: number;
   readonly superOpening: number;
   /** Earnings on the opening balance, before earnings tax. Sum over `people`. */
   readonly superEarnings: number;
@@ -554,6 +575,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       salarySacrifice: 0,
       nonConcessional: 0,
       contributionsTax: 0,
+      tax: 0,
       superOpening: superOpeningToday,
       superEarnings: 0,
       superEarningsTax: 0,
@@ -623,26 +645,44 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
     cash = cashAvailable - fromCash;
     portfolio = portfolioAvailable - fromPortfolio;
 
-    const people = mapNonEmpty(
-      drawings,
-      ({ person, superYear, accessible, drawn }): PersonYear => ({
+    // Income tax (M8) uses the rules in effect for this row's year. Cash has
+    // no owner yet, so each person is taxed on an equal share of its interest.
+    const incomeTaxRules = rulesForYear(
+      inputs.ruleSet,
+      calendarYear,
+      inputs.inflationRate,
+    ).incomeTax;
+    const cashInterestShare = cashInterest / inputs.people.length;
+
+    const people = mapNonEmpty(drawings, ({ person, superYear, accessible, drawn }): PersonYear => {
+      const salary = salaryInYear(person, inputs, yearIndex);
+      // Salary sacrifice can't take pay below $0 (or cancel the tax on the
+      // interest share), so the sacrificed pay is floored before interest is added.
+      const taxableIncome = Math.max(0, salary - superYear.salarySacrifice) + cashInterestShare;
+      const taxResult = calculateIncomeTaxFigures(taxableIncome, incomeTaxRules);
+
+      return {
         personId: person.id,
         label: person.label,
         age: person.currentAge + yearIndex,
         phase: personPhase(person, yearIndex),
-        salary: salaryInYear(person, inputs, yearIndex),
+        salary,
         employerContribution: superYear.employer,
         salarySacrifice: superYear.salarySacrifice,
         nonConcessional: superYear.nonConcessional,
         contributionsTax: superYear.contributionsTax,
+        taxableIncome,
+        incomeTax: taxResult.incomeTax,
+        medicareLevy: taxResult.medicareLevy,
+        tax: taxResult.tax,
         superOpening: superYear.opening,
         superEarnings: superYear.earnings,
         superEarningsTax: superYear.earningsTax,
         fromSuper: drawn,
         superClosing: superYear.available - drawn,
         superAccessible: accessible,
-      }),
-    );
+      };
+    });
     const superBalance = sumOverPeople(people, (personYear) => personYear.superClosing);
 
     rows.push({
@@ -672,6 +712,7 @@ export function projectPortfolio(inputs: ProjectionInputs, startYear: number): P
       salarySacrifice: sumOverPeople(people, (personYear) => personYear.salarySacrifice),
       nonConcessional: sumOverPeople(people, (personYear) => personYear.nonConcessional),
       contributionsTax: sumOverPeople(people, (personYear) => personYear.contributionsTax),
+      tax: sumOverPeople(people, (personYear) => personYear.tax),
       superOpening: sumOverPeople(people, (personYear) => personYear.superOpening),
       superEarnings: sumOverPeople(people, (personYear) => personYear.superEarnings),
       superEarningsTax: sumOverPeople(people, (personYear) => personYear.superEarningsTax),
@@ -708,6 +749,10 @@ function personYearToday(
     salarySacrifice: 0,
     nonConcessional: 0,
     contributionsTax: 0,
+    taxableIncome: 0,
+    incomeTax: 0,
+    medicareLevy: 0,
+    tax: 0,
     superOpening: superToday,
     superEarnings: 0,
     superEarningsTax: 0,

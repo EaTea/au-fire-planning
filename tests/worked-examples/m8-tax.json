@@ -1,0 +1,482 @@
+{
+  "milestone": "M8",
+  "description": "Personal income tax: the tax calculation for one person in one year (T1 to T14), going through rulesForYear with the bundled rules. Also holds projection scenarios whose expected figures are the tax fields only: until PR B funds tax, balances are not affected by it.",
+  "taxCases": [
+    {
+      "name": "T1",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 18200,
+      "expected": {
+        "bracketTax": 0,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 0,
+        "medicareLevy": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "T2",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 45000,
+      "expected": {
+        "bracketTax": 4288,
+        "lowIncomeTaxOffset": 325,
+        "incomeTax": 3963,
+        "medicareLevy": 900,
+        "total": 4863
+      }
+    },
+    {
+      "name": "T3",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20788,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20788,
+        "medicareLevy": 2000,
+        "total": 22788
+      }
+    },
+    {
+      "name": "T4",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 145000,
+      "expected": {
+        "bracketTax": 34988,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 34988,
+        "medicareLevy": 2900,
+        "total": 37888
+      }
+    },
+    {
+      "name": "T5",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 30000,
+      "expected": {
+        "bracketTax": 1888,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 1188,
+        "medicareLevy": 277.8,
+        "total": 1465.8
+      }
+    },
+    {
+      "name": "T6",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 200000,
+      "expected": {
+        "bracketTax": 56138,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 56138,
+        "medicareLevy": 4000,
+        "total": 60138
+      }
+    },
+    {
+      "name": "T7",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 40000,
+      "expected": {
+        "bracketTax": 3488,
+        "lowIncomeTaxOffset": 575,
+        "incomeTax": 2913,
+        "medicareLevy": 800,
+        "total": 3713
+      }
+    },
+    {
+      "name": "T8",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 60000,
+      "expected": {
+        "bracketTax": 8788,
+        "lowIncomeTaxOffset": 100,
+        "incomeTax": 8688,
+        "medicareLevy": 1200,
+        "total": 9888
+      }
+    },
+    {
+      "name": "T9",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2027,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20520,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20520,
+        "medicareLevy": 2000,
+        "total": 22520
+      }
+    },
+    {
+      "name": "T10",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2028,
+      "inflationRate": 0,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 20252,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 20252,
+        "medicareLevy": 2000,
+        "total": 22252
+      }
+    },
+    {
+      "name": "T11",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 27222,
+      "expected": {
+        "bracketTax": 1443.52,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 743.52,
+        "medicareLevy": 0,
+        "total": 743.52
+      }
+    },
+    {
+      "name": "T12",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": 34027,
+      "expected": {
+        "bracketTax": 2532.32,
+        "lowIncomeTaxOffset": 700,
+        "incomeTax": 1832.32,
+        "medicareLevy": 680.5,
+        "total": 2512.82
+      }
+    },
+    {
+      "name": "T13",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2031,
+      "inflationRate": 0.025,
+      "taxableIncome": 100000,
+      "expected": {
+        "bracketTax": 19502.4702,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 19502.4702,
+        "medicareLevy": 2000,
+        "total": 21502.4702
+      }
+    },
+    {
+      "name": "T14",
+      "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
+      "year": 2026,
+      "inflationRate": 0,
+      "taxableIncome": -5000,
+      "expected": {
+        "bracketTax": 0,
+        "lowIncomeTaxOffset": 0,
+        "incomeTax": 0,
+        "medicareLevy": 0,
+        "total": 0
+      }
+    }
+  ],
+  "startYear": 2026,
+  "scenarios": [
+    {
+      "name": "F: one person, tax in working years (balances not yet affected by tax)",
+      "checkedBy": "independent script (PLAN.md, M8 example F)",
+      "inputs": {
+        "livingExpensesAnnual": 60000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 60000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0,
+        "annualContribution": 10000,
+        "contributionsStopAge": null,
+        "projectionEndAge": 45,
+        "cashBalance": 20000,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "currentAge": 40,
+        "targetRetirementAge": 42,
+        "salaryAnnual": 100000,
+        "salaryGrowth": {
+          "kind": "none"
+        },
+        "superAccount": {
+          "balance": 0,
+          "returnRate": 0
+        }
+      },
+      "arithmetic": [
+        "2027 (age 41): taxable $100,000 at the FY2026-27 rules: bracket tax 0.15 x 26,800 + 0.30 x 55,000 = 4,020 + 16,500 = $20,520; no offset; Medicare 2% = $2,000; tax $22,520.",
+        "2028 (age 42): FY2027-28 rules, 14%: 3,752 + 16,500 = $20,252 + $2,000 = $22,252.",
+        "2029 onward: retired, no salary and 0% interest, so no taxable income and no tax.",
+        "Only tax fields are checked: balances are not yet reduced by tax in this step."
+      ],
+      "expected": {
+        "taxRows": [
+          {
+            "yearIndex": 1,
+            "tax": 22520,
+            "personTax": [22520],
+            "personTaxableIncome": [100000]
+          },
+          {
+            "yearIndex": 2,
+            "tax": 22252
+          },
+          {
+            "yearIndex": 3,
+            "tax": 0
+          },
+          {
+            "yearIndex": 4,
+            "tax": 0
+          },
+          {
+            "yearIndex": 5,
+            "tax": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "G: a couple, tax per person (balances not yet affected by tax)",
+      "checkedBy": "independent script (PLAN.md, M8 example G)",
+      "inputs": {
+        "livingExpensesAnnual": 70000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 60000
+        },
+        "interimAnnual": 50000,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 100000,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 44,
+        "cashBalance": 20000,
+        "interestRate": 0,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 40,
+        "targetRetirementAge": 42,
+        "salaryAnnual": 100000,
+        "salaryGrowth": {
+          "kind": "none"
+        },
+        "superAccount": {
+          "balance": 0,
+          "returnRate": 0
+        },
+        "partner": {
+          "name": "Sam",
+          "currentAge": 40,
+          "targetRetirementAge": 41,
+          "salaryAnnual": 40000,
+          "salaryGrowth": {
+            "kind": "none"
+          },
+          "superAccount": {
+            "balance": 0,
+            "returnRate": 0
+          }
+        }
+      },
+      "arithmetic": [
+        "2027: Alex $22,520 as in F. Sam: taxable $40,000, bracket tax 0.15 x 21,800 = $3,270; LITO 700 - 0.05 x 2,500 = $575; Medicare 2% = $800; tax $3,495.",
+        "2028: Sam has retired (age 42 > 41), so no tax. Alex $22,252.",
+        "Only tax fields are checked."
+      ],
+      "expected": {
+        "taxRows": [
+          {
+            "yearIndex": 1,
+            "tax": 26015,
+            "personTax": [22520, 3495]
+          },
+          {
+            "yearIndex": 2,
+            "tax": 22252,
+            "personTax": [22252, 0]
+          }
+        ]
+      }
+    },
+    {
+      "name": "H: tax on cash interest, one person (balances not yet affected by tax)",
+      "checkedBy": "independent script (PLAN.md, M8 example H), 2028 recomputed for this step",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 0,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 63,
+        "cashBalance": 600000,
+        "interestRate": 0.04,
+        "inflationRate": 0,
+        "currentAge": 60,
+        "targetRetirementAge": 60
+      },
+      "arithmetic": [
+        "2027: interest 4% x 600,000 = $24,000; bracket tax 0.15 x 5,800 = $870; LITO $700 (income under $37,500); income tax $170; Medicare $0 (under $27,222). Tax $170.",
+        "2028: in this step tax is not yet paid from cash, so cash is 600,000 + 24,000 - 40,000 = $584,000 and interest is $23,360. Bracket tax 0.14 x 5,160 = $722.40; LITO $700; tax $22.40. (Once tax is funded in PR B the interest is $23,353.20 and the tax $21.45, as in the plan's example H.)",
+        "2029: cash $567,360, interest $22,694.40, bracket tax 0.14 x 4,494.40 = $629.22, covered by the $700 offset, so tax $0."
+      ],
+      "expected": {
+        "taxRows": [
+          {
+            "yearIndex": 1,
+            "tax": 170,
+            "personTax": [170],
+            "personTaxableIncome": [24000]
+          },
+          {
+            "yearIndex": 2,
+            "tax": 22.4
+          },
+          {
+            "yearIndex": 3,
+            "tax": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "H: tax on cash interest, a couple's two thresholds",
+      "checkedBy": "independent script (PLAN.md, M8 example H)",
+      "inputs": {
+        "livingExpensesAnnual": 40000,
+        "retirementSpending": {
+          "kind": "amount",
+          "annual": 40000
+        },
+        "interimAnnual": 40000,
+        "safeWithdrawalRate": 0.04,
+        "portfolioValue": 0,
+        "expectedReturn": 0,
+        "annualContribution": 0,
+        "contributionsStopAge": null,
+        "projectionEndAge": 63,
+        "cashBalance": 600000,
+        "interestRate": 0.04,
+        "inflationRate": 0,
+        "name": "Alex",
+        "currentAge": 60,
+        "targetRetirementAge": 60,
+        "partner": {
+          "name": "Sam",
+          "currentAge": 60,
+          "targetRetirementAge": 60
+        }
+      },
+      "arithmetic": [
+        "2027: interest $24,000 split equally, so each is taxed on $12,000, under the $18,200 tax-free threshold: tax $0 for each.",
+        "Interest stays under $36,400 a year (it falls as cash is spent), so every year is $0."
+      ],
+      "expected": {
+        "taxRows": [
+          {
+            "yearIndex": 1,
+            "tax": 0,
+            "personTax": [0, 0],
+            "personTaxableIncome": [12000, 12000]
+          },
+          {
+            "yearIndex": 2,
+            "tax": 0
+          },
+          {
+            "yearIndex": 3,
+            "tax": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "A: the headline example, tax in 2027 (balances not yet affected by tax)",
+      "checkedBy": "independent script (PLAN.md, M8 example A)",
+      "inputs": {
+        "currentAge": 34,
+        "targetRetirementAge": 50,
+        "portfolioValue": 720000,
+        "expectedReturn": 0.07,
+        "annualContribution": 30000,
+        "cashBalance": 20000,
+        "interestRate": 0.04,
+        "inflationRate": 0.025,
+        "livingExpensesAnnual": 64000,
+        "projectionEndAge": null,
+        "contributionsStopAge": null,
+        "retirementSpending": null,
+        "safeWithdrawalRate": 0.04,
+        "salaryAnnual": 145000,
+        "salaryGrowth": {
+          "kind": "inflationPlus",
+          "margin": 0.01
+        },
+        "superAccount": {
+          "balance": 185000,
+          "returnRate": 0.07,
+          "salarySacrifice": {
+            "annual": 10000,
+            "fromYear": 2027,
+            "toYear": 2042
+          }
+        }
+      },
+      "arithmetic": [
+        "2027: salary 145,000 x 1.035 = $150,075; less salary sacrifice $10,000; plus interest 4% x 20,000 = $800: taxable income $140,875.",
+        "Bracket tax at the 15% bottom rate: 0.15 x 26,800 + 0.30 x 90,000 + 0.37 x 5,875 = 4,020 + 27,000 + 2,173.75 = $33,193.75. Medicare 2% = $2,817.50. Tax $36,011.25.",
+        "Only tax fields are checked.",
+        "2031 (row 5, age 39, an indexed year: three years past the FY2027-28 file, so every dollar amount is x 1.025^3): salary 145,000 x 1.035^5 = $172,214.51; salary sacrifice $10,000; cash interest this step (tax not yet paid from cash, so cash grows only by interest) = 4% x 20,000 x 1.04^4 = $935.89. Taxable income $163,150.40. Taken through the independent reference model's tax_parts(x, 2031, 0.025): bracket tax $39,691.50, no offset, Medicare $3,263.01, tax $42,954.51. In PR B the saved surplus makes cash and interest larger, so this figure rises (the full model gives $43,690.07)."
+      ],
+      "expected": {
+        "taxRows": [
+          {
+            "yearIndex": 1,
+            "tax": 36011.25,
+            "personTax": [36011.25],
+            "personTaxableIncome": [140875]
+          },
+          {
+            "yearIndex": 5,
+            "tax": 42954.51,
+            "personTax": [42954.51],
+            "personTaxableIncome": [163150.4]
+          }
+        ]
+      }
+    }
+  ]
+}

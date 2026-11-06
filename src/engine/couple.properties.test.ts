@@ -88,7 +88,13 @@ function householdFrom(
     interimSpendingAnnual: money.interim,
     datedExpenses: [],
     fiNumberToday: 1_000_000,
+    ruleSet: bundledRuleSet,
   };
+}
+
+/** A person's year without the income tax fields, which depend on how many people share the cash interest. */
+function withoutTax(personYear: ProjectionRow["people"][number]) {
+  return { ...personYear, taxableIncome: 0, incomeTax: 0, medicareLevy: 0, tax: 0 };
 }
 
 // A partner with nothing, the same ages and the same retirement, changes nothing: the
@@ -122,8 +128,10 @@ test.prop([personArbitrary, moneyArbitrary], { numRuns: 100 })(
       const { people: alonePeople, ...aloneFields } = aloneRow;
       const { people: partnerPeople, ...partnerFields } = withPartner[index] as ProjectionRow;
 
-      expect(partnerFields).toEqual(aloneFields);
-      expect(partnerPeople[0]).toEqual(alonePeople[0]);
+      // Income tax is the one thing a partner changes: the cash interest is split
+      // between two people, so each is taxed on half (and two thresholds apply).
+      expect({ ...partnerFields, tax: 0 }).toEqual({ ...aloneFields, tax: 0 });
+      expect(withoutTax(partnerPeople[0])).toEqual(withoutTax(alonePeople[0]));
     }
   },
 );

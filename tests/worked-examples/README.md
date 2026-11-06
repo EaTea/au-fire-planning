@@ -60,5 +60,17 @@ loads every file in this folder and checks the engine against it to the cent.
   `contributionsTax`, `fromSuper`, `shortfall`, `superClosing`,
   `investableClosing`). `fiReached.fiNumber` is optional.
 
+- The M8 fixture (`m8-tax.json`) holds two lists. Its `taxCases` list is tested by `tests/unit/taxExamples.test.ts`: each case has a
+  `name` (T1 to T14), `checkedBy`, a calendar `year` (which picks the rules
+  file, so the bottom rate is 16%, 15% or 14%), an `inflationRate` (which only
+  matters past the latest file), a `taxableIncome` and `expected` figures
+  `bracketTax`, `lowIncomeTaxOffset` (the amount actually used, capped at the
+  bracket tax), `incomeTax`, `medicareLevy` and `total`. Each case goes through
+  `rulesForYear` with the bundled rules. It also holds ordinary
+  `scenarios` (F, G, H and A), tested by the main harness, whose `expected.taxRows` list rows (`yearIndex`
+  plus any of `tax`, `personTax` and `personTaxableIncome`, the last two with
+  one entry per person). Until PR B funds tax, balances are not reduced by it,
+  so those scenarios check tax fields only.
+
 Add a new file per milestone as more of the engine is built; the test picks it
 up automatically.
