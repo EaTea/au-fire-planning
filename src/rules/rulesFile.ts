@@ -32,7 +32,7 @@ const superannuationWireSchema = z.object({
   earningsTaxPercent: percentSchema,
   discountedCapitalGainsTaxPercent: percentSchema,
   preservationAgeYears: ageSchema,
-  unconditionalReleaseAgeYears: ageSchema,
+  noConditionsAgeYears: ageSchema,
 });
 
 /**
@@ -89,7 +89,7 @@ const superannuationSourceKeys = [
   "earningsTaxPercent",
   "discountedCapitalGainsTaxPercent",
   "preservationAgeYears",
-  "unconditionalReleaseAgeYears",
+  "noConditionsAgeYears",
 ] as const;
 
 /** The source-link keys the income tax section needs: one URL per group of values. */
@@ -103,7 +103,7 @@ const sourcesWireSchema = z.object({
   earningsTaxPercent: z.url().optional(),
   discountedCapitalGainsTaxPercent: z.url().optional(),
   preservationAgeYears: z.url().optional(),
-  unconditionalReleaseAgeYears: z.url().optional(),
+  noConditionsAgeYears: z.url().optional(),
   residentBrackets: z.url().optional(),
   lowIncomeTaxOffset: z.url().optional(),
   medicareLevy: z.url().optional(),

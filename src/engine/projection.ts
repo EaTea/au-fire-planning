@@ -97,8 +97,9 @@ export interface ProjectionSuper {
   readonly nonConcessional: ProjectionSuperContribution;
   /**
    * The age the person wants super accessible from (IN-5). Absent means the
-   * unconditional release age (65). Whatever is given is clamped between the
-   * preservation age and that age, using the rules (see `resolveSuperAccessAge`).
+   * age at which no condition is needed to access super (65). Whatever is
+   * given is clamped between the preservation age and that age, using the
+   * rules (see `resolveSuperAccessAge`).
    */
   readonly accessAge?: number;
   /** The statutory rules, from which each row takes its rates and the contribution base. */
@@ -325,24 +326,24 @@ export function isShortfallWithSuperLocked(row: ProjectionRow): boolean {
 
 /**
  * Clamps the access age a person asked for (IN-5) into the range the rules
- * allow: no lower than the preservation age, no higher than the unconditional
- * release age, and the release age when none was given. Called by
- * `isSuperDrawable` and `effectiveSuperAccessAge`.
+ * allow: no lower than the preservation age, no higher than the age at which
+ * no condition is needed to access super (65), which is also the default when
+ * none was given. Called by `isSuperDrawable` and `effectiveSuperAccessAge`.
  */
 function resolveSuperAccessAge(
   requestedAge: number | undefined,
   rules: SuperannuationRules,
 ): number {
-  const age = requestedAge ?? rules.unconditionalReleaseAgeYears;
+  const age = requestedAge ?? rules.noConditionsAgeYears;
 
-  return Math.min(Math.max(age, rules.preservationAgeYears), rules.unconditionalReleaseAgeYears);
+  return Math.min(Math.max(age, rules.preservationAgeYears), rules.noConditionsAgeYears);
 }
 
 /**
  * The condition of release (SUPER-1): whether a person's super can be drawn
  * at `age`.
  *
- *   drawable at age a  ⇔  a ≥ unconditional release age (65)
+ *   drawable at age a  ⇔  a ≥ no-conditions age (65)
  *                       or (a ≥ access age  and  a ≥ preservation age (60)
  *                           and  a > retirement age)
  *
@@ -359,7 +360,7 @@ function isSuperDrawable(
   const accessAge = resolveSuperAccessAge(requestedAccessAge, rules);
 
   return (
-    age >= rules.unconditionalReleaseAgeYears ||
+    age >= rules.noConditionsAgeYears ||
     (age >= accessAge && age >= rules.preservationAgeYears && age > retirementAge)
   );
 }
@@ -368,7 +369,7 @@ function isSuperDrawable(
  * The effective access age of one person: the first age at which their super
  * can be drawn while retired. It is the (clamped) access age when the person
  * retires before it, otherwise the year after retirement, capped at the
- * unconditional release age. It drives the bridge, the milestones and the
+ * no-conditions age (65). It drives the bridge, the milestones and the
  * "super locked until" wording.
  *
  * Returns `undefined` when the person has no super account, since there are no
@@ -390,7 +391,7 @@ export function effectiveSuperAccessAge(
 
   return person.retirementAge < accessAge
     ? accessAge
-    : Math.min(person.retirementAge + 1, rules.unconditionalReleaseAgeYears);
+    : Math.min(person.retirementAge + 1, rules.noConditionsAgeYears);
 }
 
 /**

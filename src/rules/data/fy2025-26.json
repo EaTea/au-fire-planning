@@ -4,7 +4,7 @@
   "effectiveFrom": "2025-07-01",
   "verification": {
     "status": "unverified",
-    "note": "The original values were checked by the owner against the ATO pages in sources on 2026-10-03. preservationAgeYears and unconditionalReleaseAgeYears were added for M6 and have not been checked yet. The incomeTax section (brackets, low income tax offset, Medicare levy) and its three source URLs were entered from memory and not opened: the owner must open each URL in sources and check the values on it."
+    "note": "The original values were checked by the owner against the ATO pages in sources on 2026-10-03. preservationAgeYears and noConditionsAgeYears were added for M6 and have not been checked yet. The incomeTax section (brackets, low income tax offset, Medicare levy) and its three source URLs were entered from memory and not opened: the owner must open each URL in sources and check the values on it."
   },
   "superannuation": {
     "guaranteeRatePercent": 12,
@@ -13,7 +13,7 @@
     "earningsTaxPercent": 15,
     "discountedCapitalGainsTaxPercent": 10,
     "preservationAgeYears": 60,
-    "unconditionalReleaseAgeYears": 65
+    "noConditionsAgeYears": 65
   },
   "incomeTax": {
     "residentBrackets": [
@@ -58,7 +58,7 @@
     "earningsTaxPercent": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/self-managed-super-funds-smsf/smsf-administration-and-reporting/how-smsfs-are-taxed",
     "discountedCapitalGainsTaxPercent": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/self-managed-super-funds-smsf/smsf-administration-and-reporting/how-smsfs-are-taxed",
     "preservationAgeYears": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/preservation-age",
-    "unconditionalReleaseAgeYears": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/conditions-of-release",
+    "noConditionsAgeYears": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/conditions-of-release",
     "residentBrackets": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
     "lowIncomeTaxOffset": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/offsets-and-rebates/low-income-tax-offset",
     "medicareLevy": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction-for-low-income-earners"

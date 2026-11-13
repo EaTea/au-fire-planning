@@ -32,7 +32,7 @@ export interface SuperannuationRules {
    */
   readonly preservationAgeYears: number;
   /** The age at which super can be accessed whether or not retired (65). */
-  readonly unconditionalReleaseAgeYears: number;
+  readonly noConditionsAgeYears: number;
 }
 
 /** One resident tax bracket in internal form. */
@@ -123,7 +123,7 @@ function superannuationFromWire(
     earningsTaxRate: wireSuper.earningsTaxPercent / 100,
     discountedCapitalGainsTaxRate: wireSuper.discountedCapitalGainsTaxPercent / 100,
     preservationAgeYears: wireSuper.preservationAgeYears,
-    unconditionalReleaseAgeYears: wireSuper.unconditionalReleaseAgeYears,
+    noConditionsAgeYears: wireSuper.noConditionsAgeYears,
   };
 }
 
