@@ -97,8 +97,9 @@ export interface ProjectionSuper {
   readonly nonConcessional: ProjectionSuperContribution;
   /**
    * The age the person wants super accessible from (IN-5). Absent means the
-   * age at which no condition is needed to access super (65). Whatever is given
-   * is clamped between the preservation age and that age, using the rules (see `resolveSuperAccessAge`).
+   * age at which no condition is needed to access super (65). Whatever is
+   * given is clamped between the preservation age and that age, using the
+   * rules (see `resolveSuperAccessAge`).
    */
   readonly accessAge?: number;
   /** The statutory rules, from which each row takes its rates and the contribution base. */
@@ -327,8 +328,7 @@ export function isShortfallWithSuperLocked(row: ProjectionRow): boolean {
  * Clamps the access age a person asked for (IN-5) into the range the rules
  * allow: no lower than the preservation age, no higher than the age at which
  * no condition is needed to access super (65), which is also the default when
- * none was given. Called by
- * `isSuperDrawable` and `effectiveSuperAccessAge`.
+ * none was given. Called by `isSuperDrawable` and `effectiveSuperAccessAge`.
  */
 function resolveSuperAccessAge(
   requestedAge: number | undefined,

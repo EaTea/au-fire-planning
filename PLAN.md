@@ -1487,8 +1487,9 @@ Conventions settled while building M6, which later milestones rely on:
   `noConditionsAgeYears`). The owner still has to verify them
   against the ATO. The rule is named `noConditionsAgeYears` because 65 is
   simply the age at which no condition is needed to access super, whether
-  or not you have retired; it is not a legal term, and the preservation
-  age (60) is the only age with conditions.
+  or not you have retired; it is not a legal term. Between the preservation
+  age (60) and 65, access needs a condition such as retiring; from 65 none
+  is needed.
 - **The effective access age** (`effectiveSuperAccessAge`) is the first
   age super can be drawn while retired: the access age if you retire
   before it, otherwise the year after retirement, capped at 65. It drives
