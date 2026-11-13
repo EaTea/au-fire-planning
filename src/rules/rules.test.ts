@@ -27,7 +27,7 @@ function sampleIncomeTax(bottomRatePercent: number): NonNullable<RulesFileV1["in
       secondThresholdDollars: 45000,
       secondReductionPercent: 1.5,
     },
-    medicareLevy: { ratePercent: 2, lowIncomeThresholdDollars: 27222, shadeInPercent: 10 },
+    medicareLevy: { ratePercent: 2, lowIncomeThresholdDollars: 28011, shadeInPercent: 10 },
   };
 }
 
@@ -251,7 +251,7 @@ describe("ruleSetFromWire", () => {
     expect(incomeTax?.lowIncomeTaxOffset.maximumDollars).toBe(700);
     expect(incomeTax?.medicareLevy.rate).toBeCloseTo(0.02);
     expect(incomeTax?.medicareLevy.shadeInRate).toBeCloseTo(0.1);
-    expect(incomeTax?.medicareLevy.lowIncomeThresholdDollars).toBe(27222);
+    expect(incomeTax?.medicareLevy.lowIncomeThresholdDollars).toBe(28011);
   });
 
   it("leaves out a section the file doesn't have, and keeps its sources", () => {
@@ -395,7 +395,7 @@ describe("bundled income tax rules", () => {
       // The amounts are the file's own, not indexed.
       expect(rules.incomeTax.residentBrackets[2]?.fromDollars).toBe(45000);
       expect(rules.incomeTax.lowIncomeTaxOffset.maximumDollars).toBe(700);
-      expect(rules.incomeTax.medicareLevy.lowIncomeThresholdDollars).toBe(27222);
+      expect(rules.incomeTax.medicareLevy.lowIncomeThresholdDollars).toBe(28011);
 
       return rules.incomeTax.residentBrackets[1]?.rate;
     });
@@ -427,12 +427,12 @@ describe("bundled income tax rules", () => {
     expect(rules.lowIncomeTaxOffset.secondThresholdDollars).toBeCloseTo(45000 * growth, 6);
     expect(rules.lowIncomeTaxOffset.firstReductionRate).toBeCloseTo(0.05);
     expect(rules.lowIncomeTaxOffset.secondReductionRate).toBeCloseTo(0.015);
-    expect(rules.medicareLevy.lowIncomeThresholdDollars).toBeCloseTo(27222 * growth, 6);
+    expect(rules.medicareLevy.lowIncomeThresholdDollars).toBeCloseTo(28011 * growth, 6);
     expect(rules.medicareLevy.rate).toBeCloseTo(0.02);
     expect(rules.medicareLevy.shadeInRate).toBeCloseTo(0.1);
   });
 
-  it("implies a Medicare upper threshold within $1 of the ATO's $34,027", () => {
+  it("implies a Medicare upper threshold within $1 of the ATO's $35,014", () => {
     const levy = rulesForYear(bundledRuleSet, 2026, inflation).incomeTax.medicareLevy;
 
     // The shaded-in levy, shadeInRate × (income − threshold), reaches
@@ -440,7 +440,7 @@ describe("bundled income tax rules", () => {
     const impliedUpperThreshold =
       (levy.shadeInRate * levy.lowIncomeThresholdDollars) / (levy.shadeInRate - levy.rate);
 
-    expect(Math.abs(impliedUpperThreshold - 34027)).toBeLessThan(1);
+    expect(Math.abs(impliedUpperThreshold - 35014)).toBeLessThan(1);
   });
 
   it("holds the three source URLs the plan names, on unverified files with an honest note", () => {

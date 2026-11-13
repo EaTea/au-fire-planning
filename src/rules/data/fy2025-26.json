@@ -4,7 +4,7 @@
   "effectiveFrom": "2025-07-01",
   "verification": {
     "status": "unverified",
-    "note": "The original values were checked by the owner against the ATO pages in sources on 2026-10-03. preservationAgeYears and noConditionsAgeYears were added for M6 and have not been checked yet. The incomeTax section (brackets, low income tax offset, Medicare levy) and its three source URLs were entered from memory and not opened: the owner must open each URL in sources and check the values on it."
+    "note": "The original values were checked by the owner against the ATO pages in sources on 2026-10-03. preservationAgeYears and noConditionsAgeYears were added for M6 and have not been checked yet. The incomeTax section and its three source URLs were entered from memory and not opened. The Medicare low-income threshold ($28,011) was checked by the owner against the ATO page on 2026-11-13 and is the latest figure the owner could find (no newer figures were published for later years, so 2026-27 and 2027-28 carry it); the rest of the incomeTax values and the three source URLs are still unverified: the owner must open each URL in sources and check the values on it."
   },
   "superannuation": {
     "guaranteeRatePercent": 12,
@@ -47,7 +47,7 @@
     },
     "medicareLevy": {
       "ratePercent": 2,
-      "lowIncomeThresholdDollars": 27222,
+      "lowIncomeThresholdDollars": 28011,
       "shadeInPercent": 10
     }
   },

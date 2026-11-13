@@ -1677,7 +1677,7 @@ Each PR goes through the challenger review before it is opened.
   ],
   "lowIncomeTaxOffset": { "maximumDollars": 700, "firstThresholdDollars": 37500,
     "firstReductionPercent": 5, "secondThresholdDollars": 45000, "secondReductionPercent": 1.5 },
-  "medicareLevy": { "ratePercent": 2, "lowIncomeThresholdDollars": 27222, "shadeInPercent": 10 }
+  "medicareLevy": { "ratePercent": 2, "lowIncomeThresholdDollars": 28011, "shadeInPercent": 10 }
 }
 ```
 
@@ -1690,11 +1690,14 @@ Each PR goes through the challenger review before it is opened.
 - **Values to check (FY2025–26):**
   - the five brackets and rates above;
   - the LITO figures above;
-  - the Medicare levy rate (2%), the low-income threshold for a single
-    person ($27,222 is the latest figure the lead knows, from 2024–25, and
-    the ATO page may show a newer one) and the shade-in rate (10%).
+  - the Medicare levy rate (2%) and the shade-in rate (10%).
+  - The Medicare low-income threshold for a single person is **$28,011**,
+    checked by the owner against the ATO page on 2026-11-13 (the latest
+    figure the owner could find). The upper threshold it implies is
+    28,011 × 1.25 = **$35,013.75**; the owner has not yet confirmed what the
+    ATO page shows for the upper figure (about $35,014).
   - If the owner finds a different Medicare threshold, the figures in
-    examples T5, T11, T12 and T13 are recomputed.
+    examples T5, T11, T12 and T13b are recomputed.
 - **The legislated cuts to the 16% rate:** 15% from 1 July 2026 and 14% from
   1 July 2027. Two more files, `fy2026-27.json` and `fy2027-28.json`, carry
   only the `incomeTax` section (brackets with the new bottom rate, the
@@ -1859,23 +1862,25 @@ rules (14%), so the tax a figure shows depends on its year.
 | T2 | 2026 | $45,000 | $4,288 | $325 | $3,963 | $900 | **$4,863** |
 | T3 | 2026 | $100,000 | $20,788 | $0 | $20,788 | $2,000 | **$22,788** |
 | T4 | 2026 | $145,000 | $34,988 | $0 | $34,988 | $2,900 | **$37,888** |
-| T5 | 2026 | $30,000 | $1,888 | $700 | $1,188 | $277.80 | **$1,465.80** |
+| T5 | 2026 | $30,000 | $1,888 | $700 | $1,188 | $198.90 | **$1,386.90** |
 | T6 | 2026 | $200,000 | $56,138 | $0 | $56,138 | $4,000 | **$60,138** |
 | T7 | 2026 | $40,000 | $3,488 | $575 | $2,913 | $800 | **$3,713** |
 | T8 | 2026 | $60,000 | $8,788 | $100 | $8,688 | $1,200 | **$9,888** |
 | T9 | 2027 | $100,000 | $20,520 | $0 | $20,520 | $2,000 | **$22,520** |
 | T10 | 2028 | $100,000 | $20,252 | $0 | $20,252 | $2,000 | **$22,252** |
-| T11 | 2026 | $27,222 | $1,443.52 | $700 | $743.52 | $0 | **$743.52** |
-| T12 | 2026 | $34,027 | $2,532.32 | $700 | $1,832.32 | $680.50 | **$2,512.82** |
+| T11 | 2026 | $28,011 | $1,569.76 | $700 | $869.76 | $0 | **$869.76** |
+| T12 | 2026 | $35,014 | $2,690.24 | $700 | $1,990.24 | $700.28 | **$2,690.52** |
 
 - **T13 (the brackets don't index):** $100,000 in 2031 at 2.5% inflation
   pays exactly what it did in 2028: bracket tax $20,252, no offset, Medicare
   levy $2,000, total **$22,252**.
-- **T13b (the Medicare threshold does):** $30,000 in 2031 at 2.5%
-  inflation. The low-income threshold is $27,222 × 1.025³ = $29,315.12.
-  Bracket tax at 14% is $1,652; the offset is $700 (not indexed), so income
-  tax is $952; the levy is 10% × ($30,000 − $29,315.12) = $68.49. Total
-  **$1,020.49**. (In 2026 the same $30,000 paid $1,465.80, T5.)
+- **T13b (the Medicare threshold does):** $31,000 in 2031 at 2.5%
+  inflation. The low-income threshold is $28,011 × 1.025³ = $30,164.78.
+  Bracket tax at 14% is $1,792; the offset is $700 (not indexed), so income
+  tax is $1,092; the levy is 10% × ($31,000 − $30,164.78) = $83.52. Total
+  **$1,175.52**. (In 2026 the same $31,000 paid income tax of $1,348,
+  at the 16% rate, and a levy of 10% × ($31,000 − $28,011) = $298.90: a
+  total of **$1,646.90**.)
 - **T14 (negative income):** a taxable income below $0 pays $0.
 
 **F: one person, working years paid from take-home pay.**
@@ -1915,7 +1920,7 @@ rules (14%), so the tax a figure shows depends on its year.
   spending $40,000. No portfolio or super. No salary, so pay isn't modelled.
 - **One person:**
   - **2027:** interest $24,000; tax at 15%: $870 − LITO $700 = **$170**;
-    Medicare $0 (below $27,222). Cash $583,830 after $40,170 is drawn.
+    Medicare $0 (below $28,011). Cash $583,830 after $40,170 is drawn.
   - **2028:** interest $23,353.20; tax at 14%: $721.448 − $700 = **$21.45**;
     cash **$567,161.75**.
   - **2029:** interest $22,686.47; bracket tax $628.11 is covered by the
@@ -1963,7 +1968,7 @@ expenses $90,000; plan until 95; 2.5% inflation, 7% return, 4% interest).
 - **The bridge** (2043–2053): need $718,650.83, projected $2,510,970.42,
   **MET**. The need before contributions, for the coast split, is
   **$665,649.10**.
-- **After access** (2054–2089): need $4,129,730.15, projected $4,021,737.35
+- **After access** (2054–2089): need $4,126,657.70, projected $4,021,737.35
   (the open super, portfolio and cash), plus Alex's $2,220,151.72 locked
   until 2057. **MET**, because Alex's super opens in 2057, though the
   projected figure alone is under the need. The money lasts to 2089.
@@ -2012,7 +2017,7 @@ A and E above are the headline cases.
    - `rulesForYear` for 2026, 2027, 2028 and 2031 returns the right bottom
      rate and amounts, with `isEstimated` only after 2028;
    - the Medicare upper threshold derived from the lower one and the
-     shade-in rate is within $1 of $34,027.
+     shade-in rate is within $1 of $35,014 (28,011 × 1.25 = $35,013.75).
 
 **Check:** `npm run check` passes. No worked example changes.
 
@@ -2224,7 +2229,7 @@ for the per-person tax view.
    - the rules tests that expect indexed brackets are changed to expect them
      fixed, and a test pins that the Medicare threshold is indexed;
    - the fixture case T13 becomes the fixed-bracket case ($100,000 in 2031
-     at 2.5% is $22,252), and T13b ($30,000 in 2031: $1,020.49) is added;
+     at 2.5% is $22,252), and T13b ($31,000 in 2031: $1,175.52) is added;
    - the homogeneity property ("tax scales when every amount is indexed")
      is replaced by one that says the brackets and the offset don't depend
      on inflation, and the Medicare threshold scales with it;
@@ -2364,8 +2369,9 @@ and G.
   equally.
 - **The Medicare levy low-income threshold for 2026–27 and 2027–28.** The
   government raises it each year, but the tax-only files carry the
-  FY2025–26 figure ($27,222). The owner supplies the newer figures when they
-  are known.
+  FY2025–26 figure ($28,011, checked by the owner on 2026-11-13). The owner
+  supplies the newer figures when they are known, and confirms the upper
+  threshold shown on the ATO page (about $35,014).
 - **Per-person tax columns** in Year by year (the mockup's "Per-person tax"
   chip) and a "year in detail" panel with each partner's tax (mockup 05).
 - **A single salary-sacrifice-aware estimate** on Income & expenses
@@ -2662,7 +2668,9 @@ wording; whichever lands second rebases.
 - [x] Approve the M8 step-by-step plan (plan PR #40), including the seven owner
       decisions. The owner also checks the new tax values (the brackets, the
       low income tax offset, the Medicare levy thresholds and the legislated
-      15% and 14% rates) against the ATO before the M8 PRs merge.
+      15% and 14% rates) against the ATO before the M8 PRs merge. The Medicare
+      low-income threshold is done ($28,011, checked 2026-11-13); the upper
+      threshold, the brackets, the offset and the rates are still to check.
 - [x] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
       challenger review, then open it for verification.
 - [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 14):

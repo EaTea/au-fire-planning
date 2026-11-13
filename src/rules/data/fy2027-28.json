@@ -4,7 +4,7 @@
   "effectiveFrom": "2027-07-01",
   "verification": {
     "status": "unverified",
-    "note": "The incomeTax values and the three source URLs were entered from memory and not opened. The owner must open each URL in sources and check the values on it. Specifically check the legislated bottom rate for 2027-28 (14%); the other values are carried over unchanged from the FY2025-26 file. This file holds only the incomeTax section."
+    "note": "The incomeTax values and the three source URLs were entered from memory and not opened. The Medicare low-income threshold ($28,011) was checked by the owner against the ATO page on 2026-11-13 and is the latest figure the owner could find (no newer figures were published for later years, so 2026-27 and 2027-28 carry it); the rest of the incomeTax values and the three source URLs are still unverified: the owner must open each URL in sources and check the values on it. Specifically check the legislated bottom rate for 2027-28 (14%); the other values are carried over unchanged from the FY2025-26 file. This file holds only the incomeTax section."
   },
   "incomeTax": {
     "residentBrackets": [
@@ -38,7 +38,7 @@
     },
     "medicareLevy": {
       "ratePercent": 2,
-      "lowIncomeThresholdDollars": 27222,
+      "lowIncomeThresholdDollars": 28011,
       "shadeInPercent": 10
     }
   },

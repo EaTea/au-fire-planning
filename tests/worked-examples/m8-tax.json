@@ -68,8 +68,8 @@
         "bracketTax": 1888,
         "lowIncomeTaxOffset": 700,
         "incomeTax": 1188,
-        "medicareLevy": 277.8,
-        "total": 1465.8
+        "medicareLevy": 198.9,
+        "total": 1386.9
       }
     },
     {
@@ -147,13 +147,13 @@
       "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
       "year": 2026,
       "inflationRate": 0,
-      "taxableIncome": 27222,
+      "taxableIncome": 28011,
       "expected": {
-        "bracketTax": 1443.52,
+        "bracketTax": 1569.76,
         "lowIncomeTaxOffset": 700,
-        "incomeTax": 743.52,
+        "incomeTax": 869.76,
         "medicareLevy": 0,
-        "total": 743.52
+        "total": 869.76
       }
     },
     {
@@ -161,13 +161,13 @@
       "checkedBy": "independent script (see PLAN.md, M8 worked examples)",
       "year": 2026,
       "inflationRate": 0,
-      "taxableIncome": 34027,
+      "taxableIncome": 35014,
       "expected": {
-        "bracketTax": 2532.32,
+        "bracketTax": 2690.24,
         "lowIncomeTaxOffset": 700,
-        "incomeTax": 1832.32,
-        "medicareLevy": 680.5,
-        "total": 2512.82
+        "incomeTax": 1990.24,
+        "medicareLevy": 700.28,
+        "total": 2690.52
       }
     },
     {
@@ -349,7 +349,7 @@
         "targetRetirementAge": 60
       },
       "arithmetic": [
-        "2027: interest 4% x 600,000 = $24,000; bracket tax 0.15 x 5,800 = $870; LITO $700 (income under $37,500); income tax $170; Medicare $0 (under $27,222). Tax $170.",
+        "2027: interest 4% x 600,000 = $24,000; bracket tax 0.15 x 5,800 = $870; LITO $700 (income under $37,500); income tax $170; Medicare $0 (under $28,011). Tax $170.",
         "2028: in this step tax is not yet paid from cash, so cash is 600,000 + 24,000 - 40,000 = $584,000 and interest is $23,360. Bracket tax 0.14 x 5,160 = $722.40; LITO $700; tax $22.40. (Once tax is funded in PR B the interest is $23,353.20 and the tax $21.45, as in the plan's example H.)",
         "2029: cash $567,360, interest $22,694.40, bracket tax 0.14 x 4,494.40 = $629.22, covered by the $700 offset, so tax $0."
       ],
