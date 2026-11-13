@@ -122,7 +122,7 @@ function PersonFields({ person, personIndex, isCouple }: PersonFieldsProps) {
   const dispatch = usePlanDispatch();
   const startYear = usePlanStartYear();
 
-  // The preservation age and the unconditional release age bound the access age and give its default.
+  // The preservation age and the no-conditions age (65) bound the access age and give its default.
   const superRules = rulesForYear(
     bundledRuleSet,
     startYear,
@@ -166,9 +166,9 @@ function PersonFields({ person, personIndex, isCouple }: PersonFieldsProps) {
       <AgeField
         label={fieldLabel("Super accessible at")}
         value={person.superAccessAge}
-        defaultValue={superRules.unconditionalReleaseAgeYears}
+        defaultValue={superRules.noConditionsAgeYears}
         min={superRules.preservationAgeYears}
-        max={superRules.unconditionalReleaseAgeYears}
+        max={superRules.noConditionsAgeYears}
         hint={
           isCouple
             ? "Usually 65. 60 to 64 is possible if they will have retired by then; super opens at retirement, or at 65 regardless."
