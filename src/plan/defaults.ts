@@ -54,7 +54,7 @@ export const DEFAULT_SUPER_RETURN = 0.07;
 export const DEFAULT_SUPER_CONTRIBUTION_ANNUAL = 0;
 
 // The age super becomes accessible (IN-5) has no constant here: its default is
-// the unconditional release age (65), which is statutory, so it comes from the
+// the age at which no condition is needed to access super (65), which is statutory, so it comes from the
 // rules data (src/rules/) rather than from this file.
 
 /** Cash savings: $0. */

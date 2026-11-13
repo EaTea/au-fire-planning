@@ -108,8 +108,8 @@ export interface ResolvedPerson {
   readonly superAccount: ResolvedSuperAccount;
   /**
    * The age the person wants super accessible from, or `undefined` with
-   * source "rule" when left to the law: the default is then the unconditional
-   * release age from the rules (65). The engine clamps a user value between the
+   * source "rule" when left to the law: the default is then the age at which no
+   * condition is needed to access super, from the rules (65). The engine clamps a user value between the
    * preservation age and that age, because both come from the rules data.
    */
   readonly superAccessAge: Sourced<number | undefined>;

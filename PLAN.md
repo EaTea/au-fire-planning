@@ -1484,8 +1484,11 @@ Conventions settled while building M6, which later milestones rely on:
   `projection.ts`): super can be drawn at age a when a ≥ 65, or when a ≥
   the access age, a ≥ the preservation age (60) and a > the retirement
   age. Both ages are rules (`preservationAgeYears`,
-  `unconditionalReleaseAgeYears`). The owner still has to verify them
-  against the ATO.
+  `noConditionsAgeYears`). The owner still has to verify them
+  against the ATO. The rule is named `noConditionsAgeYears` because 65 is
+  simply the age at which no condition is needed to access super, whether
+  or not you have retired; it is not a legal term, and the preservation
+  age (60) is the only age with conditions.
 - **The effective access age** (`effectiveSuperAccessAge`) is the first
   age super can be drawn while retired: the access age if you retire
   before it, otherwise the year after retirement, capped at 65. It drives
@@ -2593,8 +2596,8 @@ wording; whichever lands second rebases.
 - [x] Approve the start over plan.
 - [x] Implement start over (step 1), then open it for verification.
 - [x] Owner verifies and merges the start over PR.
-- [ ] Owner verifies the two M6 rule values (preservation age 60 and
-      unconditional release at 65) against the ATO.
+- [ ] Owner verifies the two M6 rule values (preservation age 60, and age 65
+      with no conditions) against the ATO.
 - [x] Approve the M7 step-by-step plan (plan PR), including the four owner
       decisions, and merge it.
 - [x] Implement M7 PR A, the household refactor (steps 1 to 3): challenger

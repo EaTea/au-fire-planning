@@ -80,7 +80,7 @@ export interface Person {
   readonly superAccount?: SuperAccount;
   /**
    * Age in whole years from which they want super to be accessible (IN-5).
-   * `undefined` means the default, the unconditional release age (65). The
+   * `undefined` means the default, the age at which no condition is needed to access super (65). The
    * engine clamps it between the preservation age and that age.
    */
   readonly superAccessAge?: number;

@@ -47,7 +47,7 @@ function sampleRulesFile(overrides: Partial<RulesFileV1> = {}): RulesFileV1 {
       earningsTaxPercent: 15,
       discountedCapitalGainsTaxPercent: 10,
       preservationAgeYears: 60,
-      unconditionalReleaseAgeYears: 65,
+      noConditionsAgeYears: 65,
     },
     incomeTax: sampleIncomeTax(16),
     sources: {
@@ -60,7 +60,7 @@ function sampleRulesFile(overrides: Partial<RulesFileV1> = {}): RulesFileV1 {
       earningsTaxPercent: url,
       discountedCapitalGainsTaxPercent: url,
       preservationAgeYears: url,
-      unconditionalReleaseAgeYears: url,
+      noConditionsAgeYears: url,
     },
     ...overrides,
   };
@@ -87,7 +87,7 @@ describe("bundled rules data", () => {
     expect(rules.superannuation.earningsTaxRate).toBeCloseTo(0.15);
     expect(rules.superannuation.discountedCapitalGainsTaxRate).toBeCloseTo(0.1);
     expect(rules.superannuation.preservationAgeYears).toBe(60);
-    expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
+    expect(rules.superannuation.noConditionsAgeYears).toBe(65);
   });
 
   it("is marked unverified, with a note naming the two M6 values, until the owner checks them", () => {
@@ -95,9 +95,9 @@ describe("bundled rules data", () => {
 
     expect(snapshot?.verificationStatus).toBe("unverified");
     expect(snapshot?.verificationNote).toContain("preservationAgeYears");
-    expect(snapshot?.verificationNote).toContain("unconditionalReleaseAgeYears");
+    expect(snapshot?.verificationNote).toContain("noConditionsAgeYears");
     expect(snapshot?.sourceUrls.preservationAgeYears).toMatch(/\/preservation-age$/);
-    expect(snapshot?.sourceUrls.unconditionalReleaseAgeYears).toMatch(/\/conditions-of-release$/);
+    expect(snapshot?.sourceUrls.noConditionsAgeYears).toMatch(/\/conditions-of-release$/);
   });
 });
 
@@ -202,12 +202,12 @@ describe("rules file schema", () => {
 
     const fractional = {
       ...file,
-      superannuation: { ...file.superannuation, unconditionalReleaseAgeYears: 65.5 },
+      superannuation: { ...file.superannuation, noConditionsAgeYears: 65.5 },
     };
     expect(() => parseRulesFile(fractional)).toThrow();
 
     const withoutSource: Record<string, unknown> = { ...file.sources };
-    delete withoutSource.unconditionalReleaseAgeYears;
+    delete withoutSource.noConditionsAgeYears;
     expect(() => parseRulesFile({ ...file, sources: withoutSource })).toThrow();
   });
 
@@ -238,7 +238,7 @@ describe("ruleSetFromWire", () => {
     expect(snapshot?.superannuation?.maximumContributionBaseAnnualDollars).toBe(250000);
     expect(snapshot?.verificationStatus).toBe("verified");
     expect(snapshot?.superannuation?.preservationAgeYears).toBe(60);
-    expect(snapshot?.superannuation?.unconditionalReleaseAgeYears).toBe(65);
+    expect(snapshot?.superannuation?.noConditionsAgeYears).toBe(65);
   });
 
   it("converts the income tax percentages to fractions and keeps dollar amounts", () => {
@@ -290,7 +290,7 @@ describe("rulesForYear", () => {
     expect(rules.isEstimated).toBe(false);
     expect(rules.superannuation.maximumContributionBaseAnnualDollars).toBe(250000);
     expect(rules.superannuation.preservationAgeYears).toBe(60);
-    expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
+    expect(rules.superannuation.noConditionsAgeYears).toBe(65);
   });
 
   it("uses the earliest file for earlier years, without adjusting", () => {
@@ -313,7 +313,7 @@ describe("rulesForYear", () => {
     // Rates are law, not indexed, and the ages aren't dollar thresholds.
     expect(year2027.superannuation.guaranteeRate).toBeCloseTo(0.12);
     expect(year2027.superannuation.preservationAgeYears).toBe(60);
-    expect(year2027.superannuation.unconditionalReleaseAgeYears).toBe(65);
+    expect(year2027.superannuation.noConditionsAgeYears).toBe(65);
   });
 
   it("lets a later snapshot replace the earlier one from its date", () => {
@@ -327,7 +327,7 @@ describe("rulesForYear", () => {
         earningsTaxPercent: 15,
         discountedCapitalGainsTaxPercent: 10,
         preservationAgeYears: 60,
-        unconditionalReleaseAgeYears: 65,
+        noConditionsAgeYears: 65,
       },
     });
     const twoSnapshots = ruleSetFromWire([sampleRulesFile(), later]);
@@ -494,7 +494,7 @@ describe("bundled income tax rules", () => {
       expect(rules.superannuation.earningsTaxRate).toBeCloseTo(0.15);
       expect(rules.superannuation.discountedCapitalGainsTaxRate).toBeCloseTo(0.1);
       expect(rules.superannuation.preservationAgeYears).toBe(60);
-      expect(rules.superannuation.unconditionalReleaseAgeYears).toBe(65);
+      expect(rules.superannuation.noConditionsAgeYears).toBe(65);
     }
   });
 });

@@ -714,7 +714,7 @@ describe("resolvePlanInputs: super access age", () => {
     return resolvedPlan.inputs.projection.inputs.people[0].superAccessAge;
   }
 
-  it("leaves an unset age to the law (the rules' unconditional release age)", () => {
+  it("leaves an unset age to the law (the rules' no-conditions age)", () => {
     expect(resolveAccessAge(undefined)).toEqual({ value: undefined, source: "rule" });
   });
 
