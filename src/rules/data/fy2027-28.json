@@ -3,8 +3,8 @@
   "financialYear": "2027-28",
   "effectiveFrom": "2027-07-01",
   "verification": {
-    "status": "unverified",
-    "note": "The incomeTax values and the three source URLs were entered from memory and not opened. The owner must open each URL in sources and check the values on it. Specifically check the legislated bottom rate for 2027-28 (14%); the other values are carried over unchanged from the FY2025-26 file. This file holds only the incomeTax section."
+    "status": "verified",
+    "note": "On 2026-11-14 the owner checked the incomeTax values against the three source URLs: the resident brackets and rates for 2025-26, the low income tax offset, the Medicare levy rate (2%) and shade-in (10%), the 14% bottom-rate cut for 2027-28, and the three URLs themselves. The Medicare low-income threshold ($28,011) was found by the owner on the ATO page; the owner found no figures for later years, so later years carry it. This file holds only the incomeTax section."
   },
   "incomeTax": {
     "residentBrackets": [
@@ -38,7 +38,7 @@
     },
     "medicareLevy": {
       "ratePercent": 2,
-      "lowIncomeThresholdDollars": 27222,
+      "lowIncomeThresholdDollars": 28011,
       "shadeInPercent": 10
     }
   },
