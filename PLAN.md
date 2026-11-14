@@ -1692,10 +1692,11 @@ Each PR goes through the challenger review before it is opened.
   - the LITO figures above;
   - the Medicare levy rate (2%) and the shade-in rate (10%).
   - The Medicare low-income threshold for a single person is **$28,011**,
-    found by the owner on the ATO page (the latest figure the owner could
-    find; later years carry it). The upper threshold it implies is
-    28,011 × 1.25 = **$35,013.75**, which the model derives rather than
-    stores (about $35,014).
+    found by the owner on the ATO page as the **2025-26** figure (the
+    latest the owner could find; later years carry it). The upper threshold
+    it implies is 28,011 × 1.25 = **$35,013.75**, which the model derives
+    rather than stores. The owner confirmed the ATO's upper figure (about
+    $35,014) is correct.
   - If the owner finds a different Medicare threshold, the figures in
     examples T5, T11, T12 and T13b are recomputed.
 - **The legislated cuts to the 16% rate:** 15% from 1 July 2026 and 14% from
