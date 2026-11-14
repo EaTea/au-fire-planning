@@ -1684,25 +1684,25 @@ Each PR goes through the challenger review before it is opened.
 - **Sources:** one URL per group (brackets, offset, levy), on the ATO's
   "Tax rates – Australian residents", "Low income tax offset" and
   "Medicare levy reduction for low-income earners" pages. The ATO blocks
-  automated clients, so the lead gives the implementer the URLs, and the
-  files are committed with `verification.status: "unverified"`. **The owner
-  checks the values before the PR merges,** as for M5 and M6.
+  automated clients, so the lead gives the implementer the URLs. **The owner
+  checked the incomeTax values against the three URLs on 2026-11-14,** and
+  the three files are now `verification.status: "verified"`.
 - **Values to check (FY2025–26):**
   - the five brackets and rates above;
   - the LITO figures above;
   - the Medicare levy rate (2%) and the shade-in rate (10%).
   - The Medicare low-income threshold for a single person is **$28,011**,
-    checked by the owner against the ATO page on 2026-11-13 (the latest
-    figure the owner could find). The upper threshold it implies is
-    28,011 × 1.25 = **$35,013.75**; the owner has not yet confirmed what the
-    ATO page shows for the upper figure (about $35,014).
+    found by the owner on the ATO page (the latest figure the owner could
+    find; later years carry it). The upper threshold it implies is
+    28,011 × 1.25 = **$35,013.75**, which the model derives rather than
+    stores (about $35,014).
   - If the owner finds a different Medicare threshold, the figures in
     examples T5, T11, T12 and T13b are recomputed.
 - **The legislated cuts to the 16% rate:** 15% from 1 July 2026 and 14% from
   1 July 2027. Two more files, `fy2026-27.json` and `fy2027-28.json`, carry
   only the `incomeTax` section (brackets with the new bottom rate, the
-  other values unchanged). The owner confirms them against the ATO page. If
-  the owner would rather not, the FY2025–26 rates simply continue, which
+  other values unchanged). The owner checked them against the ATO pages on
+  2026-11-14. Had the owner not, the FY2025–26 rates simply continue, which
   overstates tax by up to $268 a person in 2027 and $536 from 2028.
 - **A file holds only the sections it changes.** Each section is read from
   the latest file in effect that has it. This is a small change to
@@ -2007,9 +2007,9 @@ A and E above are the headline cases.
    test pins the M5 and M6 values).
 3. **The values** in `fy2025-26.json` (above), and the two files
    `fy2026-27.json` (effective 2026-07-01) and `fy2027-28.json` (effective
-   2027-07-01), with only `incomeTax` and `sources`. All three keep
-   `verification.status: "unverified"`, with a note naming what the owner
-   must check.
+   2027-07-01), with only `incomeTax` and `sources`. All three are
+   `verification.status: "verified"` after the owner's check on 2026-11-14,
+   with a note saying what was checked.
 4. **Wire and internal types are separate:** `ratePercent` and the other
    `…Percent` fields become fractions in `IncomeTaxRules`, as for the
    superannuation rules.
@@ -2029,10 +2029,11 @@ A and E above are the headline cases.
   always have both. A file with only one section is fine on its own.
 - A bundled-data test also checks the bracket list starts at $0 and
   increases (the schema rejects it otherwise).
-- All three files are `unverified`. Their notes say the values and the three
-  URLs were entered from memory and not opened, so the owner must open each
-  URL and check the values on it. The existing super note is kept, with a
-  sentence added saying the `incomeTax` section is unchecked.
+- All three files are `verified`: on 2026-11-14 the owner checked the
+  incomeTax values against the three URLs. In `fy2025-26.json`, which also
+  holds the superannuation section, the note says the superannuation values
+  `preservationAgeYears` and `noConditionsAgeYears` were not rechecked in
+  that pass and are unchanged from M6 (status is per file).
 - README "How to add next year's rules" now mentions optional sections.
 - **Review fixes:**
   - `rulesForYear` answers are cached per rule set, year and inflation rate
@@ -2666,11 +2667,11 @@ wording; whichever lands second rebases.
       verification.
 - [x] Owner verifies and merges the inflation in the views PR (#41).
 - [x] Approve the M8 step-by-step plan (plan PR #40), including the seven owner
-      decisions. The owner also checks the new tax values (the brackets, the
-      low income tax offset, the Medicare levy thresholds and the legislated
-      15% and 14% rates) against the ATO before the M8 PRs merge. The Medicare
-      low-income threshold is done ($28,011, checked 2026-11-13); the upper
-      threshold, the brackets, the offset and the rates are still to check.
+      decisions. The owner checked the new tax values (the brackets, the
+      low income tax offset, the Medicare levy rate and shade-in, the
+      Medicare low-income threshold of $28,011 and the legislated 15% and 14%
+      rates) against the ATO on 2026-11-14; the three rules files are
+      `verified`.
 - [x] Implement M8 PR A, tax as data and take-home pay shown (steps 1 to 6):
       challenger review, then open it for verification.
 - [ ] Implement M8 PR B, the working-year cash flow (steps 7 to 14):
